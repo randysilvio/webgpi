@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use App\Models\AnggotaJemaat;
 use App\Models\Jemaat; // Untuk validasi jemaat_id
+use App\Models\Klasis; // Untuk scoping
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow; // Membaca baris header
 use Maatwebsite\Excel\Concerns\WithValidation; // Untuk validasi
@@ -11,15 +12,13 @@ use Maatwebsite\Excel\Concerns\WithBatchInserts; // Optimasi insert batch
 use Maatwebsite\Excel\Concerns\WithChunkReading; // Optimasi baca file besar
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule; // Untuk rule validasi
-
-// Gunakan SkipsOnError agar baris valid tetap diproses jika ada error
-// Gunakan SkipsErrors untuk menangkap error
 use Maatwebsite\Excel\Concerns\SkipsOnError;
-use Maatwebsite\Excel\Concerns\SkipsErrors;
+use Maatwebsite\Excel\Concerns\SkipsFailures; // Menggunakan SkipsFailures
+use Maatwebsite\Excel\Concerns\SkipsOnFailure; // Menggunakan SkipsOnFailure
+use Maatwebsite\Excel\Validators\Failure; // Menggunakan Failure
 use Throwable;
-
-// WithUpserts jika ingin pakai fitur upsert bawaan (tapi kita custom)
-// use Maatwebsite\Excel\Concerns\WithUpserts;
+use Illuminate\Support\Facades\Auth; // Untuk scoping
+use Carbon\Carbon; // Untuk parsing tanggal
 
 class AnggotaJemaatImport implements
     ToModel,
@@ -27,99 +26,138 @@ class AnggotaJemaatImport implements
     WithValidation,
     WithBatchInserts,
     WithChunkReading,
-    SkipsOnError // Implementasi SkipsOnError
-    // WithUpserts // Kita tidak pakai ini karena logic custom
+    SkipsOnFailure // Implementasi SkipsOnFailure
 {
-    use SkipsErrors; // Gunakan trait SkipsErrors
+    use SkipsFailures; // Gunakan trait
 
-    // Simpan Jemaat ID yang valid untuk scope (jika diperlukan)
-    private $allowedJemaatIds;
+    private $allowedJemaatIds = null;
+    private $jemaatKlasisMap;
 
-    public function __construct()
+    public function __construct(?int $jemaatIdConstraint = null, ?int $klasisIdConstraint = null)
     {
-        // Nanti bisa tambahkan logic untuk mengisi $allowedJemaatIds berdasarkan role user yg import
-        // $this->allowedJemaatIds = Jemaat::where('klasis_id', Auth::user()->klasis_id)->pluck('id')->toArray();
-    }
+        $this->jemaatKlasisMap = Jemaat::pluck('klasis_id', 'id');
 
+        if ($jemaatIdConstraint !== null) {
+            if ($this->jemaatKlasisMap->has($jemaatIdConstraint)) {
+                 $this->allowedJemaatIds = [$jemaatIdConstraint];
+            } else {
+                 Log::error("Constraint Jemaat ID $jemaatIdConstraint tidak valid saat import.");
+                 throw new \InvalidArgumentException("ID Jemaat yang terkait dengan akun Anda ($jemaatIdConstraint) tidak valid.");
+            }
+        } elseif ($klasisIdConstraint !== null) {
+            $this->allowedJemaatIds = $this->jemaatKlasisMap->filter(fn ($klasis_id) => $klasis_id == $klasisIdConstraint)->keys()->toArray();
+            if (empty($this->allowedJemaatIds)) {
+                  Log::warning("Constraint Klasis ID $klasisIdConstraint tidak memiliki jemaat saat import.");
+                  throw new \InvalidArgumentException("Klasis yang terkait dengan akun Anda (ID: $klasisIdConstraint) tidak memiliki Jemaat terdaftar.");
+            }
+        }
+    }
 
     /**
     * @param array $row
-    *
     * @return \Illuminate\Database\Eloquent\Model|null
     */
     public function model(array $row)
     {
-        // Logika untuk conditional upsert berdasarkan NIK dan kelengkapan data
-        $nik = $row['nik'] ?? null;
+        // Panggil prepareData
         $dataBaru = $this->prepareData($row);
 
-        // Validasi Jemaat ID (contoh scoping sederhana)
-        // if ($this->allowedJemaatIds && !in_array($dataBaru['jemaat_id'], $this->allowedJemaatIds)) {
-        //     Log::warning('Import dilewati: Jemaat ID ' . $dataBaru['jemaat_id'] . ' tidak diizinkan untuk user.');
-        //     return null; // Lewati baris ini
-        // }
+        // Ambil NIK dan No Buku Induk
+        $nik = $dataBaru['nik'] ?? null;
+        $nomorBukuInduk = $dataBaru['nomor_buku_induk'] ?? null;
 
+        // --- Validasi Scoping ---
+        $jemaatIdImport = $dataBaru['jemaat_id'];
+        if ($this->allowedJemaatIds !== null && !in_array($jemaatIdImport, $this->allowedJemaatIds)) {
+             $message = "Import dilewati: Jemaat ID {$jemaatIdImport} tidak termasuk dalam lingkup Anda.";
+             Log::warning($message . " (User: " . Auth::id() . ")");
+             // Sesuaikan 'key' failure dengan nama header ID Jemaat di Excel
+             $failure = new Failure(0, 'id_jemaat_wajib_diisi_saat_import', [$message], $row);
+             $this->onFailure($failure);
+             return null;
+        }
 
+        // --- Logika Conditional Upsert ---
+        $anggotaLama = null;
         if (!empty($nik)) {
             $anggotaLama = AnggotaJemaat::where('nik', $nik)->first();
-
-            if ($anggotaLama) {
-                // NIK DITEMUKAN -> Cek Kelengkapan
-                $jumlahBaru = $this->countFilledFields($dataBaru);
-                $jumlahLama = $this->countFilledFields($anggotaLama->toArray());
-
-                if ($jumlahBaru > $jumlahLama) {
-                    // Data baru lebih lengkap -> Update
-                    Log::info('Updating AnggotaJemaat by NIK: ' . $nik);
-                    $anggotaLama->update($dataBaru);
-                    return null; // Jangan buat model baru, sudah diupdate
-                } else {
-                    // Data baru tidak lebih lengkap -> Abaikan
-                    Log::info('Skipping AnggotaJemaat by NIK (data not newer): ' . $nik);
-                    return null; // Abaikan baris ini
-                }
-            }
         }
-        // Jika NIK kosong ATAU NIK tidak ditemukan -> Buat Baru
-        Log::info('Creating new AnggotaJemaat: ' . ($dataBaru['nama_lengkap'] ?? 'N/A'));
-        return new AnggotaJemaat($dataBaru);
+        if (!$anggotaLama && !empty($nomorBukuInduk)) {
+             $anggotaLama = AnggotaJemaat::where('nomor_buku_induk', $nomorBukuInduk)->first();
+        }
+
+        if ($anggotaLama) {
+            $jumlahBaru = $this->countFilledFields($dataBaru);
+            $jumlahLama = $this->countFilledFields($anggotaLama->toArray());
+
+            if ($jumlahBaru >= $jumlahLama) {
+                Log::info('Updating AnggotaJemaat by NIK/NoInduk: ' . ($nik ?? $nomorBukuInduk));
+                 if ($this->allowedJemaatIds !== null && $anggotaLama->jemaat_id != $dataBaru['jemaat_id']) {
+                     Log::warning('Skipping jemaat_id update for NIK/NoInduk: ' . ($nik ?? $nomorBukuInduk) . ' due to scope.');
+                     unset($dataBaru['jemaat_id']);
+                 }
+                $anggotaLama->update($dataBaru);
+                return null;
+            } else {
+                Log::info('Skipping AnggotaJemaat by NIK/NoInduk (data not newer): ' . ($nik ?? $nomorBukuInduk));
+                return null;
+            }
+        } else {
+            Log::info('Creating new AnggotaJemaat: ' . ($dataBaru['nama_lengkap'] ?? 'N/A'));
+             if ($this->allowedJemaatIds !== null && !in_array($dataBaru['jemaat_id'], $this->allowedJemaatIds)) {
+                  Log::error('Attempted to create AnggotaJemaat outside scope: Jemaat ID ' . $dataBaru['jemaat_id']);
+                  return null;
+             }
+            return new AnggotaJemaat($dataBaru);
+        }
     }
 
     /**
-     * Menyiapkan data dari baris excel, konversi tanggal, dll.
+     * Menyiapkan data dari baris excel.
      */
     private function prepareData(array $row): array
     {
-        // Hati-hati dengan nama header di Excel/CSV, gunakan WithHeadingRow
-        // Sesuaikan key array ($row['...']) dengan header di headings() export Anda (lowercase, underscore)
+        // ** PENTING: Sesuaikan key array $row['...'] dengan nama header di file Excel Anda **
          return [
-            'jemaat_id'         => $row['id_jemaat_wajib_diisi_saat_import'] ?? null,
+            'jemaat_id'         => $row['id_jemaat_wajib_diisi_saat_import'] ?? null, // Sesuaikan header
             'nik'               => $row['nik'] ?? null,
             'nomor_buku_induk'  => $row['nomor_buku_induk'] ?? null,
-            'nama_lengkap'      => $row['nama_lengkap_wajib'] ?? null,
+            'nama_lengkap'      => $row['nama_lengkap_wajib'] ?? null, // Sesuaikan header
+            'nomor_kk'          => $row['nomor_kk'] ?? null, // <-- Ambil dari Excel
+            'status_dalam_keluarga' => $row['status_dalam_keluarga'] ?? null, // <-- Ambil dari Excel
             'tempat_lahir'      => $row['tempat_lahir'] ?? null,
-            'tanggal_lahir'     => $this->transformDate($row['tanggal_lahir_yyyymmdd'] ?? null),
-            'jenis_kelamin'     => $row['jenis_kelamin_lakilakiperempuan'] ?? null,
+            'tanggal_lahir'     => $this->transformDate($row['tanggal_lahir_yyyymmdd'] ?? null), // Sesuaikan header
+            'jenis_kelamin'     => $row['jenis_kelamin_lakilakiperempuan'] ?? null, // Sesuaikan header
             'golongan_darah'    => $row['golongan_darah'] ?? null,
             'status_pernikahan' => $row['status_pernikahan'] ?? null,
+            'nama_ayah'         => $row['nama_ayah'] ?? null,
+            'nama_ibu'          => $row['nama_ibu'] ?? null,
+            'pendidikan_terakhir' => $row['pendidikan_terakhir'] ?? null,
+            'pekerjaan_utama'   => $row['pekerjaan_utama'] ?? null,
             'alamat_lengkap'    => $row['alamat_lengkap'] ?? null,
             'telepon'           => $row['telepon'] ?? null,
             'email'             => $row['email'] ?? null,
             'sektor_pelayanan'  => $row['sektor_pelayanan'] ?? null,
             'unit_pelayanan'    => $row['unit_pelayanan'] ?? null,
-            'tanggal_baptis'    => $this->transformDate($row['tanggal_baptis_yyyymmdd'] ?? null),
+            'tanggal_baptis'    => $this->transformDate($row['tanggal_baptis_yyyymmdd'] ?? null), // Sesuaikan header
             'tempat_baptis'     => $row['tempat_baptis'] ?? null,
-            'tanggal_sidi'      => $this->transformDate($row['tanggal_sidi_yyyymmdd'] ?? null),
+            'tanggal_sidi'      => $this->transformDate($row['tanggal_sidi_yyyymmdd'] ?? null), // Sesuaikan header
             'tempat_sidi'       => $row['tempat_sidi'] ?? null,
-            'status_keanggotaan'=> $row['status_keanggotaan_aktif_tidak_aktif_pindah_meninggal'] ?? 'Aktif', // Default
-            'tanggal_masuk_jemaat' => $this->transformDate($row['tanggal_masuk_jemaat_yyyymmdd'] ?? null),
+            'tanggal_masuk_jemaat' => $this->transformDate($row['tanggal_masuk_jemaat_yyyymmdd'] ?? null), // Sesuaikan header
+            'status_keanggotaan'=> $row['status_keanggotaan_aktif_tidak_aktif_pindah_meninggal'] ?? 'Aktif', // Sesuaikan header
             'asal_gereja_sebelumnya' => $row['asal_gereja_sebelumnya'] ?? null,
             'nomor_atestasi'    => $row['nomor_atestasi'] ?? null,
+            'jabatan_pelayan_khusus' => $row['jabatan_pelayan_khusus'] ?? null,
+            'wadah_kategorial' => $row['wadah_kategorial'] ?? null,
+            'keterlibatan_lain' => $row['keterlibatan_lain'] ?? null,
+            'nama_kepala_keluarga' => $row['nama_kepala_keluarga'] ?? null,
             'status_pekerjaan_kk' => $row['status_pekerjaan_kk'] ?? null,
+            'sektor_pekerjaan_kk' => $row['sektor_pekerjaan_kk'] ?? null,
             'status_kepemilikan_rumah' => $row['status_kepemilikan_rumah'] ?? null,
+            'sumber_penerangan' => $row['sumber_penerangan'] ?? null,
+            'sumber_air_minum' => $row['sumber_air_minum'] ?? null,
             'perkiraan_pendapatan_keluarga' => $row['perkiraan_pendapatan_keluarga'] ?? null,
             'catatan'           => $row['catatan'] ?? null,
-            // ... tambahkan field lain ...
         ];
     }
 
@@ -130,83 +168,66 @@ class AnggotaJemaatImport implements
     {
         if (empty($value)) return null;
         try {
-            // Handle jika formatnya angka serial Excel
             if (is_numeric($value)) {
-                return \Carbon\Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value))->format('Y-m-d');
+                return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value))->format('Y-m-d');
             }
-            // Coba parse format umum
-            return \Carbon\Carbon::parse($value)->format('Y-m-d');
+            return Carbon::parse($value)->format('Y-m-d');
         } catch (\Exception $e) {
-            Log::error("Failed to parse date: " . $value . " Error: " . $e->getMessage());
-            return null; // Gagal parse, kembalikan null
+            Log::warning("Gagal parse tanggal saat import: " . $value . " Error: " . $e->getMessage());
+            return null;
         }
     }
 
 
     /**
      * Aturan validasi per baris.
-     * Sesuaikan key array dengan header di file Excel/CSV (lowercase, underscore).
      */
     public function rules(): array
     {
+        // ** PENTING: Sesuaikan key array dengan nama header di file Excel Anda **
         return [
-            // 'id_jemaat_wajib_diisi_saat_import' => ['required', 'integer', Rule::exists('jemaat', 'id')], // Validasi Jemaat ID
-             '*.id_jemaat_wajib_diisi_saat_import' => ['required', 'integer', Rule::exists('jemaat', 'id')], // Validasi Jemaat ID per baris
-            // 'nik' => ['nullable', 'string', 'max:20', Rule::unique('anggota_jemaat', 'nik')->ignore($this->existingAnggotaId)], // Unique rule kompleks jika update
-             '*.nik' => ['nullable', 'string', 'max:20'], // Validasi NIK unik ditangani di logic model()
-             '*.nama_lengkap_wajib' => ['required', 'string', 'max:255'],
-             '*.tanggal_lahir_yyyymmdd' => ['nullable'], // Validasi format tanggal di transformDate
-             '*.jenis_kelamin_lakilakiperempuan' => ['nullable', Rule::in(['Laki-laki', 'Perempuan'])],
-             '*.status_keanggotaan_aktif_tidak_aktif_pindah_meninggal' => ['required', Rule::in(['Aktif', 'Tidak Aktif', 'Pindah', 'Meninggal'])],
-             '*.email' => ['nullable', 'email', 'max:255'],
-            // ... tambahkan aturan validasi untuk field lain ...
-             '*.tanggal_baptis_yyyymmdd' => ['nullable'],
-             '*.tanggal_sidi_yyyymmdd' => ['nullable'],
-             '*.tanggal_masuk_jemaat_yyyymmdd' => ['nullable'],
+            '*.id_jemaat_wajib_diisi_saat_import' => ['required', 'integer', Rule::exists('jemaat', 'id')],
+            '*.nik' => ['nullable', 'string', 'max:20'], // Unique di logic model()
+            '*.nomor_buku_induk' => ['nullable', 'string', 'max:50'], // Unique di logic model()
+            '*.nama_lengkap_wajib' => ['required', 'string', 'max:255'],
+            '*.nomor_kk' => ['nullable', 'string', 'max:50'], // <-- Tambah validasi
+            '*.status_dalam_keluarga' => ['nullable', 'string', 'max:50'], // <-- Tambah validasi
+            '*.tanggal_lahir_yyyymmdd' => ['nullable'], // Format di transformDate
+            '*.jenis_kelamin_lakilakiperempuan' => ['nullable', Rule::in(['Laki-laki', 'Perempuan'])],
+            '*.status_keanggotaan_aktif_tidak_aktif_pindah_meninggal' => ['required', Rule::in(['Aktif', 'Tidak Aktif', 'Pindah', 'Meninggal'])],
+            '*.email' => ['nullable', 'email', 'max:255'], // Unique rule mungkin perlu jika ingin sync ke users table
+            '*.tanggal_baptis_yyyymmdd' => ['nullable'],
+            '*.tanggal_sidi_yyyymmdd' => ['nullable'],
+            '*.tanggal_masuk_jemaat_yyyymmdd' => ['nullable'],
         ];
     }
 
     /**
-     * Pesan error custom untuk validasi.
+     * Pesan error custom.
      */
     public function customValidationMessages()
     {
+         // ** PENTING: Sesuaikan key array dengan nama header di file Excel Anda **
         return [
-            '*.id_jemaat_wajib_diisi_saat_import.required' => 'Kolom ID Jemaat wajib diisi.',
-            '*.id_jemaat_wajib_diisi_saat_import.exists' => 'ID Jemaat tidak ditemukan di database.',
-            '*.nama_lengkap_wajib.required' => 'Kolom Nama Lengkap wajib diisi.',
-            '*.status_keanggotaan_aktif_tidak_aktif_pindah_meninggal.required' => 'Kolom Status Keanggotaan wajib diisi.',
-            '*.status_keanggotaan_aktif_tidak_aktif_pindah_meninggal.in' => 'Status Keanggotaan tidak valid.',
+            '*.id_jemaat_wajib_diisi_saat_import.required' => 'Header [id_jemaat_wajib_diisi_saat_import] wajib diisi.',
+            '*.id_jemaat_wajib_diisi_saat_import.exists' => 'ID Jemaat di [id_jemaat_wajib_diisi_saat_import] tidak ditemukan.',
+            '*.nama_lengkap_wajib.required' => 'Header [nama_lengkap_wajib] wajib diisi.',
+            '*.status_keanggotaan_aktif_tidak_aktif_pindah_meninggal.*' => 'Status Keanggotaan tidak valid.',
             '*.jenis_kelamin_lakilakiperempuan.in' => 'Jenis Kelamin tidak valid.',
             '*.email.email' => 'Format Email tidak valid.',
+            // Tambahkan pesan custom untuk nomor_kk dan status_dalam_keluarga jika perlu
         ];
     }
 
+    // --- function batchSize & chunkSize tetap sama ---
+    public function batchSize(): int { return 100; }
+    public function chunkSize(): int { return 1000; }
 
-    /**
-     * Ukuran batch insert.
-     */
-    public function batchSize(): int
-    {
-        return 100; // Proses 100 baris per query insert
-    }
-
-    /**
-     * Ukuran chunk reading.
-     */
-    public function chunkSize(): int
-    {
-        return 1000; // Baca 1000 baris dari file per batch
-    }
-
-    /**
-     * Hitung jumlah field yang terisi (tidak null & tidak string kosong).
-     */
+    // --- function countFilledFields tetap sama ---
     private function countFilledFields(array $data): int
     {
         $filledCount = 0;
-        // Kolom yg diabaikan dalam perhitungan (misal ID internal, timestamp)
-        $ignoreKeys = ['id', 'created_at', 'updated_at'];
+        $ignoreKeys = ['id', 'created_at', 'updated_at', 'deleted_at'];
 
         foreach ($data as $key => $value) {
             if (!in_array($key, $ignoreKeys) && $value !== null && $value !== '') {
@@ -216,10 +237,4 @@ class AnggotaJemaatImport implements
         return $filledCount;
     }
 
-    // Jika ingin menangani error spesifik per baris
-    // public function onError(Throwable $e)
-    // {
-    //     // Tangani error, bisa log atau simpan pesan error
-    //     Log::error("Error importing row: " . $e->getMessage());
-    // }
 }

@@ -25,8 +25,6 @@ class UserController extends Controller
         $this->middleware('role:Super Admin'); // Hanya Super Admin yang boleh kelola user
     }
 
-    // ... (sisa method index, create, store, show, edit, update, destroy tetap sama) ...
-
     /**
      * Display a listing of the resource.
      */
@@ -44,7 +42,8 @@ class UserController extends Controller
 
         $users = $query->paginate(15)->appends($request->query());
 
-        return view('admin.user.index', compact('users')); // Gunakan folder 'user' (singular)
+        // Kembali ke 'admin.user.index' (singular)
+        return view('admin.user.index', compact('users'));
     }
 
     /**
@@ -63,7 +62,8 @@ class UserController extends Controller
         $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id'); // TODO: Filter by klasis via JS
         $pendetaOptions = Pendeta::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
 
-        return view('admin.user.create', compact('roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions')); // Gunakan folder 'user'
+        // Kembali ke 'admin.user.create' (singular)
+        return view('admin.user.create', compact('roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions'));
     }
 
     /**
@@ -100,10 +100,12 @@ class UserController extends Controller
 
             $user->syncRoles($rolesToSync);
 
+            // Kembali ke 'admin.users.index' (plural untuk route name)
             return redirect()->route('admin.users.index')->with('success', 'User baru berhasil dibuat.');
 
         } catch (\Exception $e) {
              Log::error('Gagal membuat user baru: ' . $e->getMessage());
+              // Kembali ke 'admin.users.create' (plural untuk route name)
              return redirect()->route('admin.users.create')
                               ->with('error', 'Gagal membuat user baru. Error: ' . $e->getMessage())
                               ->withInput();
@@ -116,7 +118,8 @@ class UserController extends Controller
     public function show(User $user)
     {
         $user->load(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta']);
-        return view('admin.user.show', compact('user')); // Gunakan folder 'user'
+        // Kembali ke 'admin.user.show' (singular)
+        return view('admin.user.show', compact('user'));
     }
 
     /**
@@ -124,7 +127,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        $roles = Role::pluck('name', 'name'); 
+        $roles = Role::pluck('name', 'name');
         // Jika user bukan ID 1, jangan tampilkan opsi Super Admin
         if (Auth::check() && Auth::id() != 1) {
             $roles = Role::where('name', '!=', 'Super Admin')->pluck('name', 'name');
@@ -135,7 +138,8 @@ class UserController extends Controller
         $pendetaOptions = Pendeta::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
         $userRoles = $user->roles->pluck('name')->toArray();
 
-        return view('admin.user.edit', compact('user', 'roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions', 'userRoles')); // Gunakan folder 'user'
+        // Kembali ke 'admin.user.edit' (singular)
+        return view('admin.user.edit', compact('user', 'roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions', 'userRoles'));
     }
 
     /**
@@ -180,11 +184,12 @@ class UserController extends Controller
             }
 
             $user->syncRoles($rolesToSync);
-
+             // Kembali ke 'admin.users.index' (plural untuk route name)
             return redirect()->route('admin.users.index')->with('success', 'Data user berhasil diperbarui.');
 
         } catch (\Exception $e) {
              Log::error('Gagal update user ID: ' . $user->id . '. Error: '. $e->getMessage());
+              // Kembali ke 'admin.users.edit' (plural untuk route name)
              return redirect()->route('admin.users.edit', $user->id)
                               ->with('error', 'Gagal memperbarui data user. Error: ' . $e->getMessage())
                               ->withInput();
@@ -196,21 +201,25 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        if ($user->id == 1) { 
+        if ($user->id == 1) {
+             // Kembali ke 'admin.users.index' (plural untuk route name)
              return redirect()->route('admin.users.index')->with('error', 'User Super Admin utama (ID 1) tidak dapat dihapus.');
         }
 
-        if ($user->pendeta_id) {
-             return redirect()->route('admin.users.index')->with('error', 'User ini terhubung ke Data Pendeta. Hapus Data Pendeta terkait untuk menghapus user ini.');
-        }
+        // Cek relasi sebelum hapus (opsional tapi bagus)
+        // if ($user->pendeta_id) {
+        //      return redirect()->route('admin.users.index')->with('error', 'User ini terhubung ke Data Pendeta. Hapus Data Pendeta terkait untuk menghapus user ini.');
+        // }
 
         try {
             $userName = $user->name;
             $user->delete();
+             // Kembali ke 'admin.users.index' (plural untuk route name)
             return redirect()->route('admin.users.index')->with('success', 'User (' . $userName . ') berhasil dihapus.');
 
         } catch (\Exception $e) {
              Log::error('Gagal hapus user ID: ' . $user->id . '. Error: ' . $e->getMessage());
+              // Kembali ke 'admin.users.index' (plural untuk route name)
              return redirect()->route('admin.users.index')
                               ->with('error', 'Gagal menghapus user. Error: ' . $e->getMessage());
         }

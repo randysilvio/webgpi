@@ -23,9 +23,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'pendeta_id', // <-- Tambahkan ini untuk relasi ke Pendeta
-        'klasis_id',  // <-- Tambahkan ini jika Admin Klasis dikaitkan via user
-        'jemaat_id',  // <-- Tambahkan ini jika Admin Jemaat dikaitkan via user
+        'pendeta_id', // <-- Sudah ada
+        'klasis_id',  // <-- Sudah ada
+        'jemaat_id',  // <-- Sudah ada
     ];
 
     /**
@@ -53,7 +53,8 @@ class User extends Authenticatable
      */
     public function pendeta()
     {
-        return $this->belongsTo(Pendeta::class);
+        // Pastikan foreign key 'pendeta_id' benar
+        return $this->belongsTo(Pendeta::class, 'pendeta_id');
     }
 
     /**
@@ -61,6 +62,7 @@ class User extends Authenticatable
       */
      public function klasisTugas()
      {
+         // Pastikan foreign key 'klasis_id' benar
          return $this->belongsTo(Klasis::class, 'klasis_id');
      }
 
@@ -69,6 +71,7 @@ class User extends Authenticatable
        */
       public function jemaatTugas()
       {
+          // Pastikan foreign key 'jemaat_id' benar
           return $this->belongsTo(Jemaat::class, 'jemaat_id');
       }
 }

@@ -36,8 +36,8 @@
             <div class="p-3 rounded-full bg-blue-100 text-primary"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg></div>
             <div>
                 <p class="text-sm text-gray-500 font-medium">Total Anggota Aktif</p>
-                {{-- Tampilkan statistik jika ada --}}
                 <p class="text-2xl font-bold text-gray-900">
+                    {{-- Menampilkan statistik anggota yang paling relevan --}}
                     {{ $stats['total_anggota'] ?? ($stats['total_anggota_di_klasis'] ?? ($stats['total_anggota_di_jemaat'] ?? '-')) }}
                 </p>
             </div>
@@ -46,6 +46,7 @@
         <div class="bg-white rounded-lg shadow p-6 flex items-center space-x-4 border-l-4 border-accent"> <div class="p-3 rounded-full bg-green-100 text-accent"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" /></svg></div>
             <div>
                 <p class="text-sm text-gray-500 font-medium">Total Jemaat</p>
+                {{-- Menampilkan statistik jemaat yang paling relevan --}}
                 <p class="text-2xl font-bold text-gray-900">{{ $stats['total_jemaat'] ?? ($stats['total_jemaat_di_klasis'] ?? '-') }}</p>
             </div>
         </div>
@@ -53,14 +54,14 @@
          <div class="bg-white rounded-lg shadow p-6 flex items-center space-x-4 border-l-4 border-secondary"> <div class="p-3 rounded-full bg-orange-100 text-secondary"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg></div>
             <div>
                 <p class="text-sm text-gray-500 font-medium">Total Pendeta Aktif</p>
-                <p class="text-2xl font-bold text-gray-900">{{ $stats['total_pendeta'] ?? '-' }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ $stats['total_pendeta'] ?? '-' }}</p> {{-- Hanya relevan untuk Super Admin --}}
             </div>
         </div>
         {{-- Card Klasis --}}
          <div class="bg-white rounded-lg shadow p-6 flex items-center space-x-4 border-l-4 border-purple-500"> <div class="p-3 rounded-full bg-purple-100 text-purple-600"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h6M9 11.25h6m-6 4.5h6M6.75 21v-2.25a2.25 2.25 0 0 1 2.25-2.25h6a2.25 2.25 0 0 1 2.25 2.25V21" /></svg></div>
             <div>
                 <p class="text-sm text-gray-500 font-medium">Total Klasis</p>
-                <p class="text-2xl font-bold text-gray-900">{{ $stats['total_klasis'] ?? '-' }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ $stats['total_klasis'] ?? '-' }}</p> {{-- Hanya relevan untuk Super Admin --}}
             </div>
         </div>
     </div>
@@ -79,6 +80,35 @@
                 <a href="{{ route('admin.settings') }}" class="block hover:underline">- Pengaturan Situs</a>
                 <a href="{{ route('admin.pendeta.index') }}" class="block hover:underline">- Kelola Data Pendeta</a>
                 <a href="{{ route('admin.klasis.index') }}" class="block hover:underline">- Kelola Data Klasis</a>
+                <a href="{{ route('admin.jemaat.index') }}" class="block hover:underline">- Kelola Data Jemaat</a>
+            </div>
+        </div>
+        @endhasrole
+
+         {{-- === KONTEN KHUSUS ADMIN BIDANG 1 === --}}
+        @hasrole('Admin Bidang 1')
+        <div class="bg-gradient-to-r from-rose-500 to-pink-500 p-6 rounded-lg shadow-lg text-white"> {{-- Ganti Warna --}}
+            <h3 class="text-lg font-semibold mb-3 border-b border-rose-300 pb-2">Panel Admin Bidang 1</h3>
+            <p class="text-sm mb-4">Akses lihat data pelayanan dan pendidikan.</p>
+            <div class="space-y-2 text-sm">
+                <a href="{{ route('admin.pendeta.index') }}" class="block hover:underline">- Lihat Data Pendeta</a>
+                <a href="{{ route('admin.klasis.index') }}" class="block hover:underline">- Lihat Data Klasis</a>
+                <a href="{{ route('admin.jemaat.index') }}" class="block hover:underline">- Lihat Data Jemaat</a>
+                <a href="{{ route('admin.anggota-jemaat.index') }}" class="block hover:underline">- Lihat Data Anggota</a>
+                {{-- Tambahkan link modul pendidikan nanti --}}
+            </div>
+        </div>
+        @endhasrole
+
+         {{-- === KONTEN KHUSUS ADMIN BIDANG 2 === --}}
+        @hasrole('Admin Bidang 2')
+        <div class="bg-gradient-to-r from-orange-500 to-amber-500 p-6 rounded-lg shadow-lg text-white"> {{-- Ganti Warna --}}
+            <h3 class="text-lg font-semibold mb-3 border-b border-orange-300 pb-2">Panel Admin Bidang 2</h3>
+            <p class="text-sm mb-4">Akses lihat data keuangan dan pembangunan.</p>
+            <div class="space-y-2 text-sm">
+                 <a href="{{ route('admin.klasis.index') }}" class="block hover:underline">- Lihat Data Klasis</a>
+                 <a href="{{ route('admin.jemaat.index') }}" class="block hover:underline">- Lihat Data Jemaat</a>
+                 {{-- Tambahkan link modul aset/keuangan nanti --}}
             </div>
         </div>
         @endhasrole
@@ -105,7 +135,8 @@
             <div class="space-y-2 text-sm">
                 <a href="{{ route('admin.posts.index') }}" class="block hover:underline">- Manajemen Berita</a>
                 <a href="{{ route('admin.services.index') }}" class="block hover:underline">- Manajemen Layanan</a>
-                <a href="{{ route('admin.messages.index') }}" class="block hover:underline">- Pesan Masuk</a>
+                 {{-- 👇👇👇 Perbaikan nama route di sini 👇👇👇 --}}
+                <a href="{{ route('admin.messages') }}" class="block hover:underline">- Pesan Masuk</a>
                 <a href="{{ route('admin.settings') }}" class="block hover:underline">- Pengaturan Situs</a>
             </div>
         </div>
@@ -173,7 +204,8 @@
         @endhasrole
 
         {{-- === KONTEN UMUM / FALLBACK JIKA TIDAK ADA ROLE DI ATAS === --}}
-        @if($user && !$user->hasAnyRole(['Super Admin', 'Admin Bidang 3', 'Admin Bidang 4', 'Admin Klasis', 'Admin Jemaat', 'Pendeta']))
+        {{-- Memastikan $user ada sebelum memanggil method hasAnyRole --}}
+        @if($user && !$user->hasAnyRole(['Super Admin', 'Admin Bidang 1', 'Admin Bidang 2', 'Admin Bidang 3', 'Admin Bidang 4', 'Admin Klasis', 'Admin Jemaat', 'Pendeta']))
         <div class="bg-white p-6 rounded-lg shadow md:col-span-2 lg:col-span-3">
             <h3 class="text-lg font-semibold text-gray-700 mb-2">Informasi</h3>
             <p class="text-gray-600 text-sm">Dashboard Anda sedang dalam pengembangan atau Anda belum memiliki akses ke modul khusus.</p>
