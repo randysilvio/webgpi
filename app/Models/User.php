@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles; // <-- Pastikan ini ada
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsTo; // <-- Tambahan Import
 
 class User extends Authenticatable
 {
-    // Tambahkan HasRoles agar bisa pakai $user->assignRole() / $user->hasRole()
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
@@ -23,9 +23,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'pendeta_id', // <-- Tambahkan ini untuk relasi ke Pendeta
-        'klasis_id',  // <-- Tambahkan ini jika Admin Klasis dikaitkan via user
-        'jemaat_id',  // <-- Tambahkan ini jika Admin Jemaat dikaitkan via user
+        'pendeta_id',
+        'klasis_id',
+        'jemaat_id',
+        'jenis_wadah_id', // <-- Tambahan: Kolom baru untuk Pengurus Wadah
     ];
 
     /**
@@ -51,15 +52,15 @@ class User extends Authenticatable
     /**
      * Get the pendeta record associated with the user.
      */
-    public function pendeta()
+    public function pendeta(): BelongsTo
     {
-        return $this->belongsTo(Pendeta::class);
+        return $this->belongsTo(Pendeta::class, 'pendeta_id');
     }
 
     /**
       * Get the klasis record associated with the user (if Admin Klasis).
       */
-     public function klasisTugas()
+     public function klasisTugas(): BelongsTo
      {
          return $this->belongsTo(Klasis::class, 'klasis_id');
      }
@@ -67,8 +68,17 @@ class User extends Authenticatable
       /**
        * Get the jemaat record associated with the user (if Admin Jemaat).
        */
-      public function jemaatTugas()
+      public function jemaatTugas(): BelongsTo
       {
           return $this->belongsTo(Jemaat::class, 'jemaat_id');
       }
+
+    /**
+     * Relasi ke Jenis Wadah Kategorial.
+     * Digunakan jika user adalah Pengurus Wadah (misal: Ketua PAR).
+     */
+    public function jenisWadah(): BelongsTo
+    {
+        return $this->belongsTo(JenisWadahKategorial::class, 'jenis_wadah_id');
+    }
 }

@@ -45,4 +45,17 @@ class Jemaat extends Model
     {
         return $this->hasMany(Pendeta::class, 'jemaat_penempatan_id');
     }
+
+    // ===================================================================
+    // || RELASI BARU DITAMBAHKAN ||
+    // ===================================================================
+
+    /**
+     * Mendapatkan semua akun User yang terhubung dengan Jemaat ini
+     * (misal: Admin Jemaat).
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class, 'jemaat_id');
+    }
 }

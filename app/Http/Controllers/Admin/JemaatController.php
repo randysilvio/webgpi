@@ -447,10 +447,16 @@ class JemaatController extends Controller
         // Export data normal
         try {
             $fileName = 'jemaat_gpi_papua_' . date('YmdHis') . '.xlsx';
-            // TODO: Tambahkan scoping data export untuk Admin Klasis jika perlu
-            // $klasisId = Auth::user()->hasRole('Admin Klasis') ? Auth::user()->klasis_id : null;
-            // return Excel::download(new JemaatExport($klasisId), $fileName);
-            return Excel::download(new JemaatExport, $fileName); // Sementara export semua
+            
+            // --- Scoping Export Diaktifkan ---
+            // Implementasi Scoping: Admin Klasis hanya export Jemaat di Klasisnya
+            $user = Auth::user();
+            $klasisId = $user->hasRole('Admin Klasis') ? $user->klasis_id : null;
+            
+            // Note: Pastikan JemaatExport() sudah di-update untuk menerima ?int $klasisId
+            return Excel::download(new JemaatExport($klasisId), $fileName);
+            // --- Akhir Scoping Export ---
+
         } catch (\Exception $e) {
              Log::error('Gagal export Jemaat: ' . $e->getMessage());
              return redirect()->route('admin.jemaat.index')
@@ -478,11 +484,15 @@ class JemaatController extends Controller
         $file = $request->file('import_file');
 
         try {
-            // TODO: Tambahkan scoping untuk Admin Klasis jika perlu saat import
-            // $klasisId = Auth::user()->hasRole('Admin Klasis') ? Auth::user()->klasis_id : null;
-            // $import = new JemaatImport($klasisId);
-            $import = new JemaatImport(); // Sementara izinkan import ke semua klasis
+            // --- Scoping Import Diaktifkan ---
+            // Implementasi Scoping: Admin Klasis hanya import Jemaat ke Klasisnya
+            $user = Auth::user();
+            $klasisId = $user->hasRole('Admin Klasis') ? $user->klasis_id : null;
+            
+            // Note: Pastikan JemaatImport() sudah di-update untuk menerima ?int $klasisId
+            $import = new JemaatImport($klasisId); 
             Excel::import($import, $file);
+            // --- Akhir Scoping Import ---
 
             $failures = $import->failures();
             if ($failures->isNotEmpty()) {
@@ -505,6 +515,9 @@ class JemaatController extends Controller
              Log::error($errorMessage);
              if ($errorCount > 10) { $errorMessage = "Gagal import karena {$errorCount} kesalahan validasi (10 error pertama):\n" . implode("\n", array_slice($errorRows, 0, 10)) . "\n... (cek log)";}
              return redirect()->back()->with('error', $errorMessage);
+        } catch (\InvalidArgumentException $e) { // <-- Tangkap error jika import dibatasi scope
+             Log::error('Gagal import Jemaat karena pembatasan scope: ' . $e->getMessage());
+             return redirect()->back()->with('error', $e->getMessage()); // Tampilkan pesan error dari Import Class
         } catch (\Exception $e) {
              // Handle general exception
              Log::error('Gagal import Jemaat: ' . $e->getMessage());

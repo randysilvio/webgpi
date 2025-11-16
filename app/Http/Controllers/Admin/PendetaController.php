@@ -1,49 +1,130 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+// app/Http/Controllers/Admin/PendetaController.php
 
 use App\Http\Controllers\Controller;
 use App\Models\Pendeta;
-use App\Models\User; // Tambahkan User model
-use App\Models\Klasis; // Tambahkan Klasis model untuk dropdown
-use App\Models\Jemaat; // Tambahkan Jemaat model untuk dropdown
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash; // Tambahkan Hash
-use Illuminate\Support\Facades\Log; // Tambahkan Log untuk debugging
-use Illuminate\Database\QueryException; // Tambahkan QueryException
-use Illuminate\Support\Facades\Storage; // Untuk menghapus file foto jika ada
-use Illuminate\Support\Facades\Auth; // Untuk scoping (jika login aktif)
-use Maatwebsite\Excel\Facades\Excel; // <-- Tambahkan
-use App\Exports\PendetaExport; // <-- Tambahkan
-use App\Imports\PendetaImport; // <-- Tambahkan
-use Maatwebsite\Excel\Validators\ValidationException; // <-- Tambahkan
-use Maatwebsite\Excel\Concerns\FromCollection; // <-- Tambahkan
+use App\Models\User;
+use App\Models\Klasis; // <-- Diperlukan untuk filter
+use App\Models\Jemaat; // <-- Diperlukan untuk filter
+use Illuminate\Http\Request; // <-- Pastikan Request di-use
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth; // <-- Pastikan Auth di-use
+use Maatwebsite\Excel\Facades\Excel;
+// use App\Exports\PendetaExport; // Diganti di bawah
+// use App\Imports\PendetaImport; // Diganti di bawah
+use App\Exports\PendetaExport; // <-- Pastikan namespace benar
+use App\Imports\PendetaImport; // <-- Pastikan namespace benar
+use Maatwebsite\Excel\Validators\ValidationException;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Spatie\Permission\Models\Role; // <-- Import Role
+use Illuminate\Support\Facades\DB; // <-- Import DB Facade for transaction
+use Illuminate\Validation\Rule; // <-- Import Rule for unique validation update
+use Illuminate\Support\Str; // <-- Import Str Facade
 
 class PendetaController extends Controller
 {
-    // Middleware untuk hak akses (Contoh)
+    // Middleware untuk hak akses
     public function __construct()
     {
-        // KOMENTARI SEMUA MIDDLEWARE SEMENTARA
-        // $this->middleware(['auth']);
-
-        // Izinkan Super Admin dan Admin Bidang 3 mengelola data Pendeta
-        // Sesuaikan permission atau role sesuai implementasi Spatie Anda
-        // $this->middleware('role:Super Admin|Admin Bidang 3')->except(['show', 'index']); // <-- KOMENTARI INI
-        // Mungkin role 'Pendeta' bisa melihat show? Atau role lain? Sesuaikan.
-        // $this->middleware('permission:view pendeta')->only('show');
-        // $this->middleware('role:Super Admin|Admin Bidang 3|Admin Klasis|Admin Jemaat|Pendeta')->only(['index', 'show']);
+        $this->middleware(['auth']);
+        // Hak akses untuk CRUD (kecuali index/show) hanya Super Admin & Admin Bidang 3
+        $this->middleware('role:Super Admin|Admin Bidang 3')->except(['show', 'index']);
+        // Hak akses untuk melihat index/show lebih luas
+        $this->middleware('role:Super Admin|Admin Bidang 3|Admin Klasis|Admin Jemaat|Pendeta')->only(['index', 'show']);
+        // Tambahkan hak akses spesifik untuk import/export jika perlu (misal, tidak untuk Pendeta biasa)
+        // $this->middleware('role:Super Admin|Admin Bidang 3|Admin Klasis|Admin Jemaat')->only(['showImportForm', 'import', 'export']);
     }
 
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request) // Tambahkan Request
+    public function index(Request $request)
     {
-        $query = Pendeta::with(['klasisPenempatan', 'jemaatPenempatan'])->latest(); // Eager load
+        // --- Query dasar ---
+        $query = Pendeta::with(['klasisPenempatan', 'jemaatPenempatan', 'user'])->latest(); // Tambahkan 'user'
+        $user = Auth::user();
 
-        // Fitur Search Sederhana
-         if ($request->filled('search')) {
+        // --- Scoping Tampilan Data ---
+        if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
+            $query->where('klasis_penempatan_id', $user->klasis_id);
+        } elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
+             $query->where('jemaat_penempatan_id', $user->jemaat_id);
+        }
+        // Super Admin & Admin Bidang 3 bisa lihat semua (sesuai filter)
+        // Pendeta biasa bisa lihat semua (sesuai filter), atau bisa dibatasi hanya lihat diri sendiri jika perlu
+
+        // --- Opsi Filter ---
+        // Load opsi Klasis berdasarkan scope user
+        if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
+            $klasisFilterOptions = Klasis::where('id', $user->klasis_id)->pluck('nama_klasis', 'id');
+        } elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
+            // Admin Jemaat hanya bisa filter berdasarkan Klasis dari Jemaatnya
+            $jemaatUser = Jemaat::find($user->jemaat_id);
+            if ($jemaatUser && $jemaatUser->klasis_id) {
+                 $klasisFilterOptions = Klasis::where('id', $jemaatUser->klasis_id)->pluck('nama_klasis', 'id');
+            } else {
+                 $klasisFilterOptions = collect(); // Kosongkan jika tidak ada klasis
+            }
+        } else { // Super Admin, Admin Bidang, Pendeta
+            $klasisFilterOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
+        }
+
+        $jemaatFilterOptions = collect();
+        $statusOptions = Pendeta::select('status_kepegawaian')->distinct()->pluck('status_kepegawaian', 'status_kepegawaian');
+
+        // --- Terapkan Filter Request (dengan memperhatikan scope) ---
+        $selectedKlasisId = null; // Untuk load opsi jemaat
+        if ($request->filled('klasis_penempatan_id')) {
+            $klasisFilterId = filter_var($request->klasis_penempatan_id, FILTER_VALIDATE_INT);
+            // Hanya terapkan filter jika ID valid DAN sesuai scope user
+            if ($klasisFilterId && $klasisFilterOptions->has($klasisFilterId)) {
+                $query->where('klasis_penempatan_id', $klasisFilterId);
+                $selectedKlasisId = $klasisFilterId; // Simpan untuk load opsi Jemaat
+            }
+        } elseif ($user->hasRole('Admin Klasis') && $user->klasis_id) {
+             // Jika Admin Klasis tidak filter, defaultnya adalah klasisnya sendiri
+             $selectedKlasisId = $user->klasis_id;
+        } elseif ($user->hasRole('Admin Jemaat') && $jemaatUser && $jemaatUser->klasis_id) {
+             // Jika Admin Jemaat tidak filter, defaultnya adalah klasisnya
+             $selectedKlasisId = $jemaatUser->klasis_id;
+        }
+
+
+        // Load Opsi Jemaat hanya jika ada Klasis terpilih (baik dari filter atau scope)
+        if ($selectedKlasisId) {
+            $jemaatQuery = Jemaat::where('klasis_id', $selectedKlasisId);
+            // Jika user Admin Jemaat, hanya tampilkan Jemaatnya
+            if ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
+                $jemaatQuery->where('id', $user->jemaat_id);
+            }
+            $jemaatFilterOptions = $jemaatQuery->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
+        }
+
+
+        // Terapkan Filter Jemaat
+        if ($request->filled('jemaat_penempatan_id')) {
+            $jemaatFilterId = filter_var($request->jemaat_penempatan_id, FILTER_VALIDATE_INT);
+            // Hanya terapkan jika ID valid DAN ada di opsi yang di-load (sesuai scope Klasis/Jemaat)
+            if ($jemaatFilterId && $jemaatFilterOptions->has($jemaatFilterId)) {
+                $query->where('jemaat_penempatan_id', $jemaatFilterId);
+            }
+        }
+
+        // Terapkan Filter Status
+        if ($request->filled('status_kepegawaian')) {
+            $statusFilter = $request->status_kepegawaian;
+            if ($statusOptions->has($statusFilter)) {
+                $query->where('status_kepegawaian', $statusFilter);
+            }
+        }
+
+        // Terapkan Filter Search
+        if ($request->filled('search')) {
              $searchTerm = '%' . $request->search . '%';
              $query->where(function($q) use ($searchTerm) {
                  $q->where('nama_lengkap', 'like', $searchTerm)
@@ -51,9 +132,8 @@ class PendetaController extends Controller
              });
          }
 
-        // Ambil data pendeta dengan pagination
-        $pendetaData = $query->paginate(15)->appends($request->query()); // Ambil 15 data per halaman
-        return view('admin.pendeta.index', compact('pendetaData'));
+        $pendetaData = $query->paginate(15)->appends($request->query());
+        return view('admin.pendeta.index', compact('pendetaData', 'klasisFilterOptions', 'jemaatFilterOptions', 'statusOptions', 'request'));
     }
 
     /**
@@ -61,9 +141,9 @@ class PendetaController extends Controller
      */
     public function create()
     {
-        // Ambil data Klasis dan Jemaat untuk dropdown
         $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
-        $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id'); // Nanti bisa difilter
+        // Opsi Jemaat bisa di-load via JS/AJAX saat Klasis dipilih di form
+        $jemaatOptions = collect(); // Awalnya kosong
         return view('admin.pendeta.create', compact('klasisOptions', 'jemaatOptions'));
     }
 
@@ -85,153 +165,7 @@ class PendetaController extends Controller
             'golongan_darah' => 'nullable|string|max:5',
             'alamat_domisili' => 'nullable|string',
             'telepon' => 'nullable|string|max:20',
-            'email' => 'nullable|string|email|max:255|unique:users,email', // Validasi email unik di tabel users juga
-            'tanggal_tahbisan' => 'required|date',
-            'tempat_tahbisan' => 'required|string|max:255',
-            'nomor_sk_kependetaan' => 'nullable|string|max:100',
-            'status_kepegawaian' => 'required|string|max:50', // Sesuaikan dengan opsi Anda
-            'pendidikan_teologi_terakhir' => 'nullable|string|max:100',
-            'institusi_pendidikan_teologi' => 'nullable|string|max:150',
-            'golongan_pangkat_terakhir' => 'nullable|string|max:50',
-            'tanggal_mulai_masuk_gpi' => 'nullable|date',
-            'klasis_penempatan_id' => 'nullable|exists:klasis,id',
-            'jemaat_penempatan_id' => 'nullable|exists:jemaat,id',
-            'jabatan_saat_ini' => 'nullable|string|max:100',
-            'tanggal_mulai_jabatan_saat_ini' => 'nullable|date',
-            'foto_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validasi file foto
-            'catatan' => 'nullable|string',
-        ]);
-
-        // --- Handle File Upload Foto ---
-        if ($request->hasFile('foto_path')) {
-            $validatedData['foto_path'] = $request->file('foto_path')->store('pendeta_photos', 'public');
-        }
-
-        // --- Simpan Data Pendeta ---
-        $pendeta = null; // Inisialisasi variabel pendeta
-        try {
-            $pendeta = Pendeta::create($validatedData);
-
-            // --- Logika Buat User Otomatis ---
-            if ($pendeta) {
-                try {
-                    // Pastikan ada email atau buat logic jika email nullable
-                    // Jika email kosong & unik, coba pakai NIPG + domain dummy
-                    $emailToUse = $validatedData['email'] ?? $pendeta->nipg . '@gpipapua.local';
-                    // Cek lagi keunikan email dummy jika email asli tidak ada
-                    if (!isset($validatedData['email']) && User::where('email', $emailToUse)->exists()) {
-                         // Jika email dummy sudah ada, tambahkan suffix unik atau minta email asli
-                         Log::warning('Email dummy ' . $emailToUse . ' sudah ada untuk Pendeta ID: ' . $pendeta->id . '. Coba NIPG+ID.');
-                         $emailToUse = $pendeta->nipg . $pendeta->id . '@gpipapua.local'; // Tambah ID agar unik
-                    }
-
-                    $user = User::create([
-                        'name' => $pendeta->nama_lengkap,
-                        'email' => $emailToUse,
-                        // 'username' => $pendeta->nipg, // Alternatif jika login pakai username
-                        'password' => Hash::make($pendeta->nipg), // NIPG sebagai password awal
-                        'pendeta_id' => $pendeta->id,
-                    ]);
-
-                    // Assign role (Pastikan Role 'Pendeta' ada di DB)
-                    $rolePendeta = Role::where('name', 'Pendeta')->first();
-                    if ($rolePendeta) {
-                        $user->assignRole($rolePendeta);
-                    } else {
-                         Log::error('Role "Pendeta" tidak ditemukan saat membuat user otomatis untuk Pendeta ID: ' . $pendeta->id);
-                         // Pertimbangkan apa yg harus dilakukan? Hapus user & pendeta? Atau biarkan tanpa role?
-                         // Untuk sementara, biarkan user tanpa role 'Pendeta' tapi beri warning
-                         return redirect()->route('admin.pendeta.index')->with('warning', 'Data Pendeta berhasil dibuat, TAPI role "Pendeta" tidak ditemukan. Akun user dibuat tanpa role.');
-                    }
-
-
-                    Log::info('User otomatis dibuat untuk Pendeta ID: ' . $pendeta->id . ', User ID: ' . $user->id);
-
-                } catch (QueryException $e) {
-                    Log::error('Gagal membuat user otomatis untuk Pendeta ID: ' . ($pendeta->id ?? 'unknown') . '. Error: ' . $e->getMessage());
-                    // Hapus data pendeta yang baru dibuat karena user gagal
-                    if ($pendeta) {
-                        // Hapus foto jika sudah terupload
-                        if (isset($validatedData['foto_path']) && $validatedData['foto_path'] && Storage::disk('public')->exists($validatedData['foto_path'])) {
-                            Storage::disk('public')->delete($validatedData['foto_path']);
-                        }
-                        $pendeta->delete();
-                    }
-                    return redirect()->route('admin.pendeta.create')
-                                 ->with('error', 'Gagal menyimpan data Pendeta: Gagal membuat akun user terkait (Email mungkin sudah terdaftar atau tidak valid).')
-                                 ->withInput();
-                } catch (\Exception $e) {
-                     Log::error('Error lain saat membuat user otomatis: ' . $e->getMessage());
-                     if ($pendeta) {
-                         if (isset($validatedData['foto_path']) && $validatedData['foto_path'] && Storage::disk('public')->exists($validatedData['foto_path'])) {
-                             Storage::disk('public')->delete($validatedData['foto_path']);
-                         }
-                         $pendeta->delete(); // Rollback data pendeta
-                     }
-                     return redirect()->route('admin.pendeta.create')
-                                 ->with('error', 'Terjadi kesalahan saat membuat akun user.')
-                                 ->withInput();
-                }
-            } else {
-                 // Ini seharusnya tidak terjadi jika create berhasil, tapi sebagai fallback
-                 throw new \Exception("Gagal membuat record Pendeta.");
-            }
-
-            return redirect()->route('admin.pendeta.index')->with('success', 'Data Pendeta dan akun user berhasil ditambahkan.');
-
-        } catch (\Exception $e) {
-             Log::error('Gagal menyimpan data Pendeta: ' . $e->getMessage());
-             // Hapus file foto jika sudah terupload tapi penyimpanan DB gagal
-             if (isset($validatedData['foto_path']) && $validatedData['foto_path'] && Storage::disk('public')->exists($validatedData['foto_path'])) {
-                 Storage::disk('public')->delete($validatedData['foto_path']);
-             }
-             return redirect()->route('admin.pendeta.create')
-                                 ->with('error', 'Gagal menyimpan data Pendeta. Error: ' . $e->getMessage())
-                                 ->withInput();
-        }
-    }
-
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Pendeta $pendeta)
-    {
-         // Eager load relasi jika diperlukan
-         $pendeta->load(['klasisPenempatan', 'jemaatPenempatan', 'user']);
-         return view('admin.pendeta.show', compact('pendeta'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Pendeta $pendeta)
-    {
-        $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
-        $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id'); // Nanti bisa difilter
-        return view('admin.pendeta.edit', compact('pendeta', 'klasisOptions', 'jemaatOptions'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Pendeta $pendeta)
-    {
-        // --- Validasi Data Pendeta (mirip store, tapi unique rule diubah) ---
-         $validatedData = $request->validate([
-            'nama_lengkap' => 'required|string|max:255',
-            'nik' => 'nullable|string|max:20|unique:pendeta,nik,' . $pendeta->id, // Abaikan ID saat ini
-            'nipg' => 'required|string|max:50|unique:pendeta,nipg,' . $pendeta->id, // Abaikan ID saat ini
-            'tempat_lahir' => 'required|string|max:100',
-            'tanggal_lahir' => 'required|date',
-            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'status_pernikahan' => 'nullable|string|max:50',
-            'nama_pasangan' => 'nullable|string|max:255',
-            'golongan_darah' => 'nullable|string|max:5',
-            'alamat_domisili' => 'nullable|string',
-            'telepon' => 'nullable|string|max:20',
-            // Validasi email unik di users, abaikan user yang terhubung ke pendeta ini
-            'email' => 'nullable|string|email|max:255|unique:users,email,' . optional($pendeta->user)->id,
+            'email' => 'nullable|string|email|max:255|unique:users,email',
             'tanggal_tahbisan' => 'required|date',
             'tempat_tahbisan' => 'required|string|max:255',
             'nomor_sk_kependetaan' => 'nullable|string|max:100',
@@ -248,20 +182,157 @@ class PendetaController extends Controller
             'catatan' => 'nullable|string',
         ]);
 
-        // --- Handle File Upload Foto (Hapus yg lama jika ada baru) ---
+        // --- Handle File Upload Foto ---
+        $fotoPath = null;
         if ($request->hasFile('foto_path')) {
-            // Hapus foto lama jika ada
-            if ($pendeta->foto_path && Storage::disk('public')->exists($pendeta->foto_path)) {
-                Storage::disk('public')->delete($pendeta->foto_path);
+            $fotoPath = $request->file('foto_path')->store('pendeta_photos', 'public');
+        }
+        $validatedData['foto_path'] = $fotoPath;
+
+        // --- Gunakan DB Transaction ---
+        DB::beginTransaction();
+        try {
+            // --- Simpan Data Pendeta ---
+            $pendeta = Pendeta::create($validatedData);
+
+            // --- Logika Buat User Otomatis ---
+            $emailToUse = $validatedData['email'] ?? Str::lower($pendeta->nipg . '@gpipapua.local');
+            if (!isset($validatedData['email'])) {
+                 $counter = 1;
+                 while (User::where('email', $emailToUse)->exists()) {
+                     $emailToUse = Str::lower($pendeta->nipg . '_' . $counter . '@gpipapua.local');
+                     $counter++;
+                     if ($counter > 5) { // Batasi percobaan
+                        throw new \Exception("Gagal membuat user: Terlalu banyak email fallback yang sama untuk NIPG {$pendeta->nipg}.");
+                     }
+                 }
+            } elseif (User::where('email', $emailToUse)->exists()) {
+                 // Ini seharusnya sudah dicegah validasi, tapi double check
+                 throw new \Exception("Gagal membuat user: Email {$emailToUse} sudah digunakan.");
             }
-            $validatedData['foto_path'] = $request->file('foto_path')->store('pendeta_photos', 'public');
+
+
+            $user = User::create([
+                'name' => $pendeta->nama_lengkap,
+                'email' => $emailToUse,
+                'password' => Hash::make($pendeta->nipg),
+                'pendeta_id' => $pendeta->id,
+                'klasis_id' => $pendeta->klasis_penempatan_id,
+                'jemaat_id' => $pendeta->jemaat_penempatan_id,
+            ]);
+
+            $rolePendeta = Role::where('name', 'Pendeta')->first();
+            if ($rolePendeta) {
+                $user->assignRole($rolePendeta);
+            } else {
+                 Log::error('Role "Pendeta" tidak ditemukan.');
+                 DB::rollBack();
+                 if ($fotoPath && Storage::disk('public')->exists($fotoPath)) { Storage::disk('public')->delete($fotoPath); }
+                 return redirect()->route('admin.pendeta.create')->with('error', 'Gagal: Role "Pendeta" tidak ada.')->withInput();
+            }
+
+            Log::info('User otomatis dibuat (Pendeta ID: ' . $pendeta->id . ', User ID: ' . $user->id.')');
+            DB::commit();
+            return redirect()->route('admin.pendeta.index')->with('success', 'Data Pendeta & akun user berhasil dibuat.');
+
+        } catch (\Exception $e) {
+             DB::rollBack();
+             Log::error('Gagal simpan Pendeta (Rollback): ' . $e->getMessage());
+             if ($fotoPath && Storage::disk('public')->exists($fotoPath)) { Storage::disk('public')->delete($fotoPath); }
+             return redirect()->route('admin.pendeta.create')->with('error', 'Gagal menyimpan. Error: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Pendeta $pendeta)
+    {
+         // Scoping untuk show (jika perlu):
+         $user = Auth::user();
+         if (($user->hasRole('Admin Klasis') && $user->klasis_id != $pendeta->klasis_penempatan_id) ||
+             ($user->hasRole('Admin Jemaat') && $user->jemaat_id != $pendeta->jemaat_penempatan_id)) {
+            // Uncomment jika Admin Klasis/Jemaat hanya boleh lihat pendeta di scope nya
+            // abort(403, 'Anda tidak diizinkan melihat data pendeta ini.');
+         }
+         // Pendeta biasa mungkin hanya boleh lihat profil sendiri?
+         // if ($user->hasRole('Pendeta') && $user->pendeta_id != $pendeta->id) {
+         //     abort(403, 'Anda hanya dapat melihat profil Anda sendiri.');
+         // }
+
+
+         $pendeta->load(['klasisPenempatan', 'jemaatPenempatan', 'user']);
+         return view('admin.pendeta.show', compact('pendeta'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Pendeta $pendeta)
+    {
+        // Scoping edit (middleware sudah handle role Super Admin/Bidang 3)
+        $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
+        $jemaatOptions = collect();
+        if ($pendeta->klasis_penempatan_id) {
+            $jemaatOptions = Jemaat::where('klasis_id', $pendeta->klasis_penempatan_id)->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
+        }
+        return view('admin.pendeta.edit', compact('pendeta', 'klasisOptions', 'jemaatOptions'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Pendeta $pendeta)
+    {
+        // Scoping update (middleware sudah handle role)
+
+         $validatedData = $request->validate([
+            'nama_lengkap' => 'required|string|max:255',
+            'nik' => 'nullable|string|max:20|unique:pendeta,nik,' . $pendeta->id,
+            'nipg' => 'required|string|max:50|unique:pendeta,nipg,' . $pendeta->id,
+            'tempat_lahir' => 'required|string|max:100',
+            'tanggal_lahir' => 'required|date',
+            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
+            'status_pernikahan' => 'nullable|string|max:50',
+            'nama_pasangan' => 'nullable|string|max:255',
+            'golongan_darah' => 'nullable|string|max:5',
+            'alamat_domisili' => 'nullable|string',
+            'telepon' => 'nullable|string|max:20',
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore(optional($pendeta->user)->id)],
+            'tanggal_tahbisan' => 'required|date',
+            'tempat_tahbisan' => 'required|string|max:255',
+            'nomor_sk_kependetaan' => 'nullable|string|max:100',
+            'status_kepegawaian' => 'required|string|max:50',
+            'pendidikan_teologi_terakhir' => 'nullable|string|max:100',
+            'institusi_pendidikan_teologi' => 'nullable|string|max:150',
+            'golongan_pangkat_terakhir' => 'nullable|string|max:50',
+            'tanggal_mulai_masuk_gpi' => 'nullable|date',
+            'klasis_penempatan_id' => 'nullable|exists:klasis,id',
+            'jemaat_penempatan_id' => 'nullable|exists:jemaat,id',
+            'jabatan_saat_ini' => 'nullable|string|max:100',
+            'tanggal_mulai_jabatan_saat_ini' => 'nullable|date',
+            'foto_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'catatan' => 'nullable|string',
+        ]);
+
+        $fotoPathLama = $pendeta->foto_path;
+        $fotoPathBaru = null;
+
+        if ($request->hasFile('foto_path')) {
+            $fotoPathBaru = $request->file('foto_path')->store('pendeta_photos', 'public');
+            $validatedData['foto_path'] = $fotoPathBaru;
+        } else {
+             // Jika tidak ada file baru, jangan update path foto di DB
+             unset($validatedData['foto_path']);
         }
 
-        // --- Update Data Pendeta ---
+
+        DB::beginTransaction();
         try {
+            // Update Pendeta
             $pendeta->update($validatedData);
 
-            // --- Update Data User Terkait (jika ada perubahan relevan) ---
+            // Update User Terkait
             if ($pendeta->user) {
                 $userDataToUpdate = [];
                 if (isset($validatedData['nama_lengkap']) && $pendeta->user->name !== $validatedData['nama_lengkap']) {
@@ -269,98 +340,123 @@ class PendetaController extends Controller
                 }
                  if (isset($validatedData['email']) && $validatedData['email'] && $pendeta->user->email !== $validatedData['email']) {
                     $userDataToUpdate['email'] = $validatedData['email'];
-                }
-                // Update password jika NIPG berubah? (Hati-hati, mungkin tidak diinginkan)
-                // if (isset($validatedData['nipg']) && !Hash::check($validatedData['nipg'], $pendeta->user->password)) {
-                //     $userDataToUpdate['password'] = Hash::make($validatedData['nipg']);
-                // }
+                 }
+                 // Update penempatan
+                 if (array_key_exists('klasis_penempatan_id', $validatedData) && $pendeta->user->klasis_id !== $validatedData['klasis_penempatan_id']) {
+                     $userDataToUpdate['klasis_id'] = $validatedData['klasis_penempatan_id'];
+                 }
+                 if (array_key_exists('jemaat_penempatan_id', $validatedData) && $pendeta->user->jemaat_id !== $validatedData['jemaat_penempatan_id']) {
+                     $userDataToUpdate['jemaat_id'] = $validatedData['jemaat_penempatan_id'];
+                 }
 
                 if (!empty($userDataToUpdate)) {
                     $pendeta->user()->update($userDataToUpdate);
                 }
             }
 
+             if ($fotoPathBaru && $fotoPathLama && Storage::disk('public')->exists($fotoPathLama)) {
+                 Storage::disk('public')->delete($fotoPathLama);
+             }
+
+            DB::commit();
             return redirect()->route('admin.pendeta.index')->with('success', 'Data Pendeta berhasil diperbarui.');
 
         } catch (\Exception $e) {
-             Log::error('Gagal update data Pendeta ID: ' . $pendeta->id . '. Error: ' . $e->getMessage());
-             // Jangan hapus file baru jika update gagal, biarkan saja
-             return redirect()->route('admin.pendeta.edit', $pendeta->id)
-                                 ->with('error', 'Gagal memperbarui data Pendeta. Error: ' . $e->getMessage())
-                                 ->withInput();
+             DB::rollBack();
+             Log::error('Gagal update Pendeta ID: ' . $pendeta->id . '. Error: ' . $e->getMessage());
+             if ($fotoPathBaru && Storage::disk('public')->exists($fotoPathBaru)) { Storage::disk('public')->delete($fotoPathBaru); }
+             return redirect()->route('admin.pendeta.edit', $pendeta->id)->with('error', 'Gagal update. Error: ' . $e->getMessage())->withInput();
         }
     }
-
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Pendeta $pendeta)
     {
+         // Scoping destroy (middleware sudah handle role)
+         DB::beginTransaction();
          try {
              $fotoPath = $pendeta->foto_path;
-             $user = $pendeta->user; // Ambil user terkait
+             $user = $pendeta->user;
+             $namaPendeta = $pendeta->nama_lengkap;
 
-             // Hapus data Pendeta
-             // Relasi di DB (users.pendeta_id) di-set 'nullOnDelete'
-             // jadi user TIDAK ikut terhapus, tapi pendeta_id-nya jadi null
+             // Hapus Pendeta
              $pendeta->delete();
 
-              // Opsional: Hapus user terkait jika diinginkan
-              // if ($user) {
-              //     $user->delete();
-              // }
+             // Hapus user jika hanya punya role Pendeta
+             if ($user && $user->roles()->count() === 1 && $user->hasRole('Pendeta')) {
+                 Log::info("Menghapus user {$user->id} terkait Pendeta {$namaPendeta}");
+                 $user->delete();
+             } elseif ($user) {
+                 // Jika punya role lain, hanya null kan pendeta_id
+                 $user->update(['pendeta_id' => null]);
+             }
 
-             // Hapus file foto dari storage
+             // Hapus foto
              if ($fotoPath && Storage::disk('public')->exists($fotoPath)) {
                  Storage::disk('public')->delete($fotoPath);
              }
 
-             return redirect()->route('admin.pendeta.index')->with('success', 'Data Pendeta berhasil dihapus.');
+             DB::commit();
+             return redirect()->route('admin.pendeta.index')->with('success', 'Data Pendeta (' . $namaPendeta . ') berhasil dihapus.');
 
          } catch (\Exception $e) {
-              Log::error('Gagal hapus data Pendeta ID: ' . $pendeta->id . '. Error: ' . $e->getMessage());
-              return redirect()->route('admin.pendeta.index')
-                                  ->with('error', 'Gagal menghapus data Pendeta. Error: ' . $e->getMessage());
+              DB::rollBack();
+              Log::error('Gagal hapus Pendeta ID: ' . $pendeta->id . '. Error: ' . $e->getMessage());
+               if (str_contains($e->getMessage(), 'constraint violation')) {
+                    return redirect()->route('admin.pendeta.index')->with('error', 'Gagal hapus: Pendeta ini mungkin masih terkait dengan data lain (misal: Ketua Klasis).');
+               }
+              return redirect()->route('admin.pendeta.index')->with('error', 'Gagal menghapus. Error: ' . $e->getMessage());
          }
     }
 
      /**
       * Handle request export data Pendeta.
+      * (DIUPDATE untuk scoping)
       */
      public function export(Request $request)
      {
-         // Nanti tambahkan check permission/role
-         // abort_if(!Auth::user()->can('export pendeta'), 403);
+          $user = Auth::user(); // Ambil user untuk scoping
 
-         // Cek jika request meminta template
+          // --- Handle Template Export ---
           if ($request->has('template') && $request->template == 'yes') {
-              // Buat instance Export hanya untuk header (template)
-              $export = new PendetaExport(); // Ganti dengan PendetaExport
-              $headings = $export->headings();
-              // Buat collection kosong hanya berisi header
-              $templateCollection = collect([$headings]);
-              $fileName = 'template_import_pendeta.xlsx'; // Ganti nama file
+                // Gunakan PendetaExport (tanpa filter) untuk ambil headings
+                $export = new PendetaExport();
+                $headings = $export->headings();
+                $templateCollection = collect([$headings]);
+                $fileName = 'template_import_pendeta.xlsx';
 
-              // Buat Class Export Anonim hanya untuk header
-              $templateExport = new class($templateCollection) implements FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings {
-                  protected $collection;
-                  protected $headingsData;
-                  public function __construct($collection) { $this->collection = $collection; $this->headingsData = $collection->first();}
-                  public function collection() { return collect([]); } // Kosongkan data
-                  public function headings(): array { return $this->headingsData ?? []; }
-              };
-              return Excel::download($templateExport, $fileName);
+                $templateExport = new class($templateCollection) implements FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings, \Maatwebsite\Excel\Concerns\ShouldAutoSize {
+                    // ... (kode class template export) ...
+                     use \Maatwebsite\Excel\Concerns\Exportable;
+                     protected $collection; protected $headingsData;
+                     public function __construct($collection) { $this->collection = $collection; $this->headingsData = $collection->first();}
+                     public function collection() { return collect([]); }
+                     public function headings(): array { return $this->headingsData ?? []; }
+                };
+                return Excel::download($templateExport, $fileName);
           }
 
-         // Export data normal
+         // --- Export Data Normal (dengan Scoping) ---
          try {
              $fileName = 'pendeta_gpi_papua_' . date('YmdHis') . '.xlsx';
-             return Excel::download(new PendetaExport, $fileName); // Ganti dengan PendetaExport
+
+             // Ambil filter dari request
+             $search = $request->query('search');
+             $klasisIdFilter = $request->query('klasis_penempatan_id');
+             $jemaatIdFilter = $request->query('jemaat_penempatan_id');
+             $statusFilter = $request->query('status_kepegawaian');
+
+             // Buat instance PendetaExport dengan filter
+             // Class Export akan menangani scoping di dalam method query()
+             $export = new PendetaExport( $search, $klasisIdFilter, $jemaatIdFilter, $statusFilter );
+
+             return Excel::download($export, $fileName);
+
          } catch (\Exception $e) {
               Log::error('Gagal export Pendeta: ' . $e->getMessage());
-              return redirect()->route('admin.pendeta.index') // Ganti ke route index pendeta
-                               ->with('error', 'Gagal mengekspor data Pendeta.');
+              return redirect()->route('admin.pendeta.index')->with('error', 'Gagal mengekspor data Pendeta. Error: ' . $e->getMessage());
          }
      }
 
@@ -369,55 +465,60 @@ class PendetaController extends Controller
       */
      public function showImportForm()
      {
-         // Nanti tambahkan check permission/role
-         // abort_if(!Auth::user()->can('import pendeta'), 403);
-          return view('admin.pendeta.import'); // Arahkan ke view pendeta.import
+          return view('admin.pendeta.import');
      }
 
 
      /**
       * Handle request import data Pendeta.
+      * (DIUPDATE untuk scoping)
       */
      public function import(Request $request)
      {
-         // Nanti tambahkan check permission/role
-         // abort_if(!Auth::user()->can('import pendeta'), 403);
-
-         $request->validate([
-             'import_file' => 'required|file|mimes:xlsx,xls,csv',
-         ]);
-
+         $request->validate([ 'import_file' => 'required|file|mimes:xlsx,xls,csv', ]);
          $file = $request->file('import_file');
 
          try {
-             $import = new PendetaImport(); // Ganti dengan PendetaImport
+             // --- Tentukan Constraint Scoping ---
+             $user = Auth::user();
+             $klasisIdConstraint = $user->hasRole('Admin Klasis') ? $user->klasis_id : null;
+             $jemaatIdConstraint = $user->hasRole('Admin Jemaat') ? $user->jemaat_id : null;
+             // Jika Admin Jemaat, kita juga perlu constraint klasisnya
+             if ($jemaatIdConstraint && !$klasisIdConstraint) {
+                 $jemaatUser = Jemaat::find($jemaatIdConstraint);
+                 $klasisIdConstraint = $jemaatUser->klasis_id ?? null;
+             }
+
+             // Buat instance Import dengan constraint
+             $import = new PendetaImport($klasisIdConstraint, $jemaatIdConstraint);
              Excel::import($import, $file);
 
+             // Handle failures (Sudah benar)
              $failures = $import->failures();
              if ($failures->isNotEmpty()) {
-                 // Handle partial failure (tampilkan warning)
-                 $errorRows = []; $errorCount = count($failures);
-                 foreach ($failures as $failure) { $errorRows[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors()) . ' (Nilai: ' . implode(', ', array_slice($failure->values(), 0, 3)) . '...)';}
-                 $errorMessage = "Import selesai, namun terdapat {$errorCount} kesalahan validasi:\n" . implode("\n", $errorRows);
-                 Log::warning($errorMessage);
-                 if ($errorCount > 10) { $errorMessage = "Import selesai dengan {$errorCount} kesalahan validasi (10 error pertama):\n" . implode("\n", array_slice($errorRows, 0, 10)) . "\n... (cek log)";}
-                 return redirect()->route('admin.pendeta.index')->with('warning', $errorMessage);
+                $errorRows = []; $errorCount = count($failures);
+                foreach ($failures as $failure) { $errorRows[] = 'Baris ' . ($failure->row() ?: '?') . ': ' . implode(', ', $failure->errors()) . ' (Nilai: ' . implode(', ', array_slice($failure->values(), 0, 3)) . '...)';}
+                $errorMessage = "Import selesai, namun terdapat {$errorCount} kesalahan:\n" . implode("\n", $errorRows);
+                Log::warning($errorMessage);
+                if ($errorCount > 10) { $errorMessage = "Import selesai dengan {$errorCount} kesalahan (10 error pertama):\n" . implode("\n", array_slice($errorRows, 0, 10)) . "\n... (cek log)";}
+                return redirect()->route('admin.pendeta.index')->with('warning', $errorMessage);
              }
 
              return redirect()->route('admin.pendeta.index')->with('success', 'Data Pendeta berhasil diimpor.');
 
          } catch (ValidationException $e) {
-              // Handle validation exception
+            // ... (Error handling ValidationException sudah benar) ...
              $failures = $e->failures(); $errorRows = []; $errorCount = count($failures);
-             foreach ($failures as $failure) {$errorRows[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors()) . ' (Nilai: ' . implode(', ', array_slice($failure->values(), 0, 3)) . '...)';}
-             $errorMessage = "Gagal import karena {$errorCount} kesalahan validasi:\n" . implode("\n", $errorRows);
-             Log::error($errorMessage);
-             if ($errorCount > 10) { $errorMessage = "Gagal import karena {$errorCount} kesalahan validasi (10 error pertama):\n" . implode("\n", array_slice($errorRows, 0, 10)) . "\n... (cek log)";}
-             return redirect()->back()->with('error', $errorMessage);
+             foreach ($failures as $failure) { $errorRows[] = 'Baris ' . ($failure->row() ?: '?') . ': ' . implode(', ', $failure->errors()) . ' (Nilai: ' . implode(', ', array_slice($failure->values(), 0, 3)) . '...)'; }
+             $errorMessage = "Gagal import karena {$errorCount} kesalahan validasi:\n" . implode("\n", $errorRows); Log::error($errorMessage);
+             if ($errorCount > 10) { $errorMessage = "Gagal import karena {$errorCount} kesalahan validasi (10 error pertama):\n" . implode("\n", array_slice($errorRows, 0, 10)) . "\n... (cek log)"; }
+            return redirect()->back()->with('error', $errorMessage)->withInput();
+         } catch (\InvalidArgumentException $e) { // Tangkap error scope dari Import class
+             Log::error('Gagal import Pendeta: ' . $e->getMessage());
+             return redirect()->back()->with('error', $e->getMessage())->withInput();
          } catch (\Exception $e) {
-              // Handle general exception
               Log::error('Gagal import Pendeta: ' . $e->getMessage());
-              return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data Pendeta. Error: ' . $e->getMessage());
+              return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data Pendeta. Error: ' . $e->getMessage())->withInput();
          }
      }
 }
