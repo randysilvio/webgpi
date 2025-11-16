@@ -4,23 +4,23 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Klasis; // Untuk dropdown relasi
-use App\Models\Jemaat; // Untuk dropdown relasi
-use App\Models\Pendeta; // Untuk dropdown relasi
+use App\Models\Klasis; 
+use App\Models\Jemaat; 
+use App\Models\Pendeta;
+use App\Models\JenisWadahKategorial; // <-- Import Model Wadah (BARU)
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Models\Role; // <-- Import model Role
-use Illuminate\Validation\Rules; // <-- Untuk validasi password
-use Illuminate\Validation\Rule; // <-- Untuk validasi unique
+use Spatie\Permission\Models\Role; 
+use Illuminate\Validation\Rules; 
+use Illuminate\Validation\Rule; 
 
 class UserController extends Controller
 {
-    // Middleware (AKTIFKAN SETELAH LOGIN & ROLE DISET)
+    // Middleware
     public function __construct()
     {
-        // AKTIFKAN KEMBALI
         $this->middleware(['auth']);
         $this->middleware('role:Super Admin'); // Hanya Super Admin yang boleh kelola user
     }
@@ -30,7 +30,8 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::with(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta'])->latest(); // Eager load relasi
+        // Eager load relasi termasuk jenisWadah
+        $query = User::with(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta', 'jenisWadah'])->latest();
 
         if ($request->filled('search')) {
              $searchTerm = '%' . $request->search . '%';
@@ -42,7 +43,6 @@ class UserController extends Controller
 
         $users = $query->paginate(15)->appends($request->query());
 
-        // Kembali ke 'admin.user.index' (singular)
         return view('admin.user.index', compact('users'));
     }
 
@@ -53,17 +53,19 @@ class UserController extends Controller
     {
         // Ambil semua nama role
         $roles = Role::pluck('name', 'name');
-        // Jika user bukan ID 1 (Super Admin), jangan tampilkan opsi Super Admin
+        // Jika user bukan ID 1 (Super Admin Utama), jangan tampilkan opsi Super Admin untuk assign ke orang lain
         if (Auth::check() && Auth::id() != 1) {
             $roles = Role::where('name', '!=', 'Super Admin')->pluck('name', 'name');
         }
 
         $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
-        $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id'); // TODO: Filter by klasis via JS
+        $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id'); 
         $pendetaOptions = Pendeta::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
+        
+        // Ambil Data Wadah (BARU)
+        $wadahs = JenisWadahKategorial::orderBy('nama_wadah')->get();
 
-        // Kembali ke 'admin.user.create' (singular)
-        return view('admin.user.create', compact('roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions'));
+        return view('admin.user.create', compact('roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions', 'wadahs'));
     }
 
     /**
@@ -77,9 +79,12 @@ class UserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'roles' => ['required', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
+            
+            // Validasi Relasi
             'klasis_id' => ['nullable', 'exists:klasis,id'],
             'jemaat_id' => ['nullable', 'exists:jemaat,id'],
             'pendeta_id' => ['nullable', 'exists:pendeta,id', 'unique:'.User::class.',pendeta_id'],
+            'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'], // Validasi Wadah (BARU)
         ]);
 
         try {
@@ -90,9 +95,10 @@ class UserController extends Controller
                 'klasis_id' => $validatedData['klasis_id'] ?? null,
                 'jemaat_id' => $validatedData['jemaat_id'] ?? null,
                 'pendeta_id' => $validatedData['pendeta_id'] ?? null,
+                'jenis_wadah_id' => $validatedData['jenis_wadah_id'] ?? null, // Simpan Wadah (BARU)
             ]);
 
-            // Jangan izinkan assign Super Admin jika bukan Super Admin
+            // Jangan izinkan assign Super Admin jika yang membuat bukan Super Admin
             $rolesToSync = $validatedData['roles'];
             if (Auth::check() && !Auth::user()->hasRole('Super Admin')) {
                 $rolesToSync = array_filter($rolesToSync, fn($role) => $role !== 'Super Admin');
@@ -100,12 +106,10 @@ class UserController extends Controller
 
             $user->syncRoles($rolesToSync);
 
-            // Kembali ke 'admin.users.index' (plural untuk route name)
             return redirect()->route('admin.users.index')->with('success', 'User baru berhasil dibuat.');
 
         } catch (\Exception $e) {
              Log::error('Gagal membuat user baru: ' . $e->getMessage());
-              // Kembali ke 'admin.users.create' (plural untuk route name)
              return redirect()->route('admin.users.create')
                               ->with('error', 'Gagal membuat user baru. Error: ' . $e->getMessage())
                               ->withInput();
@@ -117,8 +121,7 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        $user->load(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta']);
-        // Kembali ke 'admin.user.show' (singular)
+        $user->load(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta', 'jenisWadah']);
         return view('admin.user.show', compact('user'));
     }
 
@@ -128,7 +131,6 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $roles = Role::pluck('name', 'name');
-        // Jika user bukan ID 1, jangan tampilkan opsi Super Admin
         if (Auth::check() && Auth::id() != 1) {
             $roles = Role::where('name', '!=', 'Super Admin')->pluck('name', 'name');
         }
@@ -136,10 +138,13 @@ class UserController extends Controller
         $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
         $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
         $pendetaOptions = Pendeta::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
+        
+        // Ambil Data Wadah (BARU)
+        $wadahs = JenisWadahKategorial::orderBy('nama_wadah')->get();
+        
         $userRoles = $user->roles->pluck('name')->toArray();
 
-        // Kembali ke 'admin.user.edit' (singular)
-        return view('admin.user.edit', compact('user', 'roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions', 'userRoles'));
+        return view('admin.user.edit', compact('user', 'roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions', 'userRoles', 'wadahs'));
     }
 
     /**
@@ -153,9 +158,12 @@ class UserController extends Controller
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'roles' => ['required', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
+            
+            // Validasi Relasi
             'klasis_id' => ['nullable', 'exists:klasis,id'],
             'jemaat_id' => ['nullable', 'exists:jemaat,id'],
             'pendeta_id' => ['nullable', 'exists:pendeta,id', Rule::unique('users', 'pendeta_id')->ignore($user->id)],
+            'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'], // Validasi Wadah (BARU)
         ]);
 
          try {
@@ -165,6 +173,7 @@ class UserController extends Controller
                 'klasis_id' => $validatedData['klasis_id'] ?? null,
                 'jemaat_id' => $validatedData['jemaat_id'] ?? null,
                 'pendeta_id' => $validatedData['pendeta_id'] ?? null,
+                'jenis_wadah_id' => $validatedData['jenis_wadah_id'] ?? null, // Update Wadah (BARU)
             ];
 
             if (!empty($validatedData['password'])) {
@@ -176,7 +185,7 @@ class UserController extends Controller
             $rolesToSync = $validatedData['roles'];
             // Proteksi agar Super Admin ID 1 tidak kehilangan rolenya
             if ($user->id == 1 && !in_array('Super Admin', $rolesToSync)) {
-                $rolesToSync[] = 'Super Admin'; // Paksa tetap jadi Super Admin
+                $rolesToSync[] = 'Super Admin'; 
             }
             // Proteksi agar user lain tidak bisa assign Super Admin
             if (Auth::check() && !Auth::user()->hasRole('Super Admin')) {
@@ -184,12 +193,11 @@ class UserController extends Controller
             }
 
             $user->syncRoles($rolesToSync);
-             // Kembali ke 'admin.users.index' (plural untuk route name)
+            
             return redirect()->route('admin.users.index')->with('success', 'Data user berhasil diperbarui.');
 
         } catch (\Exception $e) {
              Log::error('Gagal update user ID: ' . $user->id . '. Error: '. $e->getMessage());
-              // Kembali ke 'admin.users.edit' (plural untuk route name)
              return redirect()->route('admin.users.edit', $user->id)
                               ->with('error', 'Gagal memperbarui data user. Error: ' . $e->getMessage())
                               ->withInput();
@@ -202,24 +210,16 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         if ($user->id == 1) {
-             // Kembali ke 'admin.users.index' (plural untuk route name)
              return redirect()->route('admin.users.index')->with('error', 'User Super Admin utama (ID 1) tidak dapat dihapus.');
         }
-
-        // Cek relasi sebelum hapus (opsional tapi bagus)
-        // if ($user->pendeta_id) {
-        //      return redirect()->route('admin.users.index')->with('error', 'User ini terhubung ke Data Pendeta. Hapus Data Pendeta terkait untuk menghapus user ini.');
-        // }
 
         try {
             $userName = $user->name;
             $user->delete();
-             // Kembali ke 'admin.users.index' (plural untuk route name)
             return redirect()->route('admin.users.index')->with('success', 'User (' . $userName . ') berhasil dihapus.');
 
         } catch (\Exception $e) {
              Log::error('Gagal hapus user ID: ' . $user->id . '. Error: ' . $e->getMessage());
-              // Kembali ke 'admin.users.index' (plural untuk route name)
              return redirect()->route('admin.users.index')
                               ->with('error', 'Gagal menghapus user. Error: ' . $e->getMessage());
         }

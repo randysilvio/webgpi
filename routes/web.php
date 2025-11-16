@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Storage;
 // Public Controllers
 use App\Http\Controllers\PostPublicController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProfileController; // Pastikan ini ada
 
 // Admin Controllers
 use App\Http\Controllers\Admin\SettingController;
@@ -20,14 +20,21 @@ use App\Http\Controllers\Admin\JemaatController;
 use App\Http\Controllers\Admin\AnggotaJemaatController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\MutasiPendetaController; // Pastikan ini ada
+use App\Http\Controllers\Admin\MutasiPendetaController;
+
+// Wadah Kategorial Controllers
+use App\Http\Controllers\Admin\WadahKategorialPengurusController;
+use App\Http\Controllers\Admin\WadahStatistikController;
+use App\Http\Controllers\Admin\WadahProgramKerjaController;
+use App\Http\Controllers\Admin\WadahAnggaranController;
+use App\Http\Controllers\Admin\WadahTransaksiController;
 
 
 // Models
 use App\Models\Setting;
 use App\Models\Post;
 use App\Models\Service;
-use App\Models\Jemaat; // <-- Import Jemaat Model for API route
+use App\Models\Jemaat;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,21 +85,18 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('pendeta-import', [PendetaController::class, 'import'])->name('pendeta.import')->middleware('can:import pendeta');
 
     // Rute Mutasi Pendeta
-    // Form tambah mutasi untuk pendeta spesifik
     Route::get('pendeta/{pendeta}/mutasi/create', [MutasiPendetaController::class, 'create'])
          ->name('pendeta.mutasi.create')
          ->middleware('role:Super Admin|Admin Bidang 3');
-    // Proses simpan mutasi baru untuk pendeta spesifik
+    // Proses simpan mutasi
     Route::post('pendeta/{pendeta}/mutasi', [MutasiPendetaController::class, 'store'])
          ->name('pendeta.mutasi.store')
          ->middleware('role:Super Admin|Admin Bidang 3');
-
-    // (Diaktifkan) Rute Resource untuk manajemen data mutasi secara umum
-    // Memberikan route: index, show, edit, update, destroy
+    // Resource Mutasi
     Route::resource('mutasi', MutasiPendetaController::class)
-         ->except(['create', 'store']) // create & store sudah ada di atas (per pendeta)
-         ->parameters(['mutasi' => 'mutasiPendeta']) // Ganti parameter {mutasi} -> {mutasiPendeta}
-         ->middleware('role:Super Admin|Admin Bidang 3'); // Sesuaikan middleware jika perlu
+         ->except(['create', 'store'])
+         ->parameters(['mutasi' => 'mutasiPendeta'])
+         ->middleware('role:Super Admin|Admin Bidang 3');
 
 
     // CRUD Klasis
@@ -113,10 +117,36 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('anggota-jemaat-import', [AnggotaJemaatController::class, 'showImportForm'])->name('anggota-jemaat.import-form')->middleware('can:import anggota jemaat');
     Route::post('anggota-jemaat-import', [AnggotaJemaatController::class, 'import'])->name('anggota-jemaat.import')->middleware('can:import anggota jemaat');
 
+    // Wadah Kategorial Group
+    Route::prefix('wadah')->name('wadah.')->group(function () {
+        // Statistik
+        Route::get('statistik', [WadahStatistikController::class, 'index'])->name('statistik.index');
+
+        // Pengurus
+        Route::resource('pengurus', WadahKategorialPengurusController::class);
+
+        // Program Kerja
+        Route::get('program/get-parents', [WadahProgramKerjaController::class, 'getParentPrograms'])->name('program.get-parents'); 
+        Route::resource('program', WadahProgramKerjaController::class);
+
+        // Anggaran & Transaksi
+        Route::get('anggaran/get-programs', [WadahAnggaranController::class, 'getPrograms'])->name('anggaran.get-programs');
+        Route::resource('anggaran', WadahAnggaranController::class);
+        Route::post('transaksi', [WadahTransaksiController::class, 'store'])->name('transaksi.store');
+        Route::delete('transaksi/{transaksi}', [WadahTransaksiController::class, 'destroy'])->name('transaksi.destroy');
+    });
+
     // CRUD User Management
     Route::resource('users', UserController::class)->middleware('role:Super Admin');
 
 }); // Akhir Grup Admin
+
+// === RUTE PROFILE USER (YANG HILANG SEBELUMNYA) ===
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
 
 /* Rute API untuk Dropdown Dinamis Jemaat */
 Route::get('/api/jemaat-by-klasis/{klasisId}', function ($klasisId) {
@@ -128,5 +158,3 @@ Route::get('/api/jemaat-by-klasis/{klasisId}', function ($klasisId) {
 
 /* Rute Autentikasi */
 require __DIR__.'/auth.php';
-
-?>

@@ -82,17 +82,45 @@
                 </a>
                 @endcan
 
-                {{-- Link Mutasi Pendeta (href diubah) --}}
+                {{-- Link Mutasi Pendeta --}}
                 @hasanyrole('Super Admin|Admin Bidang 3')
-                {{-- Mengarah ke route index mutasi --}}
-                <a href="{{ route('admin.mutasi.index') }}" {{-- <<< Href diubah di sini --}}
-                   class="sidebar-link flex items-center px-4 py-2.5 rounded-lg hover:bg-gray-700 transition-colors group @if(Request::routeIs('admin.pendeta.mutasi.*') || Request::routeIs('admin.mutasi.*') ) active @endif"> {{-- Active state diperbarui --}}
+                <a href="{{ route('admin.mutasi.index') }}" 
+                   class="sidebar-link flex items-center px-4 py-2.5 rounded-lg hover:bg-gray-700 transition-colors group @if(Request::routeIs('admin.pendeta.mutasi.*') || Request::routeIs('admin.mutasi.*') ) active @endif">
                     <i class="fas fa-exchange-alt w-5 h-5 mr-3 fa-fw"></i>
                     <span>Mutasi Pendeta</span>
                 </a>
                 @endhasanyrole
-
             </div>
+
+            {{-- Grup Wadah Kategorial (BARU) --}}
+            <div class="pt-4 mt-4 border-t border-gray-700">
+                <span class="px-4 text-xs font-semibold uppercase text-gray-500">Wadah Kategorial</span>
+                
+                {{-- Link Statistik Anggota --}}
+                <a href="{{ route('admin.wadah.statistik.index') }}" class="sidebar-link flex items-center px-4 py-2.5 rounded-lg hover:bg-gray-700 transition-colors group @if(Request::routeIs('admin.wadah.statistik.*')) active @endif">
+                    <i class="fas fa-chart-pie w-5 h-5 mr-3 fa-fw"></i>
+                    <span>Statistik Anggota</span>
+                </a>
+
+                {{-- Link Data Pengurus --}}
+                <a href="{{ route('admin.wadah.pengurus.index') }}" class="sidebar-link flex items-center px-4 py-2.5 rounded-lg hover:bg-gray-700 transition-colors group @if(Request::routeIs('admin.wadah.pengurus.*')) active @endif">
+                    <i class="fas fa-users-cog w-5 h-5 mr-3 fa-fw"></i>
+                    <span>Data Pengurus</span>
+                </a>
+
+                {{-- Link Program Kerja --}}
+                <a href="{{ route('admin.wadah.program.index') }}" class="sidebar-link flex items-center px-4 py-2.5 rounded-lg hover:bg-gray-700 transition-colors group @if(Request::routeIs('admin.wadah.program.*')) active @endif">
+                    <i class="fas fa-tasks w-5 h-5 mr-3 fa-fw"></i>
+                    <span>Program Kerja</span>
+                </a>
+
+                {{-- Link Keuangan (RAB) --}}
+                <a href="{{ route('admin.wadah.anggaran.index') }}" class="sidebar-link flex items-center px-4 py-2.5 rounded-lg hover:bg-gray-700 transition-colors group @if(Request::routeIs('admin.wadah.anggaran.*')) active @endif">
+                    <i class="fas fa-file-invoice-dollar w-5 h-5 mr-3 fa-fw"></i>
+                    <span>Keuangan (RAB)</span>
+                </a>
+            </div>
+            {{-- Akhir Grup Wadah Kategorial --}}
 
 
             {{-- Grup Konten Website --}}
