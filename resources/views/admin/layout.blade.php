@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Admin Dashboard') - Sinode GPI Papua</title>
+    
+    {{-- Favicon --}}
+    <link rel="icon" href="{{ asset('gpi_logo.png') }}" type="image/png">
+
     {{-- CDN Tailwind CSS --}}
     <script src="https://cdn.tailwindcss.com"></script>
     <script> tailwind.config = { theme: { extend: { colors: { primary: '#1e40af', secondary: '#f59e0b', accent: '#10b981' } } } } </script>
@@ -35,10 +39,15 @@
         {{-- Logo/Header Sidebar --}}
         <div class="flex items-center justify-center h-20 border-b border-gray-700 px-4">
              <div class="flex items-center space-x-2">
-                 <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7v13h18V7L12 2zm0 2.236L18.99 8H5.01L12 4.236zM5 18V9.618l7 4.118 7-4.118V18H5z"/></svg>
-                 </div>
-                <span class="text-white text-xl font-semibold">Admin GPI Papua</span>
+                 {{-- Logo --}}
+                 @if(file_exists(public_path('gpi_logo.png')))
+                    <img src="{{ asset('gpi_logo.png') }}" alt="Logo" class="w-10 h-10 object-contain">
+                 @else
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7v13h18V7L12 2zm0 2.236L18.99 8H5.01L12 4.236zM5 18V9.618l7 4.118 7-4.118V18H5z"/></svg>
+                    </div>
+                 @endif
+                <span class="text-white text-xl font-semibold">Admin GPI</span>
             </div>
         </div>
 
@@ -238,6 +247,11 @@
         if (overlay) overlay.addEventListener('click', toggleSidebar);
 
          function previewImage(event, previewId) { /* ... kode preview image ... */ }
+
+         // Logout otomatis 15 menit (900000 ms)
+         setTimeout(function(){
+            window.location.href = "{{ route('login') }}";
+         }, 900000);
     </script>
     @stack('scripts')
 </body>

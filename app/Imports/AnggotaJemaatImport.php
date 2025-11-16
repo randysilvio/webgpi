@@ -90,6 +90,7 @@ class AnggotaJemaatImport implements
             $jumlahBaru = $this->countFilledFields($dataBaru);
             $jumlahLama = $this->countFilledFields($anggotaLama->toArray());
 
+            // Update jika data baru lebih lengkap atau sama
             if ($jumlahBaru >= $jumlahLama) {
                 Log::info('Updating AnggotaJemaat by NIK/NoInduk: ' . ($nik ?? $nomorBukuInduk));
                  if ($this->allowedJemaatIds !== null && $anggotaLama->jemaat_id != $dataBaru['jemaat_id']) {
@@ -123,8 +124,11 @@ class AnggotaJemaatImport implements
             'nik'               => $row['nik'] ?? null,
             'nomor_buku_induk'  => $row['nomor_buku_induk'] ?? null,
             'nama_lengkap'      => $row['nama_lengkap_wajib'] ?? null, // Sesuaikan header
-            'nomor_kk'          => $row['nomor_kk'] ?? null, // <-- Ambil dari Excel
-            'status_dalam_keluarga' => $row['status_dalam_keluarga'] ?? null, // <-- Ambil dari Excel
+            
+            // --- PERBAIKAN: Pastikan mapping header KK ini benar ---
+            'nomor_kk'          => $row['nomor_kk'] ?? null,
+            'status_dalam_keluarga' => $row['status_dalam_keluarga'] ?? null,
+            
             'tempat_lahir'      => $row['tempat_lahir'] ?? null,
             'tanggal_lahir'     => $this->transformDate($row['tanggal_lahir_yyyymmdd'] ?? null), // Sesuaikan header
             'jenis_kelamin'     => $row['jenis_kelamin_lakilakiperempuan'] ?? null, // Sesuaikan header
@@ -187,15 +191,18 @@ class AnggotaJemaatImport implements
         // ** PENTING: Sesuaikan key array dengan nama header di file Excel Anda **
         return [
             '*.id_jemaat_wajib_diisi_saat_import' => ['required', 'integer', Rule::exists('jemaat', 'id')],
-            '*.nik' => ['nullable', 'string', 'max:20'], // Unique di logic model()
-            '*.nomor_buku_induk' => ['nullable', 'string', 'max:50'], // Unique di logic model()
+            '*.nik' => ['nullable', 'string', 'max:20'], 
+            '*.nomor_buku_induk' => ['nullable', 'string', 'max:50'], 
             '*.nama_lengkap_wajib' => ['required', 'string', 'max:255'],
-            '*.nomor_kk' => ['nullable', 'string', 'max:50'], // <-- Tambah validasi
-            '*.status_dalam_keluarga' => ['nullable', 'string', 'max:50'], // <-- Tambah validasi
-            '*.tanggal_lahir_yyyymmdd' => ['nullable'], // Format di transformDate
+            
+            // --- PERBAIKAN: Validasi untuk Nomor KK & Status Keluarga ---
+            '*.nomor_kk' => ['nullable', 'string', 'max:50'], 
+            '*.status_dalam_keluarga' => ['nullable', 'string', 'max:50'], 
+            
+            '*.tanggal_lahir_yyyymmdd' => ['nullable'], 
             '*.jenis_kelamin_lakilakiperempuan' => ['nullable', Rule::in(['Laki-laki', 'Perempuan'])],
             '*.status_keanggotaan_aktif_tidak_aktif_pindah_meninggal' => ['required', Rule::in(['Aktif', 'Tidak Aktif', 'Pindah', 'Meninggal'])],
-            '*.email' => ['nullable', 'email', 'max:255'], // Unique rule mungkin perlu jika ingin sync ke users table
+            '*.email' => ['nullable', 'email', 'max:255'], 
             '*.tanggal_baptis_yyyymmdd' => ['nullable'],
             '*.tanggal_sidi_yyyymmdd' => ['nullable'],
             '*.tanggal_masuk_jemaat_yyyymmdd' => ['nullable'],
@@ -215,7 +222,6 @@ class AnggotaJemaatImport implements
             '*.status_keanggotaan_aktif_tidak_aktif_pindah_meninggal.*' => 'Status Keanggotaan tidak valid.',
             '*.jenis_kelamin_lakilakiperempuan.in' => 'Jenis Kelamin tidak valid.',
             '*.email.email' => 'Format Email tidak valid.',
-            // Tambahkan pesan custom untuk nomor_kk dan status_dalam_keluarga jika perlu
         ];
     }
 
