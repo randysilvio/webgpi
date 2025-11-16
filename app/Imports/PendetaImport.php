@@ -13,44 +13,48 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
-use Illuminate\Validation\Rule;
-use Maatwebsite\Excel\Concerns\SkipsOnError;
-use Maatwebsite\Excel\Concerns\SkipsFailures;
-use Maatwebsite\Excel\Concerns\SkipsOnFailure;
+use Maatwebsite\Excel\Concerns\SkipsOnFailure; // Interface Wajib
+use Maatwebsite\Excel\Concerns\SkipsFailures;  // Trait Wajib
 use Maatwebsite\Excel\Validators\Failure;
-use Throwable;
-use Illuminate\Support\Facades\Auth; // Untuk scoping
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
-use Carbon\Carbon; // Untuk parsing tanggal
+use Carbon\Carbon;
 
-class PendetaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFailure, WithBatchInserts, WithChunkReading
+class PendetaImport implements 
+    ToModel, 
+    WithHeadingRow, 
+    WithValidation, 
+    WithBatchInserts, 
+    WithChunkReading,
+    SkipsOnFailure // Menangani kegagalan per baris
 {
-    use SkipsFailures;
+    use SkipsFailures; // Menyediakan method failures()
 
     private $rolePendeta;
     private $klasisMap;
     private $jemaatMap;
-    // Tambahkan constraint untuk scoping
-    private $allowedKlasisId = null; // null = semua, integer = hanya ID ini
-    private $allowedJemaatIds = null; // null = semua, array = hanya ID ini
+    private $allowedKlasisId = null;
+    private $allowedJemaatIds = null;
 
     public function __construct(?int $klasisIdConstraint = null, ?int $jemaatIdConstraint = null)
     {
         $this->rolePendeta = Role::where('name', 'Pendeta')->first();
+        
+        // Cache map untuk performa (Nama -> ID) agar tidak query berulang
         $this->klasisMap = Klasis::pluck('id', 'nama_klasis');
         $this->jemaatMap = Jemaat::pluck('id', 'nama_jemaat');
 
-        // Set constraint berdasarkan input (misal dari controller)
+        // Set constraint scoping
         $this->allowedKlasisId = $klasisIdConstraint;
+        
         if ($jemaatIdConstraint !== null) {
             $this->allowedJemaatIds = [$jemaatIdConstraint];
         } elseif ($klasisIdConstraint !== null) {
-            // Jika constraint klasis, ambil ID jemaat di bawahnya
+            // Jika admin klasis, ambil semua ID jemaat di bawahnya
             $this->allowedJemaatIds = Jemaat::where('klasis_id', $klasisIdConstraint)->pluck('id')->toArray();
         }
-        // Jika keduanya null, biarkan null (Super Admin)
     }
 
     /**
@@ -61,142 +65,105 @@ class PendetaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
     {
         $dataBaru = $this->prepareData($row);
         $nipg = $dataBaru['nipg'] ?? null;
-        $nik = $dataBaru['nik'] ?? null;
-
-        // --- Validasi Scoping Penempatan ---
+        
+        // --- 1. Validasi Scoping (Keamanan) ---
         $klasisIdImport = $dataBaru['klasis_penempatan_id'];
         $jemaatIdImport = $dataBaru['jemaat_penempatan_id'];
 
-        // Cek Klasis ID
+        // Cek apakah Admin Klasis mencoba import ke klasis lain
         if ($this->allowedKlasisId !== null && $klasisIdImport != $this->allowedKlasisId) {
-             $message = "Import dilewati: Penempatan Klasis ID {$klasisIdImport} tidak sesuai lingkup Anda (Klasis ID: {$this->allowedKlasisId}).";
-             Log::warning($message . " (NIPG: $nipg)");
-             $failure = new Failure(0, 'nama_klasis_penempatan', [$message], $row);
-             $this->onFailure($failure);
+             $this->addFailure($row, 'nama_klasis_penempatan', "Klasis penempatan tidak sesuai hak akses Anda.");
              return null;
         }
-        // Cek Jemaat ID
-        if ($this->allowedJemaatIds !== null && $jemaatIdImport !== null && !in_array($jemaatIdImport, $this->allowedJemaatIds)) {
-             $message = "Import dilewati: Penempatan Jemaat ID {$jemaatIdImport} tidak termasuk dalam lingkup Anda.";
-             Log::warning($message . " (NIPG: $nipg)");
-             $failure = new Failure(0, 'nama_jemaat_penempatan', [$message], $row);
-             $this->onFailure($failure);
+        // Cek apakah Admin mencoba import ke jemaat di luar wilayahnya
+        if ($this->allowedJemaatIds !== null && $jemaatIdImport && !in_array($jemaatIdImport, $this->allowedJemaatIds)) {
+             $this->addFailure($row, 'nama_jemaat_penempatan', "Jemaat penempatan tidak sesuai hak akses Anda.");
              return null;
         }
-        // --- Akhir Validasi Scoping Penempatan ---
 
-
+        // --- 2. Proses Database (Pendeta & User) ---
         DB::beginTransaction();
         try {
-            // Cari existing Pendeta by NIPG atau NIK
-            $pendeta = null;
-            if (!empty($nipg)) {
-                $pendeta = Pendeta::where('nipg', $nipg)->first();
-            }
-            if (!$pendeta && !empty($nik)) {
-                 $pendeta = Pendeta::where('nik', $nik)->first();
-            }
-
-            $user = null; // Inisialisasi User
+            // A. Upsert Data Pendeta
+            $pendeta = Pendeta::where('nipg', $nipg)->first();
 
             if ($pendeta) {
-                // Pendeta Ditemukan -> Update (Logic Upsert Belum ada di Project Brief untuk Pendeta, jadi ini hanya update)
-                Log::info('Updating Pendeta by NIPG/NIK: ' . ($nipg ?? $nik));
-                // Pastikan user tidak bisa mengubah penempatan di luar scope saat update
-                if ($this->allowedKlasisId !== null && $dataBaru['klasis_penempatan_id'] != $this->allowedKlasisId) unset($dataBaru['klasis_penempatan_id']);
-                if ($this->allowedJemaatIds !== null && !in_array($dataBaru['jemaat_penempatan_id'], $this->allowedJemaatIds)) unset($dataBaru['jemaat_penempatan_id']);
-
                 $pendeta->update($dataBaru);
-                $user = $pendeta->user; // Ambil user terkait
-
             } else {
-                // Pendeta Tidak Ditemukan -> Buat Baru
-                Log::info('Creating new Pendeta: ' . ($dataBaru['nama_lengkap'] ?? 'N/A'));
                 $pendeta = Pendeta::create($dataBaru);
             }
 
-            // --- Logika Buat/Update User Otomatis ---
-            if ($pendeta) {
-                $emailToUse = $row['email_unik_opsional_untuk_login'] ?? Str::lower($pendeta->nipg . '@gpipapua.local'); // Sesuaikan header email
-                $userIdToIgnore = $user ? $user->id : null; // ID user yang diabaikan saat cek unik email
+            // B. Upsert Data User Login
+            // Generate email default jika kosong: nipg@gpipapua.local
+            $email = $row['email_unik_opsional_untuk_login'] ?? Str::lower($nipg . '@gpipapua.local');
+            
+            // Cek apakah email sudah dipakai user lain (yang bukan pendeta ini)
+            $existingUser = User::where('email', $email)->first();
+            if ($existingUser && $existingUser->pendeta_id != $pendeta->id) {
+                // Jika email bentrok, buat email fallback unik
+                $email = Str::lower($nipg . rand(10,99) . '@gpipapua.local');
+            }
 
-                // Cek keunikan email
-                $existingUserEmail = User::where('email', $emailToUse)->when($userIdToIgnore, fn($q) => $q->where('id', '!=', $userIdToIgnore))->first();
-
-                if ($existingUserEmail) {
-                    Log::warning('Email import ' . $emailToUse . ' sudah ada (User ID: '.$existingUserEmail->id.') untuk Pendeta NIPG: ' . $pendeta->nipg . '. Coba NIPG+ID.');
-                    $emailToUse = Str::lower($pendeta->nipg . $pendeta->id . '@gpipapua.local');
-                    // Cek lagi
-                    $existingUserEmailFallback = User::where('email', $emailToUse)->when($userIdToIgnore, fn($q) => $q->where('id', '!=', $userIdToIgnore))->first();
-                    if ($existingUserEmailFallback) {
-                        throw new \Exception("Gagal membuat/update user: Email fallback {$emailToUse} juga sudah ada.");
-                    }
-                }
-
-                $userData = [
+            $user = User::updateOrCreate(
+                ['email' => $email],
+                [
                     'name' => $pendeta->nama_lengkap,
-                    'email' => $emailToUse,
+                    'password' => Hash::make($nipg), // Default password = NIPG
                     'pendeta_id' => $pendeta->id,
-                    'klasis_id' => $pendeta->klasis_penempatan_id, // Update penempatan
-                    'jemaat_id' => $pendeta->jemaat_penempatan_id, // Update penempatan
-                ];
-
-                if (!$user) { // Jika user belum ada (pendeta baru)
-                    $userData['password'] = Hash::make($pendeta->nipg); // Password hanya di-set saat create
-                    $user = User::create($userData);
-                    Log::info('User otomatis dibuat via import untuk Pendeta ID: ' . $pendeta->id . ', User ID: ' . $user->id);
-                    // Assign role hanya saat create
-                    if ($this->rolePendeta) {
-                        $user->assignRole($this->rolePendeta);
-                    } else { throw new \Exception("Role Pendeta tidak ditemukan."); }
-                } else { // Jika user sudah ada (update pendeta)
-                    $user->update($userData);
-                    Log::info('User terkait Pendeta ID ' . $pendeta->id . ' diupdate via import. User ID: ' . $user->id);
-                    // Pastikan role Pendeta tetap ada
-                    if ($this->rolePendeta && !$user->hasRole('Pendeta')) {
-                        $user->assignRole($this->rolePendeta);
-                    }
-                }
-            } else {
-                 throw new \Exception("Gagal membuat/menemukan record Pendeta dari Excel.");
+                    'klasis_id' => $pendeta->klasis_penempatan_id,
+                    'jemaat_id' => $pendeta->jemaat_penempatan_id,
+                ]
+            );
+            
+            // Assign Role Pendeta jika belum punya
+            if ($this->rolePendeta && !$user->hasRole('Pendeta')) {
+                $user->assignRole($this->rolePendeta);
             }
 
             DB::commit();
-            return null; // Return null karena proses sudah selesai (create/update)
+            return null; // Return null karena kita sudah handle save manual
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Rollback saat import Pendeta NIPG: ' . ($nipg ?? 'N/A') . '. Error: ' . $e->getMessage());
-             $failure = new Failure( 0, 'database_error', [$e->getMessage()], $row );
-             $this->onFailure($failure);
+            // Catat error ke list failures
+            $this->addFailure($row, 'database_error', $e->getMessage());
             return null;
         }
     }
 
-     /**
+    /**
+     * Helper untuk mencatat kegagalan manual
+     */
+    private function addFailure(array $row, string $attribute, string $message)
+    {
+        $rowIndex = $row['nipg_wajib_unik'] ?? 0; // Gunakan NIPG sebagai penanda baris jika row index sulit didapat
+        $this->failures[] = new Failure($rowIndex, $attribute, [$message], $row);
+    }
+
+    /**
      * Menyiapkan data dari baris excel.
      */
     private function prepareData(array $row): array
     {
-        // Cari ID Klasis & Jemaat berdasarkan nama dari Excel
-        // ** PENTING: Sesuaikan key $row['...'] dengan header di Excel **
+        // Mapping ID dari Nama (Cache)
         $klasisId = $this->klasisMap->get($row['nama_klasis_penempatan'] ?? null);
         $jemaatId = $this->jemaatMap->get($row['nama_jemaat_penempatan'] ?? null);
 
-         return [
-            'nipg' => $row['nipg_wajib_unik'] ?? null, // Sesuaikan header
-            'nama_lengkap' => $row['nama_lengkap_wajib'] ?? null, // Sesuaikan header
-            'nik' => $row['nik_unik_opsional'] ?? null, // Sesuaikan header
-            'tempat_lahir' => $row['tempat_lahir_wajib'] ?? null, // Sesuaikan header
-            'tanggal_lahir' => $this->transformDate($row['tanggal_lahir_yyyymmdd_wajib'] ?? null), // Sesuaikan header
-            'jenis_kelamin' => $row['jenis_kelamin_lakilakiperempuan_wajib'] ?? null, // Sesuaikan header
-            // Email diambil langsung di model()
-            'tanggal_tahbisan' => $this->transformDate($row['tanggal_tahbisan_yyyymmdd_wajib'] ?? null), // Sesuaikan header
-            'tempat_tahbisan' => $row['tempat_tahbisan_wajib'] ?? null, // Sesuaikan header
-            'status_kepegawaian' => $row['status_kepegawaian_wajib'] ?? null, // Sesuaikan header
+        return [
+            'nipg' => $row['nipg_wajib_unik'] ?? null,
+            'nama_lengkap' => $row['nama_lengkap_wajib'] ?? null,
+            'nik' => $row['nik_unik_opsional'] ?? null,
+            'tempat_lahir' => $row['tempat_lahir_wajib'] ?? null,
+            'tanggal_lahir' => $this->transformDate($row['tanggal_lahir_yyyymmdd_wajib'] ?? null),
+            'jenis_kelamin' => $row['jenis_kelamin_lakilakiperempuan_wajib'] ?? null,
+            'tanggal_tahbisan' => $this->transformDate($row['tanggal_tahbisan_yyyymmdd_wajib'] ?? null),
+            'tempat_tahbisan' => $row['tempat_tahbisan_wajib'] ?? null,
+            'status_kepegawaian' => $row['status_kepegawaian_wajib'] ?? null,
+            
             'klasis_penempatan_id' => $klasisId,
             'jemaat_penempatan_id' => $jemaatId,
-            // Field opsional
+            
+            // Field Opsional
             'status_pernikahan' => $row['status_pernikahan'] ?? null,
             'nama_pasangan' => $row['nama_pasangan'] ?? null,
             'golongan_darah' => $row['golongan_darah'] ?? null,
@@ -206,66 +173,55 @@ class PendetaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
             'pendidikan_teologi_terakhir' => $row['pendidikan_teologi_terakhir'] ?? null,
             'institusi_pendidikan_teologi' => $row['institusi_pendidikan_teologi'] ?? null,
             'golongan_pangkat_terakhir' => $row['golongan_pangkat_terakhir'] ?? null,
-            'tanggal_mulai_masuk_gpi' => $this->transformDate($row['tanggal_mulai_masuk_gpi_yyyymmdd'] ?? null), // Sesuaikan header
+            'tanggal_mulai_masuk_gpi' => $this->transformDate($row['tanggal_mulai_masuk_gpi_yyyymmdd'] ?? null),
             'jabatan_saat_ini' => $row['jabatan_saat_ini'] ?? null,
-            'tanggal_mulai_jabatan_saat_ini' => $this->transformDate($row['tanggal_mulai_jabatan_yyyymmdd'] ?? null), // Sesuaikan header
+            'tanggal_mulai_jabatan_saat_ini' => $this->transformDate($row['tanggal_mulai_jabatan_yyyymmdd'] ?? null),
             'catatan' => $row['catatan'] ?? null,
         ];
     }
 
-    // --- function transformDate tetap sama ---
-    private function transformDate($value): ?string { /* ... kode transform date ... */ }
-
     /**
-     * Aturan validasi per baris.
+     * Aturan validasi per baris Excel.
      */
     public function rules(): array
     {
-         // ** PENTING: Sesuaikan key array dengan nama header di file Excel Anda **
         return [
-            '*.nipg_wajib_unik' => ['required', 'string', 'max:50'], // Unique dicek di model()
+            '*.nipg_wajib_unik' => ['required', 'string', 'max:50'],
             '*.nama_lengkap_wajib' => ['required', 'string', 'max:255'],
-            '*.nik_unik_opsional' => ['nullable', 'string', 'max:20'], // Unique dicek di model()
-            '*.tempat_lahir_wajib' => ['required', 'string', 'max:100'],
-            '*.tanggal_lahir_yyyymmdd_wajib' => ['required', 'numeric'], // Validasi format Excel
-            '*.jenis_kelamin_lakilakiperempuan_wajib' => ['required', Rule::in(['Laki-laki', 'Perempuan'])],
-            '*.email_unik_opsional_untuk_login' => ['nullable', 'string', 'email', 'max:255'], // Unique dicek di model()
-            '*.tanggal_tahbisan_yyyymmdd_wajib' => ['required', 'numeric'],
-            '*.tempat_tahbisan_wajib' => ['required', 'string', 'max:255'],
-            '*.status_kepegawaian_wajib' => ['required', 'string', 'max:50'],
-            '*.nama_klasis_penempatan' => ['nullable', 'string', Rule::exists('klasis', 'nama_klasis')],
-            '*.nama_jemaat_penempatan' => ['nullable', 'string', Rule::exists('jemaat', 'nama_jemaat')],
+            '*.tempat_lahir_wajib' => ['required'],
+            '*.tanggal_lahir_yyyymmdd_wajib' => ['required'],
+            '*.status_kepegawaian_wajib' => ['required'],
+            '*.nama_klasis_penempatan' => ['nullable', Rule::exists('klasis', 'nama_klasis')], // Validasi nama klasis ada di DB
+            '*.nama_jemaat_penempatan' => ['nullable', Rule::exists('jemaat', 'nama_jemaat')], // Validasi nama jemaat ada di DB
+        ];
+    }
+    
+    /**
+     * Pesan error custom.
+     */
+    public function customValidationMessages()
+    {
+        return [
+            '*.nipg_wajib_unik.required' => 'NIPG wajib diisi.',
+            '*.nama_klasis_penempatan.exists' => 'Nama Klasis tidak ditemukan di database.',
+            '*.nama_jemaat_penempatan.exists' => 'Nama Jemaat tidak ditemukan di database.',
         ];
     }
 
     /**
-     * Pesan error custom.
+     * Konversi tanggal Excel ke format Y-m-d.
      */
-     public function customValidationMessages()
-     {
-         // ** PENTING: Sesuaikan key array dengan nama header di file Excel Anda **
-         return [
-             '*.nipg_wajib_unik.required' => 'Header [nipg_wajib_unik] wajib diisi.',
-             '*.nama_lengkap_wajib.required' => 'Header [nama_lengkap_wajib] wajib diisi.',
-             '*.tempat_lahir_wajib.required' => 'Header [tempat_lahir_wajib] wajib diisi.',
-             '*.tanggal_lahir_yyyymmdd_wajib.required' => 'Header [tanggal_lahir_yyyymmdd_wajib] wajib diisi.',
-             '*.tanggal_lahir_yyyymmdd_wajib.numeric' => 'Format Tanggal Lahir harus angka Excel.',
-             '*.jenis_kelamin_lakilakiperempuan_wajib.required' => 'Header [jenis_kelamin_lakilakiperempuan_wajib] wajib diisi.',
-             '*.jenis_kelamin_lakilakiperempuan_wajib.in' => 'Jenis Kelamin tidak valid.',
-             '*.email_unik_opsional_untuk_login.email' => 'Format Email tidak valid.',
-             '*.tanggal_tahbisan_yyyymmdd_wajib.*' => 'Tanggal Tahbisan wajib & format angka Excel.',
-             '*.tempat_tahbisan_wajib.required' => 'Header [tempat_tahbisan_wajib] wajib diisi.',
-             '*.status_kepegawaian_wajib.required' => 'Header [status_kepegawaian_wajib] wajib diisi.',
-             '*.nama_klasis_penempatan.exists' => 'Nama Klasis Penempatan tidak ditemukan.',
-             '*.nama_jemaat_penempatan.exists' => 'Nama Jemaat Penempatan tidak ditemukan.',
-         ];
-     }
+    private function transformDate($value): ?string
+    {
+         if (empty($value)) return null;
+         try {
+             if (is_numeric($value)) {
+                 return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value)->format('Y-m-d');
+             }
+             return Carbon::parse($value)->format('Y-m-d');
+         } catch (\Exception $e) { return null; }
+    }
 
-    // --- function batchSize & chunkSize tetap sama ---
-    public function batchSize(): int { return 50; } // Kurangi batch size jika ada logic user
+    public function batchSize(): int { return 50; }
     public function chunkSize(): int { return 500; }
-
-    // --- function countFilledFields tetap sama ---
-    private function countFilledFields(array $data): int { /* ... kode count fields ... */ }
-
 }

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Storage;
 // Public Controllers
 use App\Http\Controllers\PostPublicController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\ProfileController; // Pastikan ini ada
+use App\Http\Controllers\ProfileController;
 
 // Admin Controllers
 use App\Http\Controllers\Admin\SettingController;
@@ -29,6 +29,11 @@ use App\Http\Controllers\Admin\WadahProgramKerjaController;
 use App\Http\Controllers\Admin\WadahAnggaranController;
 use App\Http\Controllers\Admin\WadahTransaksiController;
 
+// HRIS / Kepegawaian Controllers
+use App\Http\Controllers\Admin\PegawaiController;
+use App\Http\Controllers\Admin\KeluargaPegawaiController;
+use App\Http\Controllers\Admin\RiwayatPendidikanController;
+use App\Http\Controllers\Admin\RiwayatSkController;
 
 // Models
 use App\Models\Setting;
@@ -78,7 +83,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     // Layanan
     Route::resource('services', ServiceController::class)->middleware('role:Super Admin|Admin Bidang 4');
 
-    // CRUD Pendeta
+    // CRUD Pendeta (Legacy)
     Route::resource('pendeta', PendetaController::class)->parameter('pendeta', 'pendeta');
     Route::get('pendeta-export', [PendetaController::class, 'export'])->name('pendeta.export')->middleware('can:export pendeta');
     Route::get('pendeta-import', [PendetaController::class, 'showImportForm'])->name('pendeta.import-form')->middleware('can:import pendeta');
@@ -88,11 +93,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('pendeta/{pendeta}/mutasi/create', [MutasiPendetaController::class, 'create'])
          ->name('pendeta.mutasi.create')
          ->middleware('role:Super Admin|Admin Bidang 3');
-    // Proses simpan mutasi
     Route::post('pendeta/{pendeta}/mutasi', [MutasiPendetaController::class, 'store'])
          ->name('pendeta.mutasi.store')
          ->middleware('role:Super Admin|Admin Bidang 3');
-    // Resource Mutasi
     Route::resource('mutasi', MutasiPendetaController::class)
          ->except(['create', 'store'])
          ->parameters(['mutasi' => 'mutasiPendeta'])
@@ -136,12 +139,34 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::delete('transaksi/{transaksi}', [WadahTransaksiController::class, 'destroy'])->name('transaksi.destroy');
     });
 
+    // === MANAJEMEN KEPEGAWAIAN / HRIS (FASE 6) ===
+    Route::prefix('kepegawaian')->name('kepegawaian.')->group(function () {
+        // Route Cetak PDF
+        Route::get('pegawai/{pegawai}/print', [PegawaiController::class, 'print'])->name('pegawai.print');
+
+        // Data Utama Pegawai
+        Route::resource('pegawai', PegawaiController::class);
+
+        // Data Pendukung (Sub-Resource)
+        Route::post('keluarga', [KeluargaPegawaiController::class, 'store'])->name('keluarga.store');
+        Route::put('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'update'])->name('keluarga.update');
+        Route::delete('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'destroy'])->name('keluarga.destroy');
+
+        Route::post('pendidikan', [RiwayatPendidikanController::class, 'store'])->name('pendidikan.store');
+        Route::put('pendidikan/{pendidikan}', [RiwayatPendidikanController::class, 'update'])->name('pendidikan.update');
+        Route::delete('pendidikan/{pendidikan}', [RiwayatPendidikanController::class, 'destroy'])->name('pendidikan.destroy');
+
+        Route::post('sk', [RiwayatSkController::class, 'store'])->name('sk.store');
+        Route::put('sk/{sk}', [RiwayatSkController::class, 'update'])->name('sk.update');
+        Route::delete('sk/{sk}', [RiwayatSkController::class, 'destroy'])->name('sk.destroy');
+    });
+
     // CRUD User Management
     Route::resource('users', UserController::class)->middleware('role:Super Admin');
 
 }); // Akhir Grup Admin
 
-// === RUTE PROFILE USER (YANG HILANG SEBELUMNYA) ===
+// === RUTE PROFILE USER ===
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
