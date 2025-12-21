@@ -10,64 +10,72 @@ use App\Models\Jemaat;
 use App\Models\Pendeta;
 use App\Models\AnggotaJemaat;
 use App\Models\WadahKategorialAnggaran;
-use App\Models\Pegawai; // Model Baru Fase 6
+use App\Models\Pegawai;    // Model Fase 6
+use App\Models\AsetGereja; // Model Baru Fase 7
 
 class DashboardController extends Controller
 {
+    /**
+     * Menampilkan Dashboard Utama dengan statistik terintegrasi.
+     */
     public function index()
     {
         $user = Auth::user();
+        $tahunSekarang = date('Y');
         
-        // Inisialisasi Data Statistik
+        // 1. Inisialisasi Data Statistik Dasar
         $stats = [
             'klasis' => 0,
             'jemaat' => 0,
             'anggota' => 0,
             'pendeta' => 0,
+            'aset' => 0,             // Tambahan Fase 7: Inventaris
             'keuangan_target' => 0,
             'keuangan_realisasi' => 0,
         ];
 
-        // 1. Statistik Klasis (Hanya relevan untuk level Sinode)
+        // 2. Statistik Klasis (Hanya untuk level Sinode/Super Admin)
         if ($user->hasRole(['Super Admin', 'Admin Sinode'])) {
             $stats['klasis'] = Klasis::count();
         } elseif ($user->hasRole('Admin Klasis')) {
-            $stats['klasis'] = 1; // Klasis dia sendiri
+            $stats['klasis'] = 1; // Menunjukkan wilayah tugasnya sendiri
         }
 
-        // 2. Siapkan Query Builder Dasar
+        // 3. Siapkan Query Builder Dasar
         $jemaatQuery = Jemaat::query();
-        
-        // Perbaikan: Nama kolom yang benar adalah 'status_keanggotaan', bukan 'status_anggota'
         $anggotaQuery = AnggotaJemaat::query()->where('status_keanggotaan', 'Aktif'); 
-        
-        $pendetaQuery = Pendeta::query()->where('status_kepegawaian', 'Aktif'); // Fallback data lama
-        $keuanganQuery = WadahKategorialAnggaran::query()->where('tahun_anggaran', date('Y'));
+        $pendetaQuery = Pendeta::query()->where('status_kepegawaian', 'Aktif'); 
+        $keuanganQuery = WadahKategorialAnggaran::query()->where('tahun_anggaran', $tahunSekarang);
+        $asetQuery = AsetGereja::query(); // Query untuk Aset (Fase 7)
 
-        // 3. Terapkan Filter Berdasarkan Role (Scoping)
+        // 4. Terapkan Filter Berdasarkan Role (Data Scoping)
         if ($user->hasRole(['Super Admin', 'Admin Sinode'])) {
-            // Tidak ada filter, ambil semua data
+            // Level Sinode melihat seluruh data secara nasional
         } elseif ($user->hasRole('Admin Klasis') && $user->klasis_id) {
+            // Level Klasis hanya melihat data di dalam Klasisnya
             $jemaatQuery->where('klasis_id', $user->klasis_id);
             $anggotaQuery->whereHas('jemaat', fn($q) => $q->where('klasis_id', $user->klasis_id));
             $pendetaQuery->where('klasis_penempatan_id', $user->klasis_id);
             $keuanganQuery->where('klasis_id', $user->klasis_id);
+            $asetQuery->where('klasis_id', $user->klasis_id); // Filter Aset Klasis
         } elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
+            // Level Jemaat hanya melihat data jemaatnya sendiri
             $jemaatQuery->where('id', $user->jemaat_id);
             $anggotaQuery->where('jemaat_id', $user->jemaat_id);
             $pendetaQuery->where('jemaat_penempatan_id', $user->jemaat_id);
             $keuanganQuery->where('jemaat_id', $user->jemaat_id);
+            $asetQuery->where('jemaat_id', $user->jemaat_id); // Filter Aset Jemaat
         }
 
-        // 4. Eksekusi Query Statistik Dasar
+        // 5. Eksekusi Perhitungan Statistik
         $stats['jemaat'] = $jemaatQuery->count();
         $stats['anggota'] = $anggotaQuery->count();
+        $stats['aset'] = $asetQuery->count(); // Total Aset terhitung
 
-        // Statistik Pegawai (Prioritaskan tabel 'pegawai' baru jika ada, jika tidak pakai 'pendeta')
+        // Perhitungan Pegawai (Prioritas menggunakan tabel Pegawai Fase 6)
         if (class_exists(Pegawai::class)) {
             $pegawaiQuery = Pegawai::query()->where('status_aktif', 'Aktif');
             
-            // Apply Scope untuk Pegawai
             if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
                 $pegawaiQuery->where('klasis_id', $user->klasis_id);
             } elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
@@ -76,25 +84,20 @@ class DashboardController extends Controller
             
             $stats['pendeta'] = $pegawaiQuery->count(); 
         } else {
-            $stats['pendeta'] = $pendetaQuery->count();
+            $stats['pendeta'] = $pendetaQuery->count(); // Fallback ke data pendeta lama
         }
 
-        // Ringkasan Keuangan Wadah (Tahun Ini)
+        // Ringkasan Keuangan (Realisasi Wadah)
         $stats['keuangan_target'] = $keuanganQuery->sum('jumlah_target');
         $stats['keuangan_realisasi'] = $keuanganQuery->sum('jumlah_realisasi');
 
-        // 5. Fitur Baru: Peringatan Pensiun (Early Warning System)
-        // Mengambil pegawai yang akan pensiun dalam 1 tahun ke depan
+        // 6. Fitur Peringatan Pensiun (Early Warning System Fase 6)
         $pensiunAkanDatang = collect();
-
-        // Fitur ini hanya aktif jika Model Pegawai ada dan User berhak melihat (Sinode/Klasis/Bidang 3)
         if (class_exists(Pegawai::class) && $user->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Klasis', 'Admin Bidang 3'])) {
-            
             $pensiunQuery = Pegawai::where('status_aktif', 'Aktif')
-                ->whereBetween('tanggal_pensiun', [now(), now()->addYear()]) // Range: Hari ini s/d 1 Tahun kedepan
+                ->whereBetween('tanggal_pensiun', [now(), now()->addYear()]) // Range 1 tahun ke depan
                 ->orderBy('tanggal_pensiun', 'asc');
 
-            // Scope Klasis (Hanya lihat pegawai di klasisnya)
             if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
                 $pensiunQuery->where('klasis_id', $user->klasis_id);
             }
@@ -102,6 +105,7 @@ class DashboardController extends Controller
             $pensiunAkanDatang = $pensiunQuery->take(5)->get();
         }
 
+        // Mengirimkan data ke View Dashboard
         return view('admin.dashboard', compact('stats', 'pensiunAkanDatang'));
     }
 }

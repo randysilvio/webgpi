@@ -21,22 +21,17 @@ class WadahStatistikController extends Controller
         $jemaatId = $request->jemaat_id;
         $klasisId = $request->klasis_id;
 
-        // Jika user adalah Admin Jemaat, kunci ke jemaatnya sendiri
         if ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
             $jemaatId = $user->jemaat_id;
-        }
-        // Jika user adalah Admin Klasis, kunci ke klasisnya sendiri
-        elseif ($user->hasRole('Admin Klasis') && $user->klasis_id) {
+        } elseif ($user->hasRole('Admin Klasis') && $user->klasis_id) {
             $klasisId = $user->klasis_id;
         }
 
-        // 2. Ambil Data Master Wadah untuk referensi batasan usia
+        // 2. Ambil Data Master Wadah
         $jenisWadahs = JenisWadahKategorial::all();
         $statistik = [];
 
         foreach ($jenisWadahs as $wadah) {
-            // Mulai Query Anggota
-            // PERBAIKAN: Menghapus ->where('status_anggota', 'aktif') karena kolom belum ada
             $query = AnggotaJemaat::query();
 
             // Filter Wilayah
@@ -48,23 +43,24 @@ class WadahStatistikController extends Controller
                 });
             }
 
-            // Filter Usia (Menghitung tanggal lahir berdasarkan range usia)
-            // Rumus: Tgl Lahir <= Hari ini - Min Usia AND Tgl Lahir >= Hari ini - Max Usia - 1 tahun (toleransi)
+            // Filter Usia
             $maxDate = Carbon::now()->subYears($wadah->rentang_usia_min)->format('Y-m-d');
-            $minDate = Carbon::now()->subYears($wadah->rentang_usia_max + 1)->format('Y-m-d'); // +1 agar mencakup tahun penuh
+            $minDate = Carbon::now()->subYears($wadah->rentang_usia_max + 1)->format('Y-m-d');
 
             $query->whereDate('tanggal_lahir', '<=', $maxDate)
                   ->whereDate('tanggal_lahir', '>=', $minDate);
 
-            // Filter Jenis Kelamin Spesifik (Sesuai Nama Wadah)
-            // Perwata (Wanita), Perpri (Pria). PAR/PAM/Lansia biasanya Campuran.
+            // Filter Jenis Kelamin (Mendukung kode L/P dan teks lengkap)
             if (in_array(strtoupper($wadah->nama_wadah), ['PERWATA', 'PW'])) {
-                $query->where('jenis_kelamin', 'P'); // P = Perempuan
+                $query->where(function($q) {
+                    $q->where('jenis_kelamin', 'P')->orWhere('jenis_kelamin', 'Perempuan');
+                });
             } elseif (in_array(strtoupper($wadah->nama_wadah), ['PERPRI', 'PKB', 'PRI'])) {
-                $query->where('jenis_kelamin', 'L'); // L = Laki-laki
+                $query->where(function($q) {
+                    $q->where('jenis_kelamin', 'L')->orWhere('jenis_kelamin', 'Laki-laki');
+                });
             }
 
-            // Hitung Jumlah
             $jumlah = $query->count();
 
             $statistik[] = [
@@ -74,11 +70,11 @@ class WadahStatistikController extends Controller
             ];
         }
 
-        // 3. Data untuk Dropdown Filter di View
+        // 3. Data Dropdown
         $klasisList = collect();
         $jemaatList = collect();
 
-        if ($user->hasRole('Super Admin') || $user->hasRole('Admin Sinode')) {
+        if ($user->hasRole(['Super Admin', 'Admin Sinode'])) {
             $klasisList = Klasis::orderBy('nama_klasis')->get();
             if ($request->klasis_id) {
                 $jemaatList = Jemaat::where('klasis_id', $request->klasis_id)->orderBy('nama_jemaat')->get();
