@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Log; // <-- PERBAIKAN: Tambahkan baris ini
-use App\Models\User;                 // <-- Tambahan: Ini praktik yang baik
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class DatabaseSeeder extends Seeder
 {
@@ -14,23 +13,28 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
-
-        // Panggil Seeder Role dan Permission
-        // Ini harus dijalankan agar Role 'Super Admin' ada
+        // 1. Panggil Seeder Role dan Permission (Pondasi Keamanan)
         $this->call(RolesAndPermissionsSeeder::class); 
 
-        // Buat User Super Admin pertama (Opsional, tapi direkomendasikan)
-         User::factory()->create([ // <-- Menggunakan 'User::'
-             'name' => 'Super Admin',
-             'email' => 'admin@gpipapua.org', // Ganti email Anda
-             'password' => bcrypt('password'), // Ganti password Anda
-         ])->assignRole('Super Admin'); // Langsung assign role
+        // 2. Buat User Super Admin pertama
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@gpipapua.org'],
+            [
+                'name' => 'Super Admin',
+                'password' => bcrypt('password'), // Ganti dengan password yang lebih aman
+            ]
+        );
+        $admin->assignRole('Super Admin');
+        Log::info('User Super Admin default berhasil disiapkan.');
 
-         // Baris ini sekarang akan berfungsi
-         Log::info('User Super Admin default dibuat.');
+        // 3. Panggil Seeder Mata Anggaran (Fase 7: Perbendaharaan)
+        // Pastikan file MataAnggaranSeeder.php sudah Anda buat sebelumnya
+        if (class_exists(MataAnggaranSeeder::class)) {
+            $this->call(MataAnggaranSeeder::class);
+            Log::info('Master Mata Anggaran berhasil dimuat.');
+        }
 
-        // Panggil seeder lain jika ada
-        // $this->call(AnotherSeeder::class);
+        // Panggil seeder lain jika diperlukan
+        // $this->call(KlasisSeeder::class);
     }
 }

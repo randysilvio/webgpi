@@ -39,4 +39,17 @@ class Klasis extends Model
     {
         return $this->hasMany(Pendeta::class, 'klasis_penempatan_id');
     }
+
+    // ===================================================================
+    // || RELASI BARU DITAMBAHKAN ||
+    // ===================================================================
+
+    /**
+     * Mendapatkan semua akun User yang terhubung dengan Klasis ini
+     * (misal: Admin Klasis).
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class, 'klasis_id');
+    }
 }
