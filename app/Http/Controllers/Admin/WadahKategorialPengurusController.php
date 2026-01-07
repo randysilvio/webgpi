@@ -16,18 +16,17 @@ use Illuminate\Validation\Rule;
 class WadahKategorialPengurusController extends Controller
 {
     /**
-     * Menampilkan daftar pengurus wadah.
+     * Menampilkan daftar pengurus wadah dengan statistik.
      */
     public function index(Request $request)
     {
         $user = Auth::user();
         
-        // Eager loading relasi untuk performa
+        // 1. Query Dasar (Eager Loading)
+        // Jangan pakai latest() di sini agar aman untuk query statistik
         $query = WadahKategorialPengurus::with(['jenisWadah', 'klasis', 'jemaat', 'anggotaJemaat']);
 
-        // --- Logic Scoping Data (RBAC) ---
-        
-        // Jika Admin Klasis, hanya tampilkan pengurus tingkat Klasis dia atau Jemaat di bawahnya
+        // 2. Logic Scoping Data (RBAC)
         if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
             $query->where(function($q) use ($user) {
                 $q->where('klasis_id', $user->klasis_id)
@@ -35,13 +34,11 @@ class WadahKategorialPengurusController extends Controller
                       $j->where('klasis_id', $user->klasis_id);
                   });
             });
-        }
-        // Jika Admin Jemaat, hanya tampilkan pengurus tingkat Jemaat dia
-        elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
+        } elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
             $query->where('jemaat_id', $user->jemaat_id);
         }
 
-        // --- Filter dari Request (Search/Filter UI) ---
+        // 3. Filter Request (Dropdown)
         if ($request->filled('jenis_wadah_id')) {
             $query->where('jenis_wadah_id', $request->jenis_wadah_id);
         }
@@ -54,25 +51,45 @@ class WadahKategorialPengurusController extends Controller
         if ($request->filled('jemaat_id')) {
             $query->where('jemaat_id', $request->jemaat_id);
         }
+
+        // --- 4. HITUNG STATISTIK (DASHBOARD MINI) ---
+        // Clone query yang sudah terfilter wilayah & wadah
+        $statsQuery = clone $query;
+        
+        // Gunakan reorder() untuk menghapus default sorting agar COUNT/SUM aman dari error SQL
+        $stats = $statsQuery->reorder()->selectRaw('
+            count(*) as total,
+            sum(case when is_active = 1 then 1 else 0 end) as total_aktif,
+            sum(case when is_active = 0 then 1 else 0 end) as total_non_aktif,
+            sum(case when tingkat = "jemaat" then 1 else 0 end) as level_jemaat
+        ')->first();
+
+        // 5. Filter Pencarian Teks (Search) - Diterapkan SETELAH statistik
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->whereHas('anggotaJemaat', function($subQ) use ($search) {
-                    $subQ->where('nama', 'like', "%{$search}%");
+                    $subQ->where('nama_lengkap', 'like', "%{$search}%");
                 })
                 ->orWhere('jabatan', 'like', "%{$search}%")
                 ->orWhere('nomor_sk', 'like', "%{$search}%");
             });
         }
 
+        // 6. Ambil Data Tabel (Terapkan sorting latest di sini)
         $pengurus = $query->latest()->paginate(15)->withQueryString();
+        
+        // Data Pendukung UI
         $jenisWadahs = JenisWadahKategorial::all();
+        $klasisList = collect();
         
-        // Data untuk dropdown filter (bisa dioptimalkan dengan AJAX jika data besar)
-        $klasisList = Klasis::orderBy('nama_klasis')->get();
-        // Jemaat list dikosongkan atau di-load via AJAX/API di view index untuk performa
+        if ($user->hasRole(['Super Admin', 'Admin Sinode'])) {
+            $klasisList = Klasis::orderBy('nama_klasis')->get();
+        } elseif ($user->hasRole('Admin Klasis')) {
+            $klasisList = Klasis::where('id', $user->klasis_id)->get();
+        }
         
-        return view('admin.wadah.pengurus.index', compact('pengurus', 'jenisWadahs', 'klasisList'));
+        return view('admin.wadah.pengurus.index', compact('pengurus', 'jenisWadahs', 'klasisList', 'stats'));
     }
 
     /**
@@ -81,15 +98,12 @@ class WadahKategorialPengurusController extends Controller
     public function create()
     {
         $jenisWadahs = JenisWadahKategorial::all();
-        
-        // Load data sesuai hak akses (Scoping)
         $user = Auth::user();
         $klasisList = collect();
         $jemaatList = collect();
 
-        if ($user->hasRole('Super Admin') || $user->hasRole('Admin Sinode')) {
+        if ($user->hasRole(['Super Admin', 'Admin Sinode'])) {
             $klasisList = Klasis::orderBy('nama_klasis')->get();
-            // Jemaat di-load via AJAX based on Klasis selection di frontend
         } elseif ($user->hasRole('Admin Klasis')) {
             $klasisList = Klasis::where('id', $user->klasis_id)->get();
             $jemaatList = Jemaat::where('klasis_id', $user->klasis_id)->orderBy('nama_jemaat')->get();
@@ -108,10 +122,9 @@ class WadahKategorialPengurusController extends Controller
         $request->validate([
             'jenis_wadah_id' => 'required|exists:jenis_wadah_kategorial,id',
             'tingkat' => ['required', Rule::in(['sinode', 'klasis', 'jemaat'])],
-            // Validasi kondisional: Klasis wajib jika tingkat=klasis, Jemaat wajib jika tingkat=jemaat
             'klasis_id' => 'required_if:tingkat,klasis|nullable|exists:klasis,id',
             'jemaat_id' => 'required_if:tingkat,jemaat|nullable|exists:jemaat,id',
-            'anggota_jemaat_id' => 'nullable|exists:anggota_jemaat,id', // Bisa null jika belum terdata di DB anggota
+            'anggota_jemaat_id' => 'nullable|exists:anggota_jemaat,id',
             'jabatan' => 'required|string|max:255',
             'nomor_sk' => 'nullable|string|max:255',
             'periode_mulai' => 'required|date',
@@ -121,13 +134,23 @@ class WadahKategorialPengurusController extends Controller
 
         try {
             DB::transaction(function () use ($request) {
+                // Auto-fill lokasi
+                $klasisId = $request->klasis_id;
+                $jemaatId = $request->jemaat_id;
+
+                if ($request->tingkat == 'jemaat' && $jemaatId) {
+                    $klasisId = Jemaat::find($jemaatId)->klasis_id;
+                } elseif ($request->tingkat == 'sinode') {
+                    $klasisId = null;
+                    $jemaatId = null;
+                }
+
                 WadahKategorialPengurus::create([
                     'jenis_wadah_id' => $request->jenis_wadah_id,
                     'tingkat' => $request->tingkat,
-                    'klasis_id' => $request->tingkat == 'klasis' ? $request->klasis_id : ($request->tingkat == 'jemaat' ? Jemaat::find($request->jemaat_id)->klasis_id : null), // Auto fill klasis jika jemaat dipilih
-                    'jemaat_id' => $request->tingkat == 'jemaat' ? $request->jemaat_id : null,
+                    'klasis_id' => $klasisId,
+                    'jemaat_id' => $jemaatId,
                     'anggota_jemaat_id' => $request->anggota_jemaat_id,
-                    // 'user_id' => ... (Logic untuk link ke user login bisa ditambahkan nanti jika diperlukan)
                     'jabatan' => $request->jabatan,
                     'nomor_sk' => $request->nomor_sk,
                     'periode_mulai' => $request->periode_mulai,
@@ -144,15 +167,6 @@ class WadahKategorialPengurusController extends Controller
     }
 
     /**
-     * Menampilkan detail pengurus.
-     */
-    public function show(WadahKategorialPengurus $pengurus)
-    {
-        // Policy check bisa ditambahkan di sini (authorize)
-        return view('admin.wadah.pengurus.show', compact('pengurus'));
-    }
-
-    /**
      * Menampilkan form edit pengurus.
      */
     public function edit(WadahKategorialPengurus $pengurus)
@@ -160,7 +174,6 @@ class WadahKategorialPengurusController extends Controller
         $jenisWadahs = JenisWadahKategorial::all();
         $klasisList = Klasis::orderBy('nama_klasis')->get();
         
-        // Load jemaat list berdasarkan klasis dari data pengurus (jika ada)
         $jemaatList = collect();
         if ($pengurus->klasis_id) {
             $jemaatList = Jemaat::where('klasis_id', $pengurus->klasis_id)->orderBy('nama_jemaat')->get();
@@ -188,11 +201,22 @@ class WadahKategorialPengurusController extends Controller
         ]);
 
         try {
+            // Auto-fill lokasi update
+            $klasisId = $request->klasis_id;
+            $jemaatId = $request->jemaat_id;
+
+            if ($request->tingkat == 'jemaat' && $jemaatId) {
+                $klasisId = Jemaat::find($jemaatId)->klasis_id;
+            } elseif ($request->tingkat == 'sinode') {
+                $klasisId = null;
+                $jemaatId = null;
+            }
+
             $pengurus->update([
                 'jenis_wadah_id' => $request->jenis_wadah_id,
                 'tingkat' => $request->tingkat,
-                'klasis_id' => $request->tingkat == 'klasis' ? $request->klasis_id : ($request->tingkat == 'jemaat' ? Jemaat::find($request->jemaat_id)->klasis_id : null),
-                'jemaat_id' => $request->tingkat == 'jemaat' ? $request->jemaat_id : null,
+                'klasis_id' => $klasisId,
+                'jemaat_id' => $jemaatId,
                 'anggota_jemaat_id' => $request->anggota_jemaat_id,
                 'jabatan' => $request->jabatan,
                 'nomor_sk' => $request->nomor_sk,

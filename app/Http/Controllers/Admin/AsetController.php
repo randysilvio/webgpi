@@ -14,28 +14,23 @@ use Illuminate\Support\Str;
 class AsetController extends Controller
 {
     /**
-     * Menampilkan daftar inventaris aset dengan filter.
+     * Menampilkan daftar inventaris aset dengan filter dan statistik.
      */
     public function index(Request $request)
     {
         $user = Auth::user();
+        
+        // 1. Query Dasar (TANPA latest() di sini agar aman untuk statistik)
         $query = AsetGereja::with(['klasis', 'jemaat']);
 
-        // --- Scoping Data Wilayah ---
+        // 2. Scoping Data Wilayah (RBAC)
         if ($user->hasRole('Admin Klasis')) {
             $query->where('klasis_id', $user->klasis_id);
         } elseif ($user->hasRole('Admin Jemaat')) {
             $query->where('jemaat_id', $user->jemaat_id);
         }
 
-        // --- Filter Pencarian ---
-        if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('nama_aset', 'like', '%' . $request->search . '%')
-                  ->orWhere('kode_aset', 'like', '%' . $request->search . '%');
-            });
-        }
-
+        // 3. Filter (Search, Kategori, Kondisi)
         if ($request->filled('kategori')) {
             $query->where('kategori', $request->kategori);
         }
@@ -44,9 +39,28 @@ class AsetController extends Controller
             $query->where('kondisi', $request->kondisi);
         }
 
-        $asets = $query->latest()->paginate(15)->withQueryString();
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('nama_aset', 'like', '%' . $request->search . '%')
+                  ->orWhere('kode_aset', 'like', '%' . $request->search . '%');
+            });
+        }
 
-        return view('admin.aset.index', compact('asets'));
+        // --- 4. HITUNG STATISTIK (SAFE MODE) ---
+        // Clone query yang sudah terfilter, lalu hapus sorting dengan reorder()
+        // Ini mencegah error "Mixing of GROUP columns"
+        $statsQuery = clone $query;
+        $stats = $statsQuery->reorder()->selectRaw('
+            count(*) as total_item,
+            sum(nilai_perolehan) as total_nilai,
+            sum(case when kondisi = "Baik" then 1 else 0 end) as total_baik,
+            sum(case when kondisi != "Baik" then 1 else 0 end) as total_rusak
+        ')->first();
+
+        // 5. Ambil Data Tabel (Baru kita terapkan sorting latest() di sini)
+        $asets = $query->latest('tanggal_perolehan')->paginate(15)->withQueryString();
+
+        return view('admin.aset.index', compact('asets', 'stats'));
     }
 
     /**
@@ -82,6 +96,7 @@ class AsetController extends Controller
             $data['foto_aset_path'] = $request->file('foto_aset')->store('foto_aset', 'public');
         }
 
+        // Auto Generate Kode Aset jika kosong
         if (!$request->filled('kode_aset')) {
             $data['kode_aset'] = 'AST-' . strtoupper(Str::random(6));
         }
@@ -148,6 +163,9 @@ class AsetController extends Controller
      */
     public function destroy(AsetGereja $aset)
     {
+        // Hapus file fisik jika diperlukan (opsional, tergantung kebijakan soft delete)
+        // if ($aset->foto_aset_path) Storage::disk('public')->delete($aset->foto_aset_path);
+        
         $aset->delete();
         return redirect()->route('admin.perbendaharaan.aset.index')->with('success', 'Aset berhasil dihapus.');
     }

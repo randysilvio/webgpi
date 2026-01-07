@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Klasis; 
 use App\Models\Jemaat; 
-use App\Models\Pendeta;
-use App\Models\JenisWadahKategorial; // <-- Import Model Wadah (BARU)
+use App\Models\Pegawai; // <-- Ganti Pendeta jadi Pegawai
+use App\Models\JenisWadahKategorial;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -18,11 +18,10 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    // Middleware
     public function __construct()
     {
         $this->middleware(['auth']);
-        $this->middleware('role:Super Admin'); // Hanya Super Admin yang boleh kelola user
+        $this->middleware('role:Super Admin');
     }
 
     /**
@@ -30,8 +29,8 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        // Eager load relasi termasuk jenisWadah
-        $query = User::with(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta', 'jenisWadah'])->latest();
+        // FIX: Ganti 'pendeta' menjadi 'pegawai'
+        $query = User::with(['roles', 'klasisTugas', 'jemaatTugas', 'pegawai', 'jenisWadah'])->latest();
 
         if ($request->filled('search')) {
              $searchTerm = '%' . $request->search . '%';
@@ -51,21 +50,20 @@ class UserController extends Controller
      */
     public function create()
     {
-        // Ambil semua nama role
         $roles = Role::pluck('name', 'name');
-        // Jika user bukan ID 1 (Super Admin Utama), jangan tampilkan opsi Super Admin untuk assign ke orang lain
         if (Auth::check() && Auth::id() != 1) {
             $roles = Role::where('name', '!=', 'Super Admin')->pluck('name', 'name');
         }
 
         $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
         $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id'); 
-        $pendetaOptions = Pendeta::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
         
-        // Ambil Data Wadah (BARU)
+        // FIX: Ambil data Pegawai (bukan hanya pendeta)
+        $pegawaiOptions = Pegawai::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
+        
         $wadahs = JenisWadahKategorial::orderBy('nama_wadah')->get();
 
-        return view('admin.user.create', compact('roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions', 'wadahs'));
+        return view('admin.user.create', compact('roles', 'klasisOptions', 'jemaatOptions', 'pegawaiOptions', 'wadahs'));
     }
 
     /**
@@ -80,11 +78,13 @@ class UserController extends Controller
             'roles' => ['required', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
             
-            // Validasi Relasi
             'klasis_id' => ['nullable', 'exists:klasis,id'],
             'jemaat_id' => ['nullable', 'exists:jemaat,id'],
-            'pendeta_id' => ['nullable', 'exists:pendeta,id', 'unique:'.User::class.',pendeta_id'],
-            'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'], // Validasi Wadah (BARU)
+            
+            // FIX: Validasi pegawai_id
+            'pegawai_id' => ['nullable', 'exists:pegawai,id', 'unique:'.User::class.',pegawai_id'],
+            
+            'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'],
         ]);
 
         try {
@@ -94,11 +94,10 @@ class UserController extends Controller
                 'password' => Hash::make($validatedData['password']),
                 'klasis_id' => $validatedData['klasis_id'] ?? null,
                 'jemaat_id' => $validatedData['jemaat_id'] ?? null,
-                'pendeta_id' => $validatedData['pendeta_id'] ?? null,
-                'jenis_wadah_id' => $validatedData['jenis_wadah_id'] ?? null, // Simpan Wadah (BARU)
+                'pegawai_id' => $validatedData['pegawai_id'] ?? null, // FIX
+                'jenis_wadah_id' => $validatedData['jenis_wadah_id'] ?? null,
             ]);
 
-            // Jangan izinkan assign Super Admin jika yang membuat bukan Super Admin
             $rolesToSync = $validatedData['roles'];
             if (Auth::check() && !Auth::user()->hasRole('Super Admin')) {
                 $rolesToSync = array_filter($rolesToSync, fn($role) => $role !== 'Super Admin');
@@ -121,7 +120,8 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        $user->load(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta', 'jenisWadah']);
+        // FIX: Load 'pegawai'
+        $user->load(['roles', 'klasisTugas', 'jemaatTugas', 'pegawai', 'jenisWadah']);
         return view('admin.user.show', compact('user'));
     }
 
@@ -137,14 +137,14 @@ class UserController extends Controller
 
         $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
         $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
-        $pendetaOptions = Pendeta::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
         
-        // Ambil Data Wadah (BARU)
+        // FIX: Pegawai Options
+        $pegawaiOptions = Pegawai::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
+        
         $wadahs = JenisWadahKategorial::orderBy('nama_wadah')->get();
-        
         $userRoles = $user->roles->pluck('name')->toArray();
 
-        return view('admin.user.edit', compact('user', 'roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions', 'userRoles', 'wadahs'));
+        return view('admin.user.edit', compact('user', 'roles', 'klasisOptions', 'jemaatOptions', 'pegawaiOptions', 'userRoles', 'wadahs'));
     }
 
     /**
@@ -159,11 +159,13 @@ class UserController extends Controller
             'roles' => ['required', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
             
-            // Validasi Relasi
             'klasis_id' => ['nullable', 'exists:klasis,id'],
             'jemaat_id' => ['nullable', 'exists:jemaat,id'],
-            'pendeta_id' => ['nullable', 'exists:pendeta,id', Rule::unique('users', 'pendeta_id')->ignore($user->id)],
-            'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'], // Validasi Wadah (BARU)
+            
+            // FIX: Validasi pegawai_id
+            'pegawai_id' => ['nullable', 'exists:pegawai,id', Rule::unique('users', 'pegawai_id')->ignore($user->id)],
+            
+            'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'],
         ]);
 
          try {
@@ -172,8 +174,8 @@ class UserController extends Controller
                 'email' => $validatedData['email'],
                 'klasis_id' => $validatedData['klasis_id'] ?? null,
                 'jemaat_id' => $validatedData['jemaat_id'] ?? null,
-                'pendeta_id' => $validatedData['pendeta_id'] ?? null,
-                'jenis_wadah_id' => $validatedData['jenis_wadah_id'] ?? null, // Update Wadah (BARU)
+                'pegawai_id' => $validatedData['pegawai_id'] ?? null, // FIX
+                'jenis_wadah_id' => $validatedData['jenis_wadah_id'] ?? null,
             ];
 
             if (!empty($validatedData['password'])) {
@@ -183,11 +185,9 @@ class UserController extends Controller
             $user->update($updateData);
 
             $rolesToSync = $validatedData['roles'];
-            // Proteksi agar Super Admin ID 1 tidak kehilangan rolenya
             if ($user->id == 1 && !in_array('Super Admin', $rolesToSync)) {
                 $rolesToSync[] = 'Super Admin'; 
             }
-            // Proteksi agar user lain tidak bisa assign Super Admin
             if (Auth::check() && !Auth::user()->hasRole('Super Admin')) {
                  $rolesToSync = array_filter($rolesToSync, fn($role) => $role !== 'Super Admin');
             }

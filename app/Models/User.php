@@ -8,7 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Database\Eloquent\Relations\BelongsTo; // <-- Tambahan Import
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -16,23 +16,22 @@ class User extends Authenticatable
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
      */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'pendeta_id',
-        'klasis_id',
+        'pegawai_id', // <-- GANTI: Dulu pendeta_id, sekarang pegawai_id
+        
+        // Klasis & Jemaat ID di user tetap berguna untuk Admin Klasis/Jemaat
+        // yang mungkin bukan pegawai, tapi operator.
+        'klasis_id', 
         'jemaat_id',
-        'jenis_wadah_id', // <-- Tambahan: Kolom baru untuk Pengurus Wadah
+        'jenis_wadah_id',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -41,8 +40,6 @@ class User extends Authenticatable
 
     /**
      * The attributes that should be cast.
-     *
-     * @var array<string, string>
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -50,11 +47,19 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the pendeta record associated with the user.
+     * Relasi ke Data Personil (Bisa Pendeta atau Staff).
      */
-    public function pendeta(): BelongsTo
+    public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(Pendeta::class, 'pendeta_id');
+        return $this->belongsTo(Pegawai::class, 'pegawai_id');
+    }
+
+    /**
+     * Helper: Cek apakah user ini adalah Pendeta
+     */
+    public function isPendeta(): bool
+    {
+        return $this->pegawai && $this->pegawai->jenis_pegawai === 'Pendeta';
     }
 
     /**
@@ -74,8 +79,7 @@ class User extends Authenticatable
       }
 
     /**
-     * Relasi ke Jenis Wadah Kategorial.
-     * Digunakan jika user adalah Pengurus Wadah (misal: Ketua PAR).
+     * Relasi ke Jenis Wadah (Jika akun pengurus wadah).
      */
     public function jenisWadah(): BelongsTo
     {

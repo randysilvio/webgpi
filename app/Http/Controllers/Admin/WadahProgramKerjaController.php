@@ -15,15 +15,16 @@ use Illuminate\Validation\Rule;
 class WadahProgramKerjaController extends Controller
 {
     /**
-     * Menampilkan daftar program kerja.
+     * Menampilkan daftar program kerja dengan statistik.
      */
     public function index(Request $request)
     {
         $user = Auth::user();
         
+        // 1. Query Dasar
         $query = WadahKategorialProgramKerja::with(['jenisWadah', 'klasis', 'jemaat', 'parentProgram']);
 
-        // --- 1. Logic Scoping Data (RBAC) ---
+        // 2. Logic Scoping Data (RBAC)
         if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
             $query->where(function($q) use ($user) {
                 $q->where('klasis_id', $user->klasis_id)
@@ -35,7 +36,7 @@ class WadahProgramKerjaController extends Controller
             $query->where('jemaat_id', $user->jemaat_id);
         }
 
-        // --- 2. Filter Search & Dropdown ---
+        // 3. Filter Search & Dropdown
         if ($request->filled('jenis_wadah_id')) {
             $query->where('jenis_wadah_id', $request->jenis_wadah_id);
         }
@@ -49,7 +50,17 @@ class WadahProgramKerjaController extends Controller
             $query->where('nama_program', 'like', '%' . $request->search . '%');
         }
 
-        // Default sort: Tahun terbaru, lalu Tingkat (Sinode -> Klasis -> Jemaat)
+        // --- 4. HITUNG STATISTIK (SAFE MODE) ---
+        // Clone query, hapus sorting bawaan agar aman untuk agregasi (SUM/COUNT)
+        $statsQuery = clone $query;
+        $stats = $statsQuery->reorder()->selectRaw('
+            count(*) as total_program,
+            sum(target_anggaran) as total_rab,
+            sum(case when status_pelaksanaan = 1 then 1 else 0 end) as total_berjalan,
+            sum(case when status_pelaksanaan = 2 then 1 else 0 end) as total_selesai
+        ')->first();
+
+        // 5. Ambil Data Tabel (Sort: Tahun terbaru, lalu tingkat sinode->klasis->jemaat)
         $programs = $query->orderByDesc('tahun_program')
                           ->orderByRaw("FIELD(tingkat, 'sinode', 'klasis', 'jemaat')")
                           ->paginate(15)
@@ -59,7 +70,7 @@ class WadahProgramKerjaController extends Controller
         $jenisWadahs = JenisWadahKategorial::all();
         $years = WadahKategorialProgramKerja::select('tahun_program')->distinct()->orderByDesc('tahun_program')->pluck('tahun_program');
 
-        return view('admin.wadah.program.index', compact('programs', 'jenisWadahs', 'years'));
+        return view('admin.wadah.program.index', compact('programs', 'jenisWadahs', 'years', 'stats'));
     }
 
     /**
@@ -163,7 +174,6 @@ class WadahProgramKerjaController extends Controller
         }
 
         // Load Calon Program Induk (Parent)
-        // Logika: Jika ini program Jemaat, cari program Klasis tahun yang sama & wadah yang sama
         $potentialParents = collect();
         if ($program->tingkat == 'jemaat' && $program->klasis_id) {
             $potentialParents = WadahKategorialProgramKerja::where('tingkat', 'klasis')
@@ -195,7 +205,7 @@ class WadahProgramKerjaController extends Controller
 
         try {
             $program->update([
-                'jenis_wadah_id' => $request->jenis_wadah_id, // Biasanya wadah jarang berubah, tapi disiapkan
+                'jenis_wadah_id' => $request->jenis_wadah_id, 
                 'tahun_program' => $request->tahun_program,
                 'nama_program' => $request->nama_program,
                 'deskripsi' => $request->deskripsi,
@@ -229,11 +239,10 @@ class WadahProgramKerjaController extends Controller
 
     /**
      * API Internal: Mendapatkan daftar program induk yang mungkin.
-     * Diakses via AJAX saat user memilih Tingkat/Wadah/Tahun di form Create.
      */
     public function getParentPrograms(Request $request)
     {
-        $tingkat = $request->tingkat; // Tingkat program yang sedang dibuat (misal: jemaat)
+        $tingkat = $request->tingkat;
         $wadahId = $request->wadah_id;
         $tahun = $request->tahun;
         $klasisId = $request->klasis_id;
@@ -242,10 +251,8 @@ class WadahProgramKerjaController extends Controller
                                             ->where('tahun_program', $tahun);
 
         if ($tingkat == 'jemaat') {
-            // Jika buat program Jemaat, cari induk di Klasis terkait
             $query->where('tingkat', 'klasis')->where('klasis_id', $klasisId);
         } elseif ($tingkat == 'klasis') {
-            // Jika buat program Klasis, cari induk di Sinode
             $query->where('tingkat', 'sinode');
         } else {
             return response()->json([]);

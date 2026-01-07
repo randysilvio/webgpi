@@ -7,6 +7,18 @@
 <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6 md:p-8">
     <h2 class="text-xl font-bold text-gray-800 mb-6 border-b pb-3">Formulir Data Pegawai</h2>
 
+    {{-- Tampilkan Error Validasi (Agar ketahuan jika gagal simpan) --}}
+    @if ($errors->any())
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <strong class="font-bold">Terjadi Kesalahan!</strong>
+            <ul class="mt-1 list-disc list-inside">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <form action="{{ route('admin.kepegawaian.pegawai.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
 
@@ -42,21 +54,21 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Pegawai <span class="text-red-500">*</span></label>
-                <select name="jenis_pegawai" required class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                <select name="jenis_pegawai" id="jenis_pegawai" required class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
                     <option value="">-- Pilih --</option>
-                    <option value="Pendeta">Pendeta</option>
-                    <option value="Pengajar">Pengajar</option>
-                    <option value="Pegawai Kantor">Pegawai Kantor</option>
-                    <option value="Koster">Koster / Tuagama</option>
-                    <option value="Lainnya">Lainnya</option>
+                    <option value="Pendeta" {{ old('jenis_pegawai') == 'Pendeta' ? 'selected' : '' }}>Pendeta</option>
+                    <option value="Pengajar" {{ old('jenis_pegawai') == 'Pengajar' ? 'selected' : '' }}>Pengajar</option>
+                    <option value="Pegawai Kantor" {{ old('jenis_pegawai') == 'Pegawai Kantor' ? 'selected' : '' }}>Pegawai Kantor</option>
+                    <option value="Koster" {{ old('jenis_pegawai') == 'Koster' ? 'selected' : '' }}>Koster / Tuagama</option>
+                    <option value="Lainnya" {{ old('jenis_pegawai') == 'Lainnya' ? 'selected' : '' }}>Lainnya</option>
                 </select>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status Kepegawaian <span class="text-red-500">*</span></label>
                 <select name="status_kepegawaian" required class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <option value="Organik">Organik (Tetap)</option>
-                    <option value="Kontrak">Kontrak</option>
-                    <option value="Honorer">Honorer</option>
+                    <option value="Organik" {{ old('status_kepegawaian') == 'Organik' ? 'selected' : '' }}>Organik (Tetap)</option>
+                    <option value="Kontrak" {{ old('status_kepegawaian') == 'Kontrak' ? 'selected' : '' }}>Kontrak</option>
+                    <option value="Honorer" {{ old('status_kepegawaian') == 'Honorer' ? 'selected' : '' }}>Honorer</option>
                 </select>
             </div>
             
@@ -69,6 +81,21 @@
                 <input type="file" name="foto_diri" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
             </div>
 
+            {{-- Tambahan Khusus Pendeta (Hidden by default) --}}
+            <div id="field_pendeta" class="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 hidden bg-blue-50 p-4 rounded-md border border-blue-100">
+                <div class="col-span-2">
+                    <h3 class="text-sm font-bold text-blue-600 uppercase">Data Tahbisan (Wajib untuk Pendeta)</h3>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Tahbisan <span class="text-red-500">*</span></label>
+                    <input type="date" name="tanggal_tahbisan" id="input_tgl_tahbisan" value="{{ old('tanggal_tahbisan') }}" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tempat Tahbisan <span class="text-red-500">*</span></label>
+                    <input type="text" name="tempat_tahbisan" id="input_tempat_tahbisan" value="{{ old('tempat_tahbisan') }}" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="Nama Jemaat/Gedung Gereja">
+                </div>
+            </div>
+
             {{-- Penempatan --}}
             <div class="col-span-2 mt-4">
                 <h3 class="text-sm font-bold text-blue-600 uppercase mb-3">Lokasi Penempatan Awal</h3>
@@ -79,7 +106,7 @@
                 <select name="klasis_id" id="klasis_id" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary" onchange="loadJemaat(this.value)">
                     <option value="">-- Pilih Klasis --</option>
                     @foreach($klasisList as $k)
-                        <option value="{{ $k->id }}">{{ $k->nama_klasis }}</option>
+                        <option value="{{ $k->id }}" {{ old('klasis_id') == $k->id ? 'selected' : '' }}>{{ $k->nama_klasis }}</option>
                     @endforeach
                 </select>
             </div>
@@ -105,18 +132,17 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
-                {{-- PERBAIKAN DISINI: Value diubah menjadi 'L' dan 'P' sesuai Database --}}
                 <select name="jenis_kelamin" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <option value="L">Laki-laki</option>
-                    <option value="P">Perempuan</option>
+                    <option value="L" {{ old('jenis_kelamin') == 'L' ? 'selected' : '' }}>Laki-laki</option>
+                    <option value="P" {{ old('jenis_kelamin') == 'P' ? 'selected' : '' }}>Perempuan</option>
                 </select>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status Pernikahan</label>
                 <select name="status_pernikahan" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <option value="Belum Menikah">Belum Menikah</option>
-                    <option value="Menikah">Menikah</option>
-                    <option value="Janda/Duda">Janda/Duda</option>
+                    <option value="Belum Menikah" {{ old('status_pernikahan') == 'Belum Menikah' ? 'selected' : '' }}>Belum Menikah</option>
+                    <option value="Menikah" {{ old('status_pernikahan') == 'Menikah' ? 'selected' : '' }}>Menikah</option>
+                    <option value="Janda/Duda" {{ old('status_pernikahan') == 'Janda/Duda' ? 'selected' : '' }}>Janda/Duda</option>
                 </select>
             </div>
             <div>
@@ -142,6 +168,7 @@
 
 @push('scripts')
 <script>
+    // Logic Dropdown Jemaat
     function loadJemaat(klasisId) {
         const jemaatSelect = document.getElementById('jemaat_id');
         jemaatSelect.innerHTML = '<option value="">Memuat...</option>';
@@ -156,10 +183,47 @@
             .then(data => {
                 jemaatSelect.innerHTML = '<option value="">-- Pilih Jemaat --</option>';
                 data.forEach(j => {
-                    jemaatSelect.innerHTML += `<option value="${j.id}">${j.nama_jemaat}</option>`;
+                    // Cek jika ada old value untuk auto-select saat validasi gagal
+                    let selected = '';
+                    @if(old('jemaat_id'))
+                        if(j.id == "{{ old('jemaat_id') }}") selected = 'selected';
+                    @endif
+                    
+                    jemaatSelect.innerHTML += `<option value="${j.id}" ${selected}>${j.nama_jemaat}</option>`;
                 });
             });
     }
+
+    // Trigger load jemaat jika validasi gagal dan klasis sudah terpilih
+    document.addEventListener("DOMContentLoaded", function() {
+        let oldKlasis = "{{ old('klasis_id') }}";
+        if(oldKlasis) {
+            loadJemaat(oldKlasis);
+        }
+        
+        // Jalankan toggle pendeta saat load
+        togglePendetaFields();
+    });
+
+    // --- LOGIC TAMBAHAN KHUSUS PENDETA ---
+    const jenisPegawaiSelect = document.getElementById('jenis_pegawai');
+    const fieldPendeta = document.getElementById('field_pendeta');
+    const inputTgl = document.getElementById('input_tgl_tahbisan');
+    const inputTempat = document.getElementById('input_tempat_tahbisan');
+
+    function togglePendetaFields() {
+        if (jenisPegawaiSelect.value === 'Pendeta') {
+            fieldPendeta.classList.remove('hidden');
+            inputTgl.required = true;
+            inputTempat.required = true;
+        } else {
+            fieldPendeta.classList.add('hidden');
+            inputTgl.required = false;
+            inputTempat.required = false;
+        }
+    }
+
+    jenisPegawaiSelect.addEventListener('change', togglePendetaFields);
 </script>
 @endpush
 @endsection

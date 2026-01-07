@@ -14,7 +14,6 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\MessageController;
-use App\Http\Controllers\Admin\PendetaController;
 use App\Http\Controllers\Admin\KlasisController;
 use App\Http\Controllers\Admin\JemaatController;
 use App\Http\Controllers\Admin\AnggotaJemaatController;
@@ -35,22 +34,36 @@ use App\Http\Controllers\Admin\KeluargaPegawaiController;
 use App\Http\Controllers\Admin\RiwayatPendidikanController;
 use App\Http\Controllers\Admin\RiwayatSkController;
 
-// Perbendaharaan & Aset Controllers (Fase 7)
+// Perbendaharaan & Aset Controllers
 use App\Http\Controllers\Admin\AsetController;
 use App\Http\Controllers\Admin\MataAnggaranController;
 use App\Http\Controllers\Admin\AnggaranIndukController; 
 use App\Http\Controllers\Admin\TransaksiIndukController;
-use App\Http\Controllers\Admin\LaporanController; // Tambahan: Controller Laporan
+use App\Http\Controllers\Admin\LaporanController;
+
+// E-Office Controllers
+use App\Http\Controllers\Admin\SuratMasukController;
+use App\Http\Controllers\Admin\SuratKeluarController;
+
+// Sakramen Controllers
+use App\Http\Controllers\Admin\SakramenController;
+use App\Http\Controllers\Admin\SakramenNikahController;
+use App\Http\Controllers\Admin\SakramenCetakController;
+
+// Pejabat & Sidang Controllers
+use App\Http\Controllers\Admin\PejabatGerejawiController;
+use App\Http\Controllers\Admin\PersidanganController;
 
 // Models
 use App\Models\Setting;
 use App\Models\Post;
 use App\Models\Service;
 use App\Models\Jemaat;
+use App\Models\Klasis;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Web Routes - GPI PAPUA ECOSYSTEM
 |--------------------------------------------------------------------------
 */
 
@@ -73,10 +86,13 @@ Route::post('/contact', [ContactController::class, 'store'])->name('contact.stor
 /* --- RUTE ADMIN (MEMERLUKAN LOGIN) --- */
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
+    // Redirect Root Admin ke Dashboard
+    Route::get('/', function () { return redirect()->route('admin.dashboard'); });
+
     // 1. Dashboard Utama
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // 2. Pengaturan & Konten Website (Role: Super Admin | Admin Bidang 4)
+    // 2. Pengaturan & Konten Website
     Route::middleware('role:Super Admin|Admin Bidang 4')->group(function () {
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
@@ -89,54 +105,90 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::resource('services', ServiceController::class);
     });
 
-    // 3. Data Master Wilayah & Jemaat
-    Route::resource('klasis', KlasisController::class)->parameter('klasis', 'klasis');
-    Route::get('klasis-export', [KlasisController::class, 'export'])->name('klasis.export')->middleware('can:export klasis');
-    Route::get('klasis-import', [KlasisController::class, 'showImportForm'])->name('klasis.import-form')->middleware('can:import klasis');
-    Route::post('klasis-import', [KlasisController::class, 'import'])->name('klasis.import')->middleware('can:import klasis');
-
-    Route::resource('jemaat', JemaatController::class);
-    Route::get('jemaat-export', [JemaatController::class, 'export'])->name('jemaat.export')->middleware('can:export jemaat');
-    Route::get('jemaat-import', [JemaatController::class, 'showImportForm'])->name('jemaat.import-form')->middleware('can:import jemaat');
-    Route::post('jemaat-import', [JemaatController::class, 'import'])->name('jemaat.import')->middleware('can:import jemaat');
-
-    Route::resource('anggota-jemaat', AnggotaJemaatController::class);
-    Route::get('anggota-jemaat-export', [AnggotaJemaatController::class, 'export'])->name('anggota-jemaat.export')->middleware('can:export anggota jemaat');
-    Route::get('anggota-jemaat-import', [AnggotaJemaatController::class, 'showImportForm'])->name('anggota-jemaat.import-form')->middleware('can:import anggota jemaat');
-    Route::post('anggota-jemaat-import', [AnggotaJemaatController::class, 'import'])->name('anggota-jemaat.import')->middleware('can:import anggota jemaat');
-
-    // 4. Manajemen Pendeta (Legacy & Mutasi)
-    Route::resource('pendeta', PendetaController::class)->parameter('pendeta', 'pendeta');
-    Route::get('pendeta-export', [PendetaController::class, 'export'])->name('pendeta.export')->middleware('can:export pendeta');
-    Route::get('pendeta-import', [PendetaController::class, 'showImportForm'])->name('pendeta.import-form')->middleware('can:import pendeta');
-    Route::post('pendeta-import', [PendetaController::class, 'import'])->name('pendeta.import')->middleware('can:import pendeta');
-
-    Route::middleware('role:Super Admin|Admin Bidang 3')->group(function () {
-        Route::get('pendeta/{pendeta}/mutasi/create', [MutasiPendetaController::class, 'create'])->name('pendeta.mutasi.create');
-        Route::post('pendeta/{pendeta}/mutasi', [MutasiPendetaController::class, 'store'])->name('pendeta.mutasi.store');
-        Route::resource('mutasi', MutasiPendetaController::class)->except(['create', 'store'])->parameters(['mutasi' => 'mutasiPendeta']);
+    // 3. E-Office / Persuratan Digital
+    Route::prefix('e-office')->name('e-office.')->group(function () {
+        Route::resource('surat-masuk', SuratMasukController::class);
+        Route::resource('surat-keluar', SuratKeluarController::class);
+        Route::post('surat-masuk/{surat}/disposisi', [SuratMasukController::class, 'disposisi'])->name('surat-masuk.disposisi');
     });
 
-    // 5. Wadah Kategorial
+    // 4. Administrasi Sakramen
+    Route::prefix('sakramen')->name('sakramen.')->group(function () {
+        // --- BAPTIS ---
+        Route::get('baptis', [SakramenController::class, 'baptisIndex'])->name('baptis.index');
+        Route::post('baptis', [SakramenController::class, 'baptisStore'])->name('baptis.store');
+        Route::get('baptis/{id}/cetak', [SakramenCetakController::class, 'cetakBaptis'])->name('baptis.cetak'); 
+
+        // --- SIDI ---
+        Route::get('sidi', [SakramenController::class, 'sidiIndex'])->name('sidi.index');
+        Route::post('sidi', [SakramenController::class, 'sidiStore'])->name('sidi.store');
+        Route::get('sidi/{id}/cetak', [SakramenCetakController::class, 'cetakSidi'])->name('sidi.cetak'); 
+        
+        // --- NIKAH ---
+        Route::get('nikah', [SakramenNikahController::class, 'index'])->name('nikah.index');
+        Route::post('nikah', [SakramenNikahController::class, 'store'])->name('nikah.store');
+        Route::delete('nikah/{nikah}', [SakramenNikahController::class, 'destroy'])->name('nikah.destroy');
+        Route::get('nikah/{id}/cetak', [SakramenCetakController::class, 'cetakNikah'])->name('nikah.cetak');
+    });
+
+    // 5. Pejabat & Persidangan
+    Route::prefix('tata-gereja')->name('tata-gereja.')->group(function () {
+        Route::resource('pejabat', PejabatGerejawiController::class);
+        Route::resource('sidang', PersidanganController::class);
+    });
+
+    // 6. Data Master Wilayah & Jemaat
+    Route::resource('klasis', KlasisController::class)->parameter('klasis', 'klasis');
+    Route::get('klasis-export', [KlasisController::class, 'export'])->name('klasis.export');
+    Route::get('klasis-import', [KlasisController::class, 'showImportForm'])->name('klasis.import-form');
+    Route::post('klasis-import', [KlasisController::class, 'import'])->name('klasis.import');
+
+    Route::resource('jemaat', JemaatController::class);
+    Route::get('jemaat-export', [JemaatController::class, 'export'])->name('jemaat.export');
+    Route::get('jemaat-import', [JemaatController::class, 'showImportForm'])->name('jemaat.import-form');
+    Route::post('jemaat-import', [JemaatController::class, 'import'])->name('jemaat.import');
+
+    // --- ANGGOTA JEMAAT ---
+    Route::get('/anggota-jemaat/search', [AnggotaJemaatController::class, 'search'])->name('anggota-jemaat.search');
+    // TAMBAHAN BARU: Rute Cetak KK
+    Route::get('anggota-jemaat/{id}/cetak-kk', [AnggotaJemaatController::class, 'cetakKartuKeluarga'])->name('anggota-jemaat.cetak-kk');
+    
+    Route::resource('anggota-jemaat', AnggotaJemaatController::class);
+    Route::get('anggota-jemaat-export', [AnggotaJemaatController::class, 'export'])->name('anggota-jemaat.export');
+    Route::get('anggota-jemaat-import', [AnggotaJemaatController::class, 'showImportForm'])->name('anggota-jemaat.import-form');
+    Route::post('anggota-jemaat-import', [AnggotaJemaatController::class, 'import'])->name('anggota-jemaat.import');
+
+
+    // 8. Wadah Kategorial
     Route::prefix('wadah')->name('wadah.')->group(function () {
+        // --- TAMBAHAN BARU: CETAK STATISTIK ---
+        // Letakkan sebelum 'statistik' (index) agar tidak tertutup
+        Route::get('statistik/cetak', [WadahStatistikController::class, 'print'])->name('statistik.print');
         Route::get('statistik', [WadahStatistikController::class, 'index'])->name('statistik.index');
+        
         Route::resource('pengurus', WadahKategorialPengurusController::class);
         
         Route::get('program/get-parents', [WadahProgramKerjaController::class, 'getParentPrograms'])->name('program.get-parents'); 
         Route::resource('program', WadahProgramKerjaController::class);
-        
         Route::get('anggaran/get-programs', [WadahAnggaranController::class, 'getPrograms'])->name('anggaran.get-programs');
         Route::resource('anggaran', WadahAnggaranController::class);
+        
         Route::post('transaksi', [WadahTransaksiController::class, 'store'])->name('transaksi.store');
         Route::delete('transaksi/{transaksi}', [WadahTransaksiController::class, 'destroy'])->name('transaksi.destroy');
     });
 
-    // 6. Kepegawaian / HRIS (Fase 6)
+    // 9. Kepegawaian / HRIS (Unified: Pendeta + Staff)
     Route::prefix('kepegawaian')->name('kepegawaian.')->group(function () {
-        Route::get('pegawai/{pegawai}/print', [PegawaiController::class, 'print'])->name('pegawai.print');
+        // --- MANAJEMEN PEGAWAI (TERMASUK PENDETA) ---
         Route::resource('pegawai', PegawaiController::class);
+        Route::get('pegawai/{pegawai}/print', [PegawaiController::class, 'print'])->name('pegawai.print');
         
-        // Data Pendukung Pegawai
+        // Export & Import
+        Route::get('pegawai-export', [PegawaiController::class, 'export'])->name('pegawai.export');
+        Route::get('pegawai-import', [PegawaiController::class, 'showImportForm'])->name('pegawai.import-form');
+        Route::post('pegawai-import', [PegawaiController::class, 'import'])->name('pegawai.import');
+
+        // --- SUB DATA PEGAWAI ---
         Route::post('keluarga', [KeluargaPegawaiController::class, 'store'])->name('keluarga.store');
         Route::put('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'update'])->name('keluarga.update');
         Route::delete('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'destroy'])->name('keluarga.destroy');
@@ -148,38 +200,49 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('sk', [RiwayatSkController::class, 'store'])->name('sk.store');
         Route::put('sk/{sk}', [RiwayatSkController::class, 'update'])->name('sk.update');
         Route::delete('sk/{sk}', [RiwayatSkController::class, 'destroy'])->name('sk.destroy');
+
+        // --- MUTASI ---
+        Route::middleware('role:Super Admin|Admin Bidang 3')->group(function () {
+            Route::get('pegawai/{pegawai}/mutasi/create', [MutasiPendetaController::class, 'create'])->name('pegawai.mutasi.create');
+            Route::post('pegawai/{pegawai}/mutasi', [MutasiPendetaController::class, 'store'])->name('pegawai.mutasi.store');
+        });
     });
 
-    // 7. Perbendaharaan & Aset (Fase 7)
+    // Resource Mutasi Independen
+    Route::middleware('role:Super Admin|Admin Bidang 3')->group(function () {
+        Route::resource('mutasi', MutasiPendetaController::class)
+             ->except(['create', 'store'])
+             ->parameters(['mutasi' => 'mutasiPendeta']);
+    });
+
+    // 10. Perbendaharaan, Aset & Keuangan
     Route::prefix('perbendaharaan')->name('perbendaharaan.')->group(function () {
         Route::resource('aset', AsetController::class);
         Route::resource('mata-anggaran', MataAnggaranController::class);
         Route::resource('anggaran', AnggaranIndukController::class); 
         Route::resource('transaksi', TransaksiIndukController::class);
         
-        // Rute Laporan (Penyesuaian Terbaru)
         Route::get('laporan/realisasi', [LaporanController::class, 'realisasi'])->name('laporan.realisasi');
         Route::get('laporan/aset', [LaporanController::class, 'aset'])->name('laporan.aset');
+        Route::get('laporan/gabungan', [LaporanController::class, 'gabungan'])->name('laporan.gabungan');
     });
 
-    // 8. Manajemen User (Hanya Super Admin)
+    // 11. Manajemen User (Hanya Super Admin)
     Route::resource('users', UserController::class)->middleware('role:Super Admin');
 
 });
 
-/* --- RUTE PROFIL PENGGUNA --- */
+/* --- RUTE PROFIL & API --- */
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-/* --- API DROPDOWN DINAMIS --- */
+// API Dropdown Dinamis Jemaat by Klasis
 Route::get('/api/jemaat-by-klasis/{klasisId}', function ($klasisId) {
-    if (!ctype_digit((string)$klasisId)) { return response()->json([], 400); }
     $jemaat = Jemaat::where('klasis_id', $klasisId)->orderBy('nama_jemaat')->select('id', 'nama_jemaat')->get();
     return response()->json($jemaat);
 })->name('api.jemaat.by.klasis');
 
-/* --- AUTENTIKASI --- */
 require __DIR__.'/auth.php';

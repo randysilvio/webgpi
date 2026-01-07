@@ -9,17 +9,20 @@ class MutasiPendeta extends Model
 {
     use HasFactory;
 
-    protected $table = 'mutasi_pendeta'; // Pastikan nama tabel benar
+    protected $table = 'mutasi_pendeta'; 
 
     protected $fillable = [
-        'pendeta_id',
+        'pegawai_id', // <-- GANTI: Dulu pendeta_id
         'tanggal_sk',
         'nomor_sk',
-        'jenis_mutasi',
+        'jenis_mutasi', // Penempatan Awal, Pindah Tugas, Emeritus, dll
+        
         'asal_klasis_id',
         'asal_jemaat_id',
+        
         'tujuan_klasis_id',
         'tujuan_jemaat_id',
+        
         'tanggal_efektif',
         'keterangan',
     ];
@@ -30,15 +33,23 @@ class MutasiPendeta extends Model
     ];
 
     /**
-     * Relasi ke Pendeta yang dimutasi.
+     * Relasi ke Pegawai (Pendeta) yang dimutasi.
+     * Sekarang mengarah ke model Pegawai.
      */
+    public function pegawai()
+    {
+        return $this->belongsTo(Pegawai::class, 'pegawai_id');
+    }
+
+    // Alias untuk backward compatibility (jika ada kode lama yang panggil ->pendeta)
+    // Sebaiknya perlahan diganti jadi ->pegawai di controller/view
     public function pendeta()
     {
-        return $this->belongsTo(Pendeta::class);
+        return $this->belongsTo(Pegawai::class, 'pegawai_id');
     }
 
     /**
-     * Relasi ke Klasis Asal (opsional).
+     * Relasi ke Klasis Asal.
      */
     public function asalKlasis()
     {
@@ -46,7 +57,7 @@ class MutasiPendeta extends Model
     }
 
     /**
-     * Relasi ke Jemaat Asal (opsional).
+     * Relasi ke Jemaat Asal.
      */
     public function asalJemaat()
     {
@@ -54,7 +65,7 @@ class MutasiPendeta extends Model
     }
 
     /**
-     * Relasi ke Klasis Tujuan (opsional).
+     * Relasi ke Klasis Tujuan.
      */
     public function tujuanKlasis()
     {
@@ -62,7 +73,7 @@ class MutasiPendeta extends Model
     }
 
     /**
-     * Relasi ke Jemaat Tujuan (opsional).
+     * Relasi ke Jemaat Tujuan.
      */
     public function tujuanJemaat()
     {

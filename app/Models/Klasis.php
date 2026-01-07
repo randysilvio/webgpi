@@ -22,34 +22,24 @@ class Klasis extends Model
         'tanggal_pembentukan' => 'date',
     ];
 
-    // Relasi ke Pendeta yang menjadi Ketua MPK
+    // --- PERBAIKAN RELASI ---
+    
+    // Ganti 'Pendeta' menjadi 'Pegawai'
     public function ketuaMp()
     {
-        return $this->belongsTo(Pendeta::class, 'ketua_mpk_pendeta_id');
+        // Pastikan foreign key di database tetap 'ketua_mpk_pendeta_id' (jika belum diubah)
+        // atau 'pegawai_id' jika sudah migrasi kolom. 
+        // Asumsi: Kolom di tabel klasis masih 'ketua_mpk_pendeta_id' tapi isinya ID Pegawai.
+        return $this->belongsTo(Pegawai::class, 'ketua_mpk_pendeta_id');
     }
 
-    // Relasi ke Jemaat di bawah Klasis ini
     public function jemaat()
     {
         return $this->hasMany(Jemaat::class);
     }
 
-    // Relasi Pendeta yang ditempatkan di Klasis ini (bukan hanya ketua)
-    public function pendetaDitempatkan()
+    public function pegawaiDitempatkan()
     {
-        return $this->hasMany(Pendeta::class, 'klasis_penempatan_id');
-    }
-
-    // ===================================================================
-    // || RELASI BARU DITAMBAHKAN ||
-    // ===================================================================
-
-    /**
-     * Mendapatkan semua akun User yang terhubung dengan Klasis ini
-     * (misal: Admin Klasis).
-     */
-    public function users()
-    {
-        return $this->hasMany(User::class, 'klasis_id');
+        return $this->hasMany(Pegawai::class, 'klasis_id');
     }
 }
