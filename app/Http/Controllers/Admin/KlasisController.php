@@ -57,17 +57,25 @@ class KlasisController extends Controller
 
     public function store(Request $request)
     {
-        // Validasi LENGKAP untuk semua kolom database
+        // Validasi LENGKAP untuk semua kolom database termasuk Peta
         $validatedData = $request->validate([
             'nama_klasis' => 'required|string|max:255',
             'kode_klasis' => 'required|string|max:50|unique:klasis,kode_klasis',
             'pusat_klasis' => 'nullable|string|max:100',
             'alamat_kantor' => 'nullable|string',
             'koordinat_gps' => 'nullable|string|max:100',
+            
+            // --- UPDATE MINOR: VALIDASI DATA PETA ---
+            'kabupaten_kota' => 'nullable|string', // Penting untuk warna
+            'latitude' => 'nullable|string',       // Penting untuk pin
+            'longitude' => 'nullable|string',      // Penting untuk pin
+            'warna_peta' => 'nullable|string',     // Penting untuk visualisasi
+            // ----------------------------------------
+
             'wilayah_pelayanan' => 'nullable|string',
             'tanggal_pembentukan' => 'nullable|date',
             'nomor_sk_pembentukan' => 'nullable|string|max:100',
-            'klasis_induk' => 'nullable|string|max:100', // Jika ini pemekaran
+            'klasis_induk' => 'nullable|string|max:100', 
             'sejarah_singkat' => 'nullable|string',
             'email_klasis' => 'nullable|email|max:255',
             'telepon_kantor' => 'nullable|string|max:50',
@@ -99,13 +107,21 @@ class KlasisController extends Controller
 
     public function update(Request $request, Klasis $klasis)
     {
-        // Validasi LENGKAP
+        // Validasi LENGKAP termasuk Peta
         $validatedData = $request->validate([
             'nama_klasis' => 'required|string|max:255',
             'kode_klasis' => 'required|string|max:50|unique:klasis,kode_klasis,' . $klasis->id,
             'pusat_klasis' => 'nullable|string|max:100',
             'alamat_kantor' => 'nullable|string',
             'koordinat_gps' => 'nullable|string|max:100',
+            
+            // --- UPDATE MINOR: VALIDASI DATA PETA ---
+            'kabupaten_kota' => 'nullable|string',
+            'latitude' => 'nullable|string',
+            'longitude' => 'nullable|string',
+            'warna_peta' => 'nullable|string',
+            // ----------------------------------------
+
             'wilayah_pelayanan' => 'nullable|string',
             'tanggal_pembentukan' => 'nullable|date',
             'nomor_sk_pembentukan' => 'nullable|string|max:100',
@@ -144,14 +160,12 @@ class KlasisController extends Controller
         return redirect()->route('admin.klasis.index')->with('success', 'Data Klasis berhasil dihapus.');
     }
     
-    // --- IMPORT / EXPORT TETAP AMAN ---
+    // --- IMPORT / EXPORT ---
     public function showImportForm() { return view('admin.klasis.import'); }
     
     public function import(Request $request) {
         $request->validate(['import_file' => 'required|file|mimes:xlsx,xls,csv']);
         try {
-            // Import ini menggunakan file KlasisImport.php yang sudah disederhanakan
-            // jadi hanya mengimpor Nama & Kode (sesuai data yang ada) agar tidak error.
             Excel::import(new KlasisImport, $request->file('import_file'));
             return redirect()->route('admin.klasis.index')->with('success', 'Data Klasis berhasil diimpor.');
         } catch (\Exception $e) {

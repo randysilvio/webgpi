@@ -86,14 +86,39 @@
                     <input type="url" id="website_klasis" name="website_klasis" value="{{ old('website_klasis', $klasis->website_klasis) }}" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
                 </div>
 
+                {{-- SETUP PETA PELAYANAN (BARU) --}}
+                <div class="bg-blue-50 p-4 rounded-md border border-blue-100">
+                    <h4 class="text-xs font-bold text-blue-800 uppercase mb-3">Konfigurasi Peta Pelayanan</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Latitude</label>
+                            <input type="text" name="latitude" value="{{ old('latitude', $klasis->latitude) }}" placeholder="-2.5489" class="w-full border-gray-300 rounded text-sm focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Longitude</label>
+                            <input type="text" name="longitude" value="{{ old('longitude', $klasis->longitude) }}" placeholder="140.718" class="w-full border-gray-300 rounded text-sm focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Kabupaten/Kota</label>
+                            <input type="text" name="kabupaten_kota" value="{{ old('kabupaten_kota', $klasis->kabupaten_kota) }}" placeholder="JAYAPURA" class="w-full border-gray-300 rounded text-sm uppercase focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Warna Wilayah</label>
+                            <input type="color" name="warna_peta" value="{{ old('warna_peta', $klasis->warna_peta ?? '#3B82F6') }}" class="w-full h-9 border-gray-300 rounded p-1 cursor-pointer">
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-2 italic">* Koordinat kantor & nama kabupaten untuk visualisasi dashboard.</p>
+                </div>
+
                 {{-- Lokasi --}}
                 <div>
                     <label for="alamat_kantor" class="block text-sm font-medium text-gray-700 mb-1">Alamat Kantor</label>
                     <textarea id="alamat_kantor" name="alamat_kantor" rows="2" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm">{{ old('alamat_kantor', $klasis->alamat_kantor) }}</textarea>
                 </div>
 
+                {{-- Koordinat Legacy --}}
                 <div>
-                    <label for="koordinat_gps" class="block text-sm font-medium text-gray-700 mb-1">Koordinat GPS (Lat, Long)</label>
+                    <label for="koordinat_gps" class="block text-sm font-medium text-gray-700 mb-1">Koordinat GPS (Legacy)</label>
                     <input type="text" id="koordinat_gps" name="koordinat_gps" value="{{ old('koordinat_gps', $klasis->koordinat_gps) }}" placeholder="-2.548, 140.678" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
                 </div>
 

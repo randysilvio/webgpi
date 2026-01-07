@@ -91,6 +91,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // 1. Dashboard Utama
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // TAMBAHAN: Route khusus untuk Widget Peta (IFrame) agar tidak bentrok CSS
+    Route::get('/dashboard/peta-widget', [DashboardController::class, 'petaWidget'])->name('dashboard.peta_widget');
 
     // 2. Pengaturan & Konten Website
     Route::middleware('role:Super Admin|Admin Bidang 4')->group(function () {
@@ -161,8 +163,6 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // 8. Wadah Kategorial
     Route::prefix('wadah')->name('wadah.')->group(function () {
-        // --- TAMBAHAN BARU: CETAK STATISTIK ---
-        // Letakkan sebelum 'statistik' (index) agar tidak tertutup
         Route::get('statistik/cetak', [WadahStatistikController::class, 'print'])->name('statistik.print');
         Route::get('statistik', [WadahStatistikController::class, 'index'])->name('statistik.index');
         

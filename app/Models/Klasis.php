@@ -12,24 +12,37 @@ class Klasis extends Model
     protected $table = 'klasis';
 
     protected $fillable = [
-        'nama_klasis', 'kode_klasis', 'pusat_klasis', 'alamat_kantor', 'koordinat_gps',
-        'wilayah_pelayanan', 'tanggal_pembentukan', 'nomor_sk_pembentukan', 'klasis_induk',
-        'sejarah_singkat', 'ketua_mpk_pendeta_id', 'telepon_kantor', 'email_klasis',
-        'website_klasis', 'foto_kantor_path',
+        'nama_klasis', 
+        'kode_klasis', 
+        'pusat_klasis', 
+        'alamat_kantor', 
+        'koordinat_gps', 
+        
+        // --- 4 KOLOM BARU INI WAJIB ADA ---
+        'kabupaten_kota', // PENTING: Untuk warna peta
+        'latitude',       // PENTING: Untuk titik pin
+        'longitude',      
+        'warna_peta',     
+        // ----------------------------------
+
+        'wilayah_pelayanan', 
+        'tanggal_pembentukan', 
+        'nomor_sk_pembentukan', 
+        'klasis_induk',
+        'sejarah_singkat', 
+        'ketua_mpk_pendeta_id', 
+        'telepon_kantor', 
+        'email_klasis',
+        'website_klasis', 
+        'foto_kantor_path',
     ];
 
     protected $casts = [
         'tanggal_pembentukan' => 'date',
     ];
 
-    // --- PERBAIKAN RELASI ---
-    
-    // Ganti 'Pendeta' menjadi 'Pegawai'
     public function ketuaMp()
     {
-        // Pastikan foreign key di database tetap 'ketua_mpk_pendeta_id' (jika belum diubah)
-        // atau 'pegawai_id' jika sudah migrasi kolom. 
-        // Asumsi: Kolom di tabel klasis masih 'ketua_mpk_pendeta_id' tapi isinya ID Pegawai.
         return $this->belongsTo(Pegawai::class, 'ketua_mpk_pendeta_id');
     }
 
