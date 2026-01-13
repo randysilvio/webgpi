@@ -4,6 +4,9 @@
 @section('header-title', 'Edit Data: ' . $anggotaJemaat->nama_lengkap)
 
 @section('content')
+{{-- Library Tambahan: Select2 untuk Pencarian Dinamis --}}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
 <div class="bg-white shadow rounded-lg p-6 md:p-8">
     <h2 class="text-xl font-semibold text-gray-800 mb-6 border-b pb-3">Formulir Edit Anggota Jemaat</h2>
 
@@ -129,6 +132,11 @@
                     </select>
                     @error('status_keanggotaan') <p class="error-message">{{ $message }}</p> @enderror
                 </div>
+                {{-- Nomor KK & Status Keluarga --}}
+                <div>
+                    <label for="nomor_kk" class="block text-sm font-medium text-gray-700 mb-1">Nomor Kartu Keluarga (KK)</label>
+                    <input type="text" id="nomor_kk" name="nomor_kk" value="{{ old('nomor_kk', $anggotaJemaat->nomor_kk) }}" class="form-input">
+                </div>
                 {{-- Tanggal Baptis --}}
                 <div>
                     <label for="tanggal_baptis" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Baptis</label>
@@ -149,22 +157,17 @@
                     <label for="tempat_sidi" class="block text-sm font-medium text-gray-700 mb-1">Tempat Sidi</label>
                     <input type="text" id="tempat_sidi" name="tempat_sidi" value="{{ old('tempat_sidi', $anggotaJemaat->tempat_sidi) }}" class="form-input" placeholder="Nama Gereja/Jemaat">
                 </div>
-                {{-- Tanggal Masuk Jemaat (Jika Pindahan) --}}
+                {{-- Tanggal Masuk Jemaat --}}
                 <div>
                     <label for="tanggal_masuk_jemaat" class="block text-sm font-medium text-gray-700 mb-1">Tgl Masuk Jemaat Ini <span class="italic text-gray-500">(Jika Pindahan)</span></label>
                     <input type="date" id="tanggal_masuk_jemaat" name="tanggal_masuk_jemaat" value="{{ old('tanggal_masuk_jemaat', optional($anggotaJemaat->tanggal_masuk_jemaat)->format('Y-m-d')) }}" class="form-input">
                 </div>
                 {{-- Asal Gereja Sebelumnya --}}
                 <div>
-                    <label for="asal_gereja_sebelumnya" class="block text-sm font-medium text-gray-700 mb-1">Asal Gereja Sebelumnya <span class="italic text-gray-500">(Jika Pindahan)</span></label>
+                    <label for="asal_gereja_sebelumnya" class="block text-sm font-medium text-gray-700 mb-1">Asal Gereja Sebelumnya</label>
                     <input type="text" id="asal_gereja_sebelumnya" name="asal_gereja_sebelumnya" value="{{ old('asal_gereja_sebelumnya', $anggotaJemaat->asal_gereja_sebelumnya) }}" class="form-input">
                 </div>
-                 {{-- No Atestasi --}}
-                <div>
-                    <label for="nomor_atestasi" class="block text-sm font-medium text-gray-700 mb-1">No. Atestasi <span class="italic text-gray-500">(Jika Pindahan)</span></label>
-                    <input type="text" id="nomor_atestasi" name="nomor_atestasi" value="{{ old('nomor_atestasi', $anggotaJemaat->nomor_atestasi) }}" class="form-input">
-                </div>
-                {{-- Sektor & Unit (Opsional) --}}
+                 {{-- Sektor & Unit --}}
                  <div>
                     <label for="sektor_pelayanan" class="block text-sm font-medium text-gray-700 mb-1">Sektor Pelayanan</label>
                     <input type="text" id="sektor_pelayanan" name="sektor_pelayanan" value="{{ old('sektor_pelayanan', $anggotaJemaat->sektor_pelayanan) }}" class="form-input">
@@ -176,58 +179,87 @@
             </div>
         </section>
 
-         {{-- BAGIAN 3: SENSUS EKONOMI (SEDERHANA) --}}
+        {{-- BAGIAN 3: HUBUNGAN KELUARGA (POHON KELUARGA) - UPDATE FASE 12 --}}
+        <section class="mb-8 border-2 border-blue-100 rounded-lg p-6 bg-blue-50/30">
+            <h3 class="text-lg font-semibold text-blue-800 mb-4 flex items-center">
+                <i class="fas fa-sitemap mr-2"></i> 3. Hubungan Keluarga (Pohon Keluarga)
+            </h3>
+            <p class="text-[11px] text-blue-600 mb-4 italic italic">Pilih Ayah/Ibu dari database untuk membangun silsilah otomatis. Jika tidak ada, tetap isi nama manual di bawahnya.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {{-- Relasi Ayah --}}
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-black text-gray-500 uppercase mb-1">Ayah Biologis (Cari dari Database Anggota)</label>
+                        <select name="ayah_id" id="select-ayah" class="w-full"></select>
+                    </div>
+                    <div>
+                        <label for="nama_ayah" class="block text-[10px] font-bold text-gray-400 uppercase">Nama Ayah (Manual / Jika Tidak Ada di Database)</label>
+                        <input type="text" id="nama_ayah" name="nama_ayah" value="{{ old('nama_ayah', $anggotaJemaat->nama_ayah) }}" class="form-input bg-white">
+                    </div>
+                </div>
+
+                {{-- Relasi Ibu --}}
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-black text-gray-500 uppercase mb-1">Ibu Biologis (Cari dari Database Anggota)</label>
+                        <select name="ibu_id" id="select-ibu" class="w-full"></select>
+                    </div>
+                    <div>
+                        <label for="nama_ibu" class="block text-[10px] font-bold text-gray-400 uppercase">Nama Ibu (Manual / Jika Tidak Ada di Database)</label>
+                        <input type="text" id="nama_ibu" name="nama_ibu" value="{{ old('nama_ibu', $anggotaJemaat->nama_ibu) }}" class="form-input bg-white">
+                    </div>
+                </div>
+                
+                {{-- Status dalam Keluarga --}}
+                <div>
+                    <label for="status_dalam_keluarga" class="block text-sm font-medium text-gray-700 mb-1">Status dalam Keluarga</label>
+                    <select id="status_dalam_keluarga" name="status_dalam_keluarga" class="form-select">
+                        <option value="" disabled {{ !old('status_dalam_keluarga', $anggotaJemaat->status_dalam_keluarga) ? 'selected' : '' }}>-- Pilih Status --</option>
+                        <option value="Kepala Keluarga" {{ old('status_dalam_keluarga', $anggotaJemaat->status_dalam_keluarga) == 'Kepala Keluarga' ? 'selected' : '' }}>Kepala Keluarga</option>
+                        <option value="Istri" {{ old('status_dalam_keluarga', $anggotaJemaat->status_dalam_keluarga) == 'Istri' ? 'selected' : '' }}>Istri</option>
+                        <option value="Anak" {{ old('status_dalam_keluarga', $anggotaJemaat->status_dalam_keluarga) == 'Anak' ? 'selected' : '' }}>Anak</option>
+                        <option value="Famili Lain" {{ old('status_dalam_keluarga', $anggotaJemaat->status_dalam_keluarga) == 'Famili Lain' ? 'selected' : '' }}>Famili Lain</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+         {{-- BAGIAN 4: SENSUS EKONOMI --}}
          <section class="mb-8 border rounded-lg p-6">
-             <h3 class="text-lg font-semibold text-gray-700 mb-1">3. Gambaran Ekonomi Keluarga</h3>
-             <p class="text-xs text-gray-500 mb-4 italic">Data ini bersifat rahasia dan digunakan secara anonim untuk perencanaan program diakonia.</p>
+             <h3 class="text-lg font-semibold text-gray-700 mb-1">4. Gambaran Ekonomi Keluarga</h3>
+             <p class="text-xs text-gray-500 mb-4 italic">Data ini digunakan untuk perencanaan program diakonia jemaat.</p>
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
                  {{-- Status Pekerjaan KK --}}
                 <div>
-                    <label for="status_pekerjaan_kk" class="block text-sm font-medium text-gray-700 mb-1">Status Pekerjaan Utama Kepala Keluarga</label>
+                    <label for="status_pekerjaan_kk" class="block text-sm font-medium text-gray-700 mb-1">Status Pekerjaan Utama KK</label>
                     <select id="status_pekerjaan_kk" name="status_pekerjaan_kk" class="form-select">
-                        <option value="" disabled {{ !old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) ? 'selected' : '' }}>-- Pilih Status --</option>
                         <option value="Bekerja (PNS/TNI/POLRI)" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Bekerja (PNS/TNI/POLRI)' ? 'selected' : '' }}>Bekerja (PNS/TNI/POLRI)</option>
-                        <option value="Bekerja (Swasta/BUMN/Honorer)" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Bekerja (Swasta/BUMN/Honorer)' ? 'selected' : '' }}>Bekerja (Swasta/BUMN/Honorer)</option>
                         <option value="Wiraswasta/Usaha Sendiri" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Wiraswasta/Usaha Sendiri' ? 'selected' : '' }}>Wiraswasta/Usaha Sendiri</option>
                         <option value="Petani/Nelayan/Peternak" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Petani/Nelayan/Peternak' ? 'selected' : '' }}>Petani/Nelayan/Peternak</option>
-                        <option value="Buruh Harian Lepas" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Buruh Harian Lepas' ? 'selected' : '' }}>Buruh Harian Lepas</option>
-                        <option value="Tidak Bekerja" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Tidak Bekerja' ? 'selected' : '' }}>Tidak Bekerja (Termasuk IRT)</option>
-                        <option value="Pelajar/Mahasiswa" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Pelajar/Mahasiswa' ? 'selected' : '' }}>Pelajar/Mahasiswa</option>
                         <option value="Pensiunan" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Pensiunan' ? 'selected' : '' }}>Pensiunan</option>
-                        <option value="Lainnya" {{ old('status_pekerjaan_kk', $anggotaJemaat->status_pekerjaan_kk) == 'Lainnya' ? 'selected' : '' }}>Lainnya</option>
                     </select>
                 </div>
                  {{-- Status Kepemilikan Rumah --}}
                 <div>
                     <label for="status_kepemilikan_rumah" class="block text-sm font-medium text-gray-700 mb-1">Status Kepemilikan Rumah</label>
                     <select id="status_kepemilikan_rumah" name="status_kepemilikan_rumah" class="form-select">
-                        <option value="" disabled {{ !old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) ? 'selected' : '' }}>-- Pilih Status --</option>
                         <option value="Milik Sendiri" {{ old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) == 'Milik Sendiri' ? 'selected' : '' }}>Milik Sendiri</option>
                         <option value="Sewa/Kontrak" {{ old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) == 'Sewa/Kontrak' ? 'selected' : '' }}>Sewa/Kontrak</option>
                         <option value="Menumpang" {{ old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) == 'Menumpang' ? 'selected' : '' }}>Menumpang</option>
-                        <option value="Rumah Dinas" {{ old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) == 'Rumah Dinas' ? 'selected' : '' }}>Rumah Dinas</option>
-                        <option value="Bebas Sewa" {{ old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) == 'Bebas Sewa' ? 'selected' : '' }}>Bebas Sewa</option>
-                        <option value="Lainnya" {{ old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) == 'Lainnya' ? 'selected' : '' }}>Lainnya</option>
                     </select>
                 </div>
-                {{-- Perkiraan Pendapatan (Opsional) --}}
+                {{-- Perkiraan Pendapatan --}}
                 <div>
-                    <label for="perkiraan_pendapatan_keluarga" class="block text-sm font-medium text-gray-700 mb-1">Perkiraan Pendapatan Keluarga/Bulan <span class="italic text-gray-500">(Opsional)</span></label>
+                    <label for="perkiraan_pendapatan_keluarga" class="block text-sm font-medium text-gray-700 mb-1">Rentang Pendapatan Keluarga</label>
                     <select id="perkiraan_pendapatan_keluarga" name="perkiraan_pendapatan_keluarga" class="form-select">
-                        <option value="" {{ !old('perkiraan_pendapatan_keluarga', $anggotaJemaat->perkiraan_pendapatan_keluarga) ? 'selected' : '' }}>-- Pilih Rentang --</option>
                         <option value="Di bawah UMR" {{ old('perkiraan_pendapatan_keluarga', $anggotaJemaat->perkiraan_pendapatan_keluarga) == 'Di bawah UMR' ? 'selected' : '' }}>Di bawah UMR</option>
                         <option value="UMR - 5 Juta" {{ old('perkiraan_pendapatan_keluarga', $anggotaJemaat->perkiraan_pendapatan_keluarga) == 'UMR - 5 Juta' ? 'selected' : '' }}>UMR - Rp 5 Juta</option>
-                        <option value="5 - 10 Juta" {{ old('perkiraan_pendapatan_keluarga', $anggotaJemaat->perkiraan_pendapatan_keluarga) == '5 - 10 Juta' ? 'selected' : '' }}>Rp 5 Juta - Rp 10 Juta</option>
-                        <option value="Di atas 10 Juta" {{ old('perkiraan_pendapatan_keluarga', $anggotaJemaat->perkiraan_pendapatan_keluarga) == 'Di atas 10 Juta' ? 'selected' : '' }}>Di atas Rp 10 Juta</option>
-                        <option value="Tidak menjawab" {{ old('perkiraan_pendapatan_keluarga', $anggotaJemaat->perkiraan_pendapatan_keluarga) == 'Tidak menjawab' ? 'selected' : '' }}>Tidak ingin menjawab</option>
+                        <option value="Di atas 5 Juta" {{ old('perkiraan_pendapatan_keluarga', $anggotaJemaat->perkiraan_pendapatan_keluarga) == 'Di atas 5 Juta' ? 'selected' : '' }}>Di atas Rp 5 Juta</option>
                     </select>
                 </div>
              </div>
          </section>
-
-         {{-- BAGIAN 4: LAIN-LAIN (jika ada) --}}
-         {{-- ... (Tambahkan section lain jika perlu, misal Keterlibatan Pelayanan, dll.) ... --}}
-
 
         {{-- Tombol Aksi --}}
         <div class="mt-8 flex justify-end space-x-3 border-t pt-6">
@@ -235,59 +267,82 @@
                 Batal
             </a>
             <button type="submit" class="bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md shadow hover:shadow-md transition duration-150 ease-in-out">
-                Simpan Perubahan
+                <i class="fas fa-save mr-2"></i> Simpan Perubahan
             </button>
         </div>
     </form>
 </div>
 
-{{-- Helper CSS untuk form (sama seperti di create.blade.php) --}}
+{{-- Scripts JQuery & Select2 --}}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Fungsi Inisialisasi Select2 AJAX
+    function initSelect2Member(elementId, initialData) {
+        $(elementId).select2({
+            placeholder: 'Cari Nama Lengkap atau NIK...',
+            ajax: {
+                url: "{{ route('admin.anggota-jemaat.search') }}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) { return { q: params.term }; },
+                processResults: function (data) { return { results: data }; },
+                cache: true
+            }
+        });
+
+        // Jika ada data awal (saat edit), tampilkan di select2
+        if (initialData) {
+            var option = new Option(initialData.text, initialData.id, true, true);
+            $(elementId).append(option).trigger('change');
+        }
+    }
+
+    // Eksekusi Inisialisasi untuk Ayah
+    @if($anggotaJemaat->ayah_id)
+        initSelect2Member('#select-ayah', { 
+            id: '{{ $anggotaJemaat->ayah_id }}', 
+            text: '{{ $anggotaJemaat->ayah->nama_lengkap }} ({{ $anggotaJemaat->ayah->nik ?? "No NIK" }})' 
+        });
+    @else
+        initSelect2Member('#select-ayah', null);
+    @endif
+
+    // Eksekusi Inisialisasi untuk Ibu
+    @if($anggotaJemaat->ibu_id)
+        initSelect2Member('#select-ibu', { 
+            id: '{{ $anggotaJemaat->ibu_id }}', 
+            text: '{{ $anggotaJemaat->ibu->nama_lengkap }} ({{ $anggotaJemaat->ibu->nik ?? "No NIK" }})' 
+        });
+    @else
+        initSelect2Member('#select-ibu', null);
+    @endif
+});
+</script>
+
+{{-- Helper CSS untuk form & Select2 --}}
 @push('styles')
 <style>
     .form-input, .form-select, .form-textarea {
-        display: block;
-        width: 100%;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem; /* text-sm */
-        line-height: 1.25rem;
-        border: 1px solid #D1D5DB; /* border-gray-300 */
-        border-radius: 0.375rem; /* rounded-md */
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        display: block; width: 100%; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+        border: 1px solid #D1D5DB; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
     .form-input:focus, .form-select:focus, .form-textarea:focus {
-        border-color: #1e40af; /* primary color */
-        outline: 0;
-        box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2); /* ring-primary focus:ring-2 */
+        border-color: #1e40af; outline: 0; box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2);
     }
-    .form-select {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center;
-        background-repeat: no-repeat;
-        background-size: 1.5em 1.5em;
-        padding-right: 2.5rem;
-        -webkit-appearance: none;
-           -moz-appearance: none;
-                appearance: none;
+    /* Styling khusus Select2 agar selaras dengan Tailwind */
+    .select2-container .select2-selection--single {
+        height: 38px !important; border: 1px solid #D1D5DB !important; border-radius: 0.375rem !important;
     }
-     select:disabled, select[readonly] {
-         background-color: #F3F4F6; /* bg-gray-100 */
-         cursor: not-allowed;
-         color: #6B7280; /* text-gray-500 */
-         /* Hapus background image arrow jika disabled */
-         background-image: none;
-     }
-    .error-message {
-        margin-top: 0.25rem;
-        font-size: 0.75rem; /* text-xs */
-        color: #DC2626; /* text-red-600 */
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px !important; font-size: 0.875rem !important; color: #374151 !important;
     }
-    input.border-red-500, select.border-red-500, textarea.border-red-500 {
-        border-color: #EF4444; /* border-red-500 */
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px !important;
     }
-    input.border-red-500:focus, select.border-red-500:focus, textarea.border-red-500:focus {
-        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
-    }
+    .error-message { margin-top: 0.25rem; font-size: 0.75rem; color: #DC2626; }
 </style>
 @endpush
 

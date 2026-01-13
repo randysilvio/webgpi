@@ -4,26 +4,28 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnggotaJemaat;
-use App\Models\Jemaat; // Import Jemaat model
-use App\Models\Klasis; // <-- Import Klasis model
-use Illuminate\Http\Request; // <-- Pastikan Request di-use
+use App\Models\Jemaat;
+use App\Models\Klasis;
+use App\Models\Setting; // Tambahan untuk Logo
+use App\Models\SakramenNikah; // Tambahan untuk Cek Nikah
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str; 
+use Barryvdh\DomPDF\Facade\Pdf; 
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AnggotaJemaatExport;
 use App\Imports\AnggotaJemaatImport;
 use Maatwebsite\Excel\Validators\ValidationException;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Illuminate\Validation\Rule;
 
 class AnggotaJemaatController extends Controller
 {
-    // Middleware
     public function __construct()
     {
-         $this->middleware(['auth']); // Semua harus login
-
-         // Sesuaikan permission berdasarkan RolesAndPermissionsSeeder
-         $this->middleware('can:view anggota jemaat')->only(['index', 'show']);
+         $this->middleware(['auth']);
+         $this->middleware('can:view anggota jemaat')->only(['index', 'show', 'cetakKartuKeluarga']);
          $this->middleware('can:create anggota jemaat')->only(['create', 'store']);
          $this->middleware('can:edit anggota jemaat')->only(['edit', 'update']);
          $this->middleware('can:delete anggota jemaat')->only(['destroy']);
@@ -31,112 +33,114 @@ class AnggotaJemaatController extends Controller
          $this->middleware('can:export anggota jemaat')->only(['export']);
     }
 
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(Request $request) // <-- Tambahkan Request $request
+    // FASE 12: Fungsi Search untuk Select2 (AJAX)
+    public function search(Request $request)
     {
-        $query = AnggotaJemaat::with(['jemaat', 'jemaat.klasis'])->latest(); // Eager load jemaat & klasisnya
-        $user = Auth::user(); // Ambil user yang login
+        $term = $request->get('q');
+        $results = AnggotaJemaat::aktif()
+            ->where(function($query) use ($term) {
+                $query->where('nama_lengkap', 'LIKE', '%' . $term . '%')
+                      ->orWhere('nik', 'LIKE', '%' . $term . '%');
+            })
+            ->limit(10)
+            ->get(['id', 'nama_lengkap', 'nik']);
 
-        // Variabel untuk menyimpan opsi filter
+        return response()->json($results->map(function($item){
+            return [
+                'id' => $item->id,
+                'text' => $item->nama_lengkap . ' (' . ($item->nik ?? 'No NIK') . ')'
+            ];
+        }));
+    }
+
+    public function index(Request $request)
+    {
+        $query = AnggotaJemaat::with(['jemaat', 'jemaat.klasis']);
+        
+        $user = Auth::user();
+        $jemaatUser = null; 
         $klasisFilterOptions = collect();
         $jemaatFilterOptions = collect();
 
-        // --- Scoping berdasarkan Role ---
+        // RBAC Scoping
         if ($user->hasRole('Admin Jemaat')) {
             $jemaatId = $user->jemaat_id;
             if ($jemaatId) {
                 $query->where('jemaat_id', $jemaatId);
+                $jemaatFilterOptions = Jemaat::where('id', $jemaatId)->pluck('nama_jemaat', 'id');
+                $jemaatUser = Jemaat::find($jemaatId); 
+                if ($jemaatUser && $jemaatUser->klasis_id) {
+                    $klasisFilterOptions = Klasis::where('id', $jemaatUser->klasis_id)->pluck('nama_klasis', 'id');
+                }
             } else {
-                Log::warning('Admin Jemaat ' . $user->id . ' tidak terhubung ke Jemaat manapun.');
                 $query->whereRaw('1 = 0');
             }
         } elseif ($user->hasRole('Admin Klasis')) {
             $klasisId = $user->klasis_id;
             if ($klasisId) {
-                // Ambil semua jemaat_id dalam klasis ini
-                $jemaatIds = Jemaat::where('klasis_id', $klasisId)->pluck('id');
-                if ($jemaatIds->isNotEmpty()) {
-                     $query->whereIn('jemaat_id', $jemaatIds);
-                     // Ambil opsi Jemaat HANYA dari klasis ini untuk filter
-                     $jemaatFilterOptions = Jemaat::where('klasis_id', $klasisId)->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
-                } else {
-                     Log::warning('Admin Klasis ' . $user->id . ' scope index, tapi Klasis ' . $klasisId . ' tidak punya Jemaat.');
-                     $query->whereRaw('1 = 0');
-                }
-                // Ambil opsi Klasis HANYA klasis ini untuk filter (meskipun hanya 1)
+                $query->whereHas('jemaat', fn($q) => $q->where('klasis_id', $klasisId));
+                $jemaatFilterOptions = Jemaat::where('klasis_id', $klasisId)->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
                 $klasisFilterOptions = Klasis::where('id', $klasisId)->pluck('nama_klasis', 'id');
-
             } else {
-                 Log::warning('Admin Klasis ' . $user->id . ' tidak terhubung ke Klasis manapun.');
                 $query->whereRaw('1 = 0');
             }
-        } else { // Super Admin, Admin Bidang 3, dll.
-             // Ambil semua Klasis untuk filter
+        } else { 
              $klasisFilterOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
-             // Ambil semua Jemaat untuk filter (atau filter berdasarkan klasis yg dipilih)
-             // 👇👇👇 Logika Opsi Jemaat berdasarkan Filter Klasis 👇👇👇
-             if ($request->filled('klasis_id')) {
-                 $klasisFilterId = filter_var($request->klasis_id, FILTER_VALIDATE_INT);
-                 if ($klasisFilterId) {
-                      $jemaatFilterOptions = Jemaat::where('klasis_id', $klasisFilterId)->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
-                 } else {
-                      // Jika filter klasis_id tidak valid, ambil semua jemaat
-                      $jemaatFilterOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
-                 }
-             } else {
-                  // Jika tidak ada filter klasis, ambil semua jemaat
-                  $jemaatFilterOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
+             if ($request->filled('klasis_id') && ($klasisFilterId = filter_var($request->klasis_id, FILTER_VALIDATE_INT))) {
+                  if ($klasisFilterOptions->has($klasisFilterId)) {
+                        $jemaatFilterOptions = Jemaat::where('klasis_id', $klasisFilterId)->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
+                  }
              }
         }
-        // --- Akhir Scoping & Opsi Filter ---
 
-
-        // --- Filter berdasarkan Request ---
-        // Filter by Klasis
-        if ($request->filled('klasis_id')) {
-            $klasisFilterId = filter_var($request->klasis_id, FILTER_VALIDATE_INT);
-            if ($klasisFilterId) {
-                // Scoping sudah ditangani di atas, di sini hanya apply filter
-                // Perlu filter via relasi jemaat
-                $query->whereHas('jemaat', function ($q) use ($klasisFilterId) {
-                    $q->where('klasis_id', $klasisFilterId);
-                });
+        // Filter Request
+        if ($request->filled('klasis_id') && ($klasisFilterId = filter_var($request->klasis_id, FILTER_VALIDATE_INT))) {
+            if (($user->hasRole('Admin Klasis') && $user->klasis_id != $klasisFilterId) ||
+                ($user->hasRole('Admin Jemaat') && $jemaatUser && $jemaatUser->klasis_id != $klasisFilterId)) {
+            } else {
+                 $query->whereHas('jemaat', fn($q) => $q->where('klasis_id', $klasisFilterId));
             }
         }
-        // Filter by Jemaat
-        if ($request->filled('jemaat_id')) {
-             $jemaatFilterId = filter_var($request->jemaat_id, FILTER_VALIDATE_INT);
-             if ($jemaatFilterId) {
-                  // Scoping sudah ditangani di atas, di sini hanya apply filter
-                  $query->where('jemaat_id', $jemaatFilterId);
+        if ($request->filled('jemaat_id') && ($jemaatFilterId = filter_var($request->jemaat_id, FILTER_VALIDATE_INT))) {
+             if ($user->hasRole('Admin Jemaat') && $user->jemaat_id != $jemaatFilterId) {
+             } else {
+                 $query->where('jemaat_id', $jemaatFilterId);
              }
         }
-        // --- Akhir Filter ---
+        
+        if ($request->filled('status_keanggotaan')) {
+            $query->where('status_keanggotaan', $request->status_keanggotaan);
+        }
 
-         // Fitur Search Sederhana
+        $statsQuery = clone $query;
+        $stats = $statsQuery->reorder()->selectRaw('
+            count(*) as total,
+            sum(case when status_keanggotaan = "Aktif" then 1 else 0 end) as total_aktif,
+            sum(case when jenis_kelamin = "Laki-laki" then 1 else 0 end) as total_laki,
+            sum(case when jenis_kelamin = "Perempuan" then 1 else 0 end) as total_perempuan,
+            sum(case when status_dalam_keluarga = "Kepala Keluarga" and status_keanggotaan = "Aktif" then 1 else 0 end) as total_kk
+        ')->first();
+
+        if ($request->filled('nomor_kk_filter')) {
+            $query->where('nomor_kk', 'like', '%' . $request->nomor_kk_filter . '%');
+        }
+
          if ($request->filled('search')) {
              $searchTerm = '%' . $request->search . '%';
              $query->where(function($q) use ($searchTerm) {
                  $q->where('nama_lengkap', 'like', $searchTerm)
                    ->orWhere('nik', 'like', $searchTerm)
-                   ->orWhere('nomor_buku_induk', 'like', $searchTerm);
+                   ->orWhere('nomor_buku_induk', 'like', $searchTerm)
+                   ->orWhere('nomor_kk', 'like', $searchTerm);
              });
          }
 
-        // Ambil data Anggota dengan pagination
-        $anggotaJemaatData = $query->paginate(20)->appends($request->query());
-
-        // Kirim data ke view
-        // 👇👇👇 Kirim Opsi Filter & Request ke view 👇👇👇
-        return view('admin.anggota_jemaat.index', compact('anggotaJemaatData', 'klasisFilterOptions', 'jemaatFilterOptions', 'request'));
+        $anggotaJemaatData = $query->latest()->paginate(20)->appends($request->query());
+        
+        return view('admin.anggota_jemaat.index', compact('anggotaJemaatData', 'klasisFilterOptions', 'jemaatFilterOptions', 'request', 'stats'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function create(Request $request)
     {
          $jemaatOptionsQuery = Jemaat::orderBy('nama_jemaat');
          $user = Auth::user();
@@ -144,36 +148,38 @@ class AnggotaJemaatController extends Controller
          if ($user->hasRole('Admin Jemaat')) {
              $jemaatId = $user->jemaat_id;
              if ($jemaatId) $jemaatOptionsQuery->where('id', $jemaatId);
-             else { Log::error('Admin Jemaat ' . $user->id . ' create anggota tanpa jemaat_id.'); return redirect()->route('admin.dashboard')->with('error', 'Akun Anda tidak terhubung ke Jemaat.'); }
+             else return redirect()->route('admin.dashboard')->with('error', 'Akun Anda tidak terhubung ke Jemaat.');
          } elseif ($user->hasRole('Admin Klasis')) {
               $klasisId = $user->klasis_id;
               if ($klasisId) $jemaatOptionsQuery->where('klasis_id', $klasisId);
-              else { Log::error('Admin Klasis ' . $user->id . ' create anggota tanpa klasis_id.'); return redirect()->route('admin.dashboard')->with('error', 'Akun Anda tidak terhubung ke Klasis.'); }
+              else return redirect()->route('admin.dashboard')->with('error', 'Akun Anda tidak terhubung ke Klasis.');
          }
-
         $jemaatOptions = $jemaatOptionsQuery->pluck('nama_jemaat', 'id');
-
-        if ($jemaatOptions->isEmpty()) {
-             if (Auth::check() && !$user->hasAnyRole(['Super Admin', 'Admin Bidang 3'])) {
-                 return redirect()->back()->with('error', 'Tidak ada Jemaat tersedia dalam lingkup Anda.');
-             }
-             Log::warning('Tidak ada data Jemaat untuk pilihan form tambah anggota.');
+        
+        if ($jemaatOptions->isEmpty() && !$user->hasAnyRole(['Super Admin', 'Admin Bidang 3'])) {
+             return redirect()->back()->with('error', 'Tidak ada Jemaat tersedia dalam lingkup Anda.');
         }
-        return view('admin.anggota_jemaat.create', compact('jemaatOptions'));
+
+        $prefillData = [
+             'nomor_kk' => $request->query('nomor_kk'),
+             'alamat_lengkap' => $request->query('alamat'),
+             'jemaat_id' => $request->query('jemaat_id'),
+             'sektor_pelayanan' => $request->query('sektor'),
+             'unit_pelayanan' => $request->query('unit'),
+        ];
+
+        return view('admin.anggota_jemaat.create', compact('jemaatOptions', 'prefillData'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-         // Validasi semua field yang ada di form create Anda
          $validatedData = $request->validate([
             'nama_lengkap' => 'required|string|max:255',
-            'nik' => 'nullable|string|max:20|unique:anggota_jemaat,nik',
+            'nik' => ['nullable', 'string', 'max:20', Rule::unique('anggota_jemaat', 'nik')->whereNull('deleted_at')],
             'jemaat_id' => 'required|exists:jemaat,id',
-            'nomor_buku_induk' => 'nullable|string|max:50|unique:anggota_jemaat,nomor_buku_induk',
-            // ... (validasi field lainnya) ...
+            'nomor_buku_induk' => ['nullable', 'string', 'max:50', Rule::unique('anggota_jemaat', 'nomor_buku_induk')->whereNull('deleted_at')],
+            'nomor_kk' => 'nullable|string|max:50',
+            'status_dalam_keluarga' => 'nullable|string|max:50',
             'tempat_lahir' => 'nullable|string|max:100',
             'tanggal_lahir' => 'nullable|date',
             'jenis_kelamin' => 'nullable|in:Laki-laki,Perempuan',
@@ -185,7 +191,7 @@ class AnggotaJemaatController extends Controller
             'pekerjaan_utama' => 'nullable|string|max:100',
             'alamat_lengkap' => 'nullable|string',
             'telepon' => 'nullable|string|max:20',
-            'email' => 'nullable|string|email|max:255',
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('anggota_jemaat', 'email')->whereNull('deleted_at')],
             'sektor_pelayanan' => 'nullable|string|max:50',
             'unit_pelayanan' => 'nullable|string|max:50',
             'tanggal_baptis' => 'nullable|date',
@@ -199,161 +205,127 @@ class AnggotaJemaatController extends Controller
             'status_pekerjaan_kk' => 'nullable|string|max:100',
             'status_kepemilikan_rumah' => 'nullable|string|max:100',
             'perkiraan_pendapatan_keluarga' => 'nullable|string|max:50',
+            'catatan' => 'nullable|string',
+            'jabatan_pelayan_khusus' => 'nullable|string|max:100',
+            'wadah_kategorial' => 'nullable|string|max:100',
+            'keterlibatan_lain' => 'nullable|string',
+            'nama_kepala_keluarga' => 'nullable|string|max:255',
+            'sektor_pekerjaan_kk' => 'nullable|string|max:100',
+            'sumber_penerangan' => 'nullable|string|max:100',
+            'sumber_air_minum' => 'nullable|string|max:100',
+            'ayah_id' => 'nullable|exists:anggota_jemaat,id',
+            'ibu_id' => 'nullable|exists:anggota_jemaat,id',
         ]);
 
-        // --- Security Check (Diaktifkan) ---
-        // 👇👇👇 Blok ini diaktifkan 👇👇👇
         if (Auth::check()) {
             $user = Auth::user();
             if ($user->hasRole('Admin Jemaat')) {
-                $adminJemaatId = $user->jemaat_id;
-                // Pastikan admin jemaat hanya bisa input ke jemaatnya sendiri
-                if (!$adminJemaatId || $adminJemaatId != $validatedData['jemaat_id']) {
+                if ($user->jemaat_id != $validatedData['jemaat_id']) {
                     return redirect()->back()->with('error', 'Anda hanya bisa menambah anggota untuk Jemaat Anda.')->withInput();
                 }
             } elseif ($user->hasRole('Admin Klasis')) {
-                $adminKlasisId = $user->klasis_id;
-                // Pastikan jemaat yang dipilih ada dalam klasis admin
                 $jemaatDipilih = Jemaat::find($validatedData['jemaat_id']);
-                if (!$adminKlasisId || !$jemaatDipilih || $jemaatDipilih->klasis_id != $adminKlasisId) {
+                if (!$jemaatDipilih || $jemaatDipilih->klasis_id != $user->klasis_id) {
                     return redirect()->back()->with('error', 'Anda hanya bisa menambah anggota untuk Jemaat dalam Klasis Anda.')->withInput();
                 }
             }
-            // Super Admin & Admin Bidang 3 bisa menambah ke Jemaat mana saja
         }
-        // --- Akhir Security Check ---
-
 
         try {
-            AnggotaJemaat::create($validatedData);
+            $anggota = AnggotaJemaat::create($validatedData);
 
-            // Redirect kembali ke form create untuk input cepat berikutnya
-             return redirect()->route('admin.anggota-jemaat.create')
-                             ->with('success', 'Anggota Jemaat (' . $validatedData['nama_lengkap'] . ') berhasil ditambahkan. Silakan tambah lagi jika ada.');
+            if ($request->has('save_and_add_another')) {
+                return redirect()->route('admin.anggota-jemaat.create', [
+                    'nomor_kk' => $anggota->nomor_kk,
+                    'alamat' => $anggota->alamat_lengkap,
+                    'jemaat_id' => $anggota->jemaat_id,
+                    'sektor' => $anggota->sektor_pelayanan,
+                    'unit' => $anggota->unit_pelayanan,
+                ])->with('success', 'Data berhasil ditambahkan. Lanjut input anggota keluarga berikutnya.');
+            } else {
+                 return redirect()->route('admin.anggota-jemaat.index')
+                                 ->with('success', 'Anggota Jemaat berhasil ditambahkan.');
+            }
 
         } catch (\Exception $e) {
-            Log::error('Gagal menyimpan data Anggota Jemaat: ' . $e->getMessage());
-            return redirect()->route('admin.anggota-jemaat.create')
-                             ->with('error', 'Gagal menyimpan data Anggota Jemaat. Error DB: ' . $e->getMessage())
+            Log::error('Gagal menyimpan data: ' . $e->getMessage());
+            return redirect()->back()
+                             ->with('error', 'Gagal menyimpan data. Error: ' . $e->getMessage())
                              ->withInput();
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(AnggotaJemaat $anggotaJemaat)
     {
-         // --- Scoping (Diaktifkan) ---
-         // 👇👇👇 Blok ini diaktifkan 👇👇👇
          if (Auth::check()) {
              $user = Auth::user();
-             // Jika Admin Jemaat, cek ID jemaat
-             if ($user->hasRole('Admin Jemaat') && $anggotaJemaat->jemaat_id != $user->jemaat_id) {
-                 abort(403, 'Anda tidak diizinkan melihat data anggota ini.');
-             }
-             // Jika Admin Klasis, cek ID klasis dari jemaat anggota
+             if ($user->hasRole('Admin Jemaat') && $anggotaJemaat->jemaat_id != $user->jemaat_id) { abort(403); }
              elseif ($user->hasRole('Admin Klasis')) {
-                 // Pastikan relasi jemaat sudah di-load atau load di sini
-                 $anggotaJemaat->loadMissing('jemaat'); // Load jika belum ada
-                 if (!$anggotaJemaat->jemaat || $anggotaJemaat->jemaat->klasis_id != $user->klasis_id) {
-                    abort(403, 'Anda tidak diizinkan melihat data anggota dari Klasis lain.');
-                 }
+                 $anggotaJemaat->loadMissing('jemaat');
+                 if (!$anggotaJemaat->jemaat || $anggotaJemaat->jemaat->klasis_id != $user->klasis_id) { abort(403); }
              }
-             // Role lain yang punya 'view anggota jemaat' bisa lihat
-         } else {
-              abort(401);
-         }
-        // --- Akhir Scoping ---
+         } else { abort(401); }
 
-        $anggotaJemaat->load('jemaat.klasis'); // Eager load relasi Jemaat dan Klasisnya
-        return view('admin.anggota_jemaat.show', compact('anggotaJemaat'));
+        $anggotaJemaat->load(['jemaat.klasis', 'keluarga', 'kepalaKeluarga', 'dataBaptis', 'dataSidi']);
+        
+        // --- Cek Nikah (Suami/Istri) ---
+        $dataNikah = SakramenNikah::where('suami_id', $anggotaJemaat->id)
+                        ->orWhere('istri_id', $anggotaJemaat->id)
+                        ->first();
+        $anggotaJemaat->setRelation('dataPernikahan', $dataNikah);
+        
+        return view('admin.anggota_jemaat.show', [
+            'anggotaJemaat' => $anggotaJemaat,
+            'kepalaKeluarga' => $anggotaJemaat->kepalaKeluarga,
+            'anggotaKeluargaLain' => $anggotaJemaat->keluarga
+        ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(AnggotaJemaat $anggotaJemaat)
     {
-         // --- Scoping (Diaktifkan) ---
-         // 👇👇👇 Blok ini diaktifkan 👇👇👇
          if (Auth::check()) {
              $user = Auth::user();
-             // Check permission sudah di __construct
-
-             // Batasi scope Admin Jemaat & Klasis
-             if ($user->hasRole('Admin Jemaat') && $anggotaJemaat->jemaat_id != $user->jemaat_id) {
-                  abort(403, 'Anda tidak diizinkan mengedit anggota Jemaat lain.');
-             } elseif ($user->hasRole('Admin Klasis')) {
+             if ($user->hasRole('Admin Jemaat') && $anggotaJemaat->jemaat_id != $user->jemaat_id) { abort(403); }
+             elseif ($user->hasRole('Admin Klasis')) {
                  $anggotaJemaat->loadMissing('jemaat');
-                 if (!$anggotaJemaat->jemaat || $anggotaJemaat->jemaat->klasis_id != $user->klasis_id) {
-                    abort(403, 'Anda tidak diizinkan mengedit anggota dari Klasis lain.');
-                 }
+                 if (!$anggotaJemaat->jemaat || $anggotaJemaat->jemaat->klasis_id != $user->klasis_id) { abort(403); }
              }
-         } else {
-              abort(401);
-         }
-        // --- Akhir Scoping ---
+         } else { abort(401); }
 
          $jemaatOptionsQuery = Jemaat::orderBy('nama_jemaat');
-
-         // --- Scoping Pilihan Jemaat (Diaktifkan) ---
-         // 👇👇👇 Blok ini diaktifkan 👇👇👇
          if (Auth::check()) {
              $user = Auth::user();
-             if ($user->hasRole('Admin Jemaat')) {
-                  // Hanya bisa edit anggota di jemaatnya, pilihan jemaat hanya jemaatnya
+             if ($user->hasRole(['Admin Jemaat'])) {
                   $jemaatId = $user->jemaat_id;
-                  if ($jemaatId) $jemaatOptionsQuery->where('id', $jemaatId);
-                  else $jemaatOptionsQuery->whereRaw('1 = 0'); // Kosongkan jika tidak terhubung
-
+                  if ($jemaatId) $jemaatOptionsQuery->where('id', $jemaatId); else $jemaatOptionsQuery->whereRaw('1 = 0');
              } elseif ($user->hasRole('Admin Klasis')) {
-                  // Hanya bisa edit anggota di klasisnya, pilihan jemaat terbatas di klasisnya
                   $klasisId = $user->klasis_id;
-                  if ($klasisId) $jemaatOptionsQuery->where('klasis_id', $klasisId);
-                  else $jemaatOptionsQuery->whereRaw('1 = 0');
+                  if ($klasisId) $jemaatOptionsQuery->where('klasis_id', $klasisId); else $jemaatOptionsQuery->whereRaw('1 = 0');
              }
-             // Super Admin & Admin Bidang 3 bisa edit semua & pindah jemaat
          }
-         // --- Akhir Scoping Pilihan ---
-
         $jemaatOptions = $jemaatOptionsQuery->pluck('nama_jemaat', 'id');
 
         return view('admin.anggota_jemaat.edit', compact('anggotaJemaat', 'jemaatOptions'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, AnggotaJemaat $anggotaJemaat)
     {
-         // --- Scoping (Diaktifkan) ---
-         // 👇👇👇 Blok ini diaktifkan 👇👇👇
          if (Auth::check()) {
-             $user = Auth::user();
-             // Check permission sudah di __construct
+            $user = Auth::user();
+            if ($user->hasRole('Admin Jemaat') && $anggotaJemaat->jemaat_id != $user->jemaat_id) { abort(403); }
+            elseif ($user->hasRole('Admin Klasis')) {
+                $anggotaJemaat->loadMissing('jemaat');
+                if (!$anggotaJemaat->jemaat || $anggotaJemaat->jemaat->klasis_id != $user->klasis_id) { abort(403); }
+            }
+         } else { abort(401); }
 
-             // Batasi scope Admin Jemaat & Klasis
-             if ($user->hasRole('Admin Jemaat') && $anggotaJemaat->jemaat_id != $user->jemaat_id) {
-                  abort(403, 'Anda tidak diizinkan mengupdate anggota Jemaat lain.');
-             } elseif ($user->hasRole('Admin Klasis')) {
-                  $anggotaJemaat->loadMissing('jemaat');
-                  if (!$anggotaJemaat->jemaat || $anggotaJemaat->jemaat->klasis_id != $user->klasis_id) {
-                     abort(403, 'Anda tidak diizinkan mengupdate anggota dari Klasis lain.');
-                  }
-             }
-         } else {
-              abort(401);
-         }
-        // --- Akhir Scoping ---
-
-        // Validasi semua field yang ada di form edit Anda
         $validatedData = $request->validate([
             'nama_lengkap' => 'required|string|max:255',
-            'nik' => 'nullable|string|max:20|unique:anggota_jemaat,nik,' . $anggotaJemaat->id, // Abaikan ID saat ini
+            'nik' => ['nullable', 'string', 'max:20', Rule::unique('anggota_jemaat', 'nik')->ignore($anggotaJemaat->id)->whereNull('deleted_at')],
             'jemaat_id' => 'required|exists:jemaat,id',
-            'nomor_buku_induk' => 'nullable|string|max:50|unique:anggota_jemaat,nomor_buku_induk,' . $anggotaJemaat->id, // Abaikan ID saat ini
-            // ... (Validasi field lainnya sama seperti store, tapi unique rule diubah) ...
+            'nomor_buku_induk' => ['nullable', 'string', 'max:50', Rule::unique('anggota_jemaat', 'nomor_buku_induk')->ignore($anggotaJemaat->id)->whereNull('deleted_at')],
+            'nomor_kk' => 'nullable|string|max:50',
+            'status_dalam_keluarga' => 'nullable|string|max:50',
             'tempat_lahir' => 'nullable|string|max:100',
             'tanggal_lahir' => 'nullable|date',
             'jenis_kelamin' => 'nullable|in:Laki-laki,Perempuan',
@@ -365,7 +337,7 @@ class AnggotaJemaatController extends Controller
             'pekerjaan_utama' => 'nullable|string|max:100',
             'alamat_lengkap' => 'nullable|string',
             'telepon' => 'nullable|string|max:20',
-            'email' => 'nullable|string|email|max:255',
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('anggota_jemaat', 'email')->ignore($anggotaJemaat->id)->whereNull('deleted_at')],
             'sektor_pelayanan' => 'nullable|string|max:50',
             'unit_pelayanan' => 'nullable|string|max:50',
             'tanggal_baptis' => 'nullable|date',
@@ -379,21 +351,24 @@ class AnggotaJemaatController extends Controller
             'status_pekerjaan_kk' => 'nullable|string|max:100',
             'status_kepemilikan_rumah' => 'nullable|string|max:100',
             'perkiraan_pendapatan_keluarga' => 'nullable|string|max:50',
+            'catatan' => 'nullable|string',
+            'jabatan_pelayan_khusus' => 'nullable|string|max:100',
+            'wadah_kategorial' => 'nullable|string|max:100',
+            'keterlibatan_lain' => 'nullable|string',
+            'nama_kepala_keluarga' => 'nullable|string|max:255',
+            'sektor_pekerjaan_kk' => 'nullable|string|max:100',
+            'sumber_penerangan' => 'nullable|string|max:100',
+            'sumber_air_minum' => 'nullable|string|max:100',
+            'ayah_id' => 'nullable|exists:anggota_jemaat,id',
+            'ibu_id' => 'nullable|exists:anggota_jemaat,id',
         ]);
 
-        // --- Security Check Pindah Jemaat (Diaktifkan) ---
-         // 👇👇👇 Blok ini diaktifkan 👇👇👇
          if (Auth::check()) {
              $user = Auth::user();
-             // Jika jemaat_id yang diinput berbeda dengan jemaat_id anggota saat ini
-             // DAN user yang melakukan BUKAN Super Admin atau Admin Bidang 3
              if ($validatedData['jemaat_id'] != $anggotaJemaat->jemaat_id && !$user->hasAnyRole(['Super Admin', 'Admin Bidang 3'])) {
-                  // Admin Jemaat tidak boleh pindah
                   if ($user->hasRole('Admin Jemaat')) {
                       return redirect()->back()->with('error', 'Anda tidak bisa memindahkan anggota ke Jemaat lain.')->withInput();
-                  }
-                  // Admin Klasis hanya boleh pindah dalam klasisnya
-                  elseif ($user->hasRole('Admin Klasis')) {
+                  } elseif ($user->hasRole('Admin Klasis')) {
                       $adminKlasisId = $user->klasis_id;
                       $jemaatTujuan = Jemaat::find($validatedData['jemaat_id']);
                       if (!$adminKlasisId || !$jemaatTujuan || $jemaatTujuan->klasis_id != $adminKlasisId) {
@@ -402,98 +377,129 @@ class AnggotaJemaatController extends Controller
                   }
              }
          }
-         // --- Akhir Security Check ---
 
         try {
             $anggotaJemaat->update($validatedData);
-            // Redirect ke index anggota jemaat (atau ke show view anggota tersebut)
-             return redirect()->route('admin.anggota-jemaat.index', ['search' => $anggotaJemaat->nik ?? $anggotaJemaat->nomor_buku_induk]) // Redirect ke index & langsung cari yg diupdate
+             return redirect()->route('admin.anggota-jemaat.show', $anggotaJemaat->id)
                               ->with('success', 'Data Anggota Jemaat berhasil diperbarui.');
-
         } catch (\Exception $e) {
-            Log::error('Gagal update data Anggota Jemaat ID: ' . $anggotaJemaat->id . '. Error: ' . $e->getMessage());
-            return redirect()->route('admin.anggota-jemaat.edit', $anggotaJemaat->id)
-                             ->with('error', 'Gagal memperbarui data Anggota Jemaat. Error DB: ' . $e->getMessage())
+            Log::error('Gagal update data: ' . $e->getMessage());
+            return redirect()->back()
+                             ->with('error', 'Gagal memperbarui data. Error: ' . $e->getMessage())
                              ->withInput();
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(AnggotaJemaat $anggotaJemaat)
     {
-         // --- Scoping & Hak Akses (Diaktifkan) ---
-         // 👇👇👇 Blok ini diaktifkan 👇👇👇
          if (Auth::check()) {
-             $user = Auth::user();
-             // Check permission sudah di __construct
-
-             // Batasi scope Admin Jemaat & Klasis
-             if ($user->hasRole('Admin Jemaat') && $anggotaJemaat->jemaat_id != $user->jemaat_id) {
-                  abort(403, 'Anda tidak diizinkan menghapus anggota Jemaat lain.');
-             } elseif ($user->hasRole('Admin Klasis')) {
-                 $anggotaJemaat->loadMissing('jemaat');
-                 if (!$anggotaJemaat->jemaat || $anggotaJemaat->jemaat->klasis_id != $user->klasis_id) {
-                     abort(403, 'Anda tidak diizinkan menghapus anggota dari Klasis lain.');
-                 }
-             }
-         } else {
-              abort(401);
-         }
-        // --- Akhir Scoping ---
+            $user = Auth::user();
+            if ($user->hasRole('Admin Jemaat') && $anggotaJemaat->jemaat_id != $user->jemaat_id) { abort(403); }
+            elseif ($user->hasRole('Admin Klasis')) {
+                $anggotaJemaat->loadMissing('jemaat');
+                if (!$anggotaJemaat->jemaat || $anggotaJemaat->jemaat->klasis_id != $user->klasis_id) { abort(403); }
+            }
+         } else { abort(401); }
 
         try {
-            $namaAnggota = $anggotaJemaat->nama_lengkap; // Simpan nama untuk pesan sukses
-            $jemaatIdRedirect = $anggotaJemaat->jemaat_id; // Simpan ID jemaat untuk redirect
+            $namaAnggota = $anggotaJemaat->nama_lengkap;
+            $nomorKkRedirect = $anggotaJemaat->nomor_kk;
             $anggotaJemaat->delete();
 
-            return redirect()->route('admin.anggota-jemaat.index', ['jemaat_id' => $jemaatIdRedirect]) // Redirect ke index jemaatnya (atau hapus filter)
+            $redirectParams = $nomorKkRedirect ? ['nomor_kk_filter' => $nomorKkRedirect] : [];
+            return redirect()->route('admin.anggota-jemaat.index', $redirectParams)
                              ->with('success', 'Data Anggota Jemaat (' . $namaAnggota . ') berhasil dihapus.');
 
         } catch (\Exception $e) {
-            Log::error('Gagal hapus data Anggota Jemaat ID: ' . $anggotaJemaat->id . '. Error: ' . $e->getMessage());
+            Log::error('Gagal hapus data: ' . $e->getMessage());
             return redirect()->route('admin.anggota-jemaat.index')
-                              ->with('error', 'Gagal menghapus data Anggota Jemaat. Error DB: ' . $e->getMessage());
+                              ->with('error', 'Gagal menghapus data. Error: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Handle request export data.
-     */
-    public function export(Request $request) // Tambahkan Request
+    public function showImportForm()
     {
-        // Permission check sudah di __construct
+        $user = Auth::user();
+        $klasisOptions = collect();
+        $jemaatOptions = collect();
 
-         // Cek apakah request meminta template
+        if ($user->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3'])) {
+            $klasisOptions = Klasis::orderBy('nama_klasis')->get();
+        } 
+        elseif ($user->hasRole('Admin Klasis')) {
+            $klasisOptions = Klasis::where('id', $user->klasis_id)->get();
+            $jemaatOptions = Jemaat::where('klasis_id', $user->klasis_id)->orderBy('nama_jemaat')->get();
+        } 
+        elseif ($user->hasRole('Admin Jemaat')) {
+            $jemaatOptions = Jemaat::where('id', $user->jemaat_id)->get();
+        }
+
+        return view('admin.anggota_jemaat.import', compact('klasisOptions', 'jemaatOptions'));
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:xlsx,xls,csv',
+            'jemaat_id'   => 'required|exists:jemaat,id', 
+        ], [
+            'jemaat_id.required' => 'Anda wajib memilih Jemaat tujuan import data.',
+            'import_file.mimes'  => 'Format file harus berupa Excel (.xlsx, .xls) atau CSV.',
+        ]);
+
+        try {
+            $targetJemaatId = $request->jemaat_id;
+            $import = new AnggotaJemaatImport($targetJemaatId);
+            Excel::import($import, $request->file('import_file'));
+
+            return redirect()->route('admin.anggota-jemaat.index')
+                             ->with('success', 'Data Anggota Jemaat berhasil diimpor ke Jemaat terpilih.');
+
+        } catch (ValidationException $e) {
+             return redirect()->back()->with('error', 'Validasi Gagal: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan Import: ' . $e->getMessage());
+        }
+    }
+
+    public function export(Request $request)
+    {
          if ($request->has('template') && $request->template == 'yes') {
-             $export = new AnggotaJemaatExport();
-             $headings = $export->headings();
-             $templateCollection = collect([$headings]);
+             $headings = [
+                'id_jemaat_wajib_diisi_saat_import', 'nik', 'nomor_buku_induk', 'nama_lengkap_wajib',
+                'nomor_kk', 'status_dalam_keluarga', 'tempat_lahir', 'tanggal_lahir_yyyymmdd',
+                'jenis_kelamin_lakilakiperempuan', 'golongan_darah', 'status_pernikahan',
+                'nama_ayah', 'nama_ibu', 'pendidikan_terakhir', 'pekerjaan_utama',
+                'alamat_lengkap', 'telepon', 'email', 'sektor_pelayanan', 'unit_pelayanan',
+                'tanggal_baptis_yyyymmdd', 'tempat_baptis', 'tanggal_sidi_yyyymmdd', 'tempat_sidi',
+                'tanggal_masuk_jemaat_yyyymmdd', 'status_keanggotaan_aktif_tidak_aktif_pindah_meninggal',
+                'asal_gereja_sebelumnya', 'nomor_atestasi', 'jabatan_pelayan_khusus', 'wadah_kategorial',
+                'keterlibatan_lain', 'nama_kepala_keluarga', 'status_pekerjaan_kk', 'sektor_pekerjaan_kk',
+                'status_kepemilikan_rumah', 'sumber_penerangan', 'sumber_air_minum',
+                'perkiraan_pendapatan_keluarga', 'catatan'
+             ];
+
              $fileName = 'template_import_anggota_jemaat.xlsx';
-             $templateExport = new class($templateCollection) implements FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings {
-                 protected $collection; protected $headingsData;
-                 public function __construct($collection) { $this->collection = $collection; $this->headingsData = $collection->first(); }
-                 public function collection() { return collect([]); }
-                 public function headings(): array { return $this->headingsData ?? []; }
+             $templateExport = new class($headings) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings, \Maatwebsite\Excel\Concerns\ShouldAutoSize {
+                 private $headings;
+                 public function __construct($headings) { $this->headings = $headings; }
+                 public function array(): array { return []; } 
+                 public function headings(): array { return $this->headings; }
              };
+             
              return Excel::download($templateExport, $fileName);
          }
 
-        // Jika bukan template, export data normal
         try {
             $fileName = 'anggota_jemaat_gpi_papua_' . date('YmdHis') . '.xlsx';
-            // TODO: Tambahkan scoping export untuk Admin Klasis/Jemaat
-            // 👇👇👇 Contoh Scoping Export (bisa diaktifkan nanti) 👇👇👇
              $user = Auth::user();
-             $jemaatId = $user->hasRole('Admin Jemaat') ? $user->jemaat_id : $request->query('jemaat_id'); // Ambil dari user atau filter
-             $klasisId = $user->hasRole('Admin Klasis') ? $user->klasis_id : $request->query('klasis_id'); // Ambil dari user atau filter
-             $search = $request->query('search'); // Ambil search term
+             $jemaatId = $user->hasRole('Admin Jemaat') ? $user->jemaat_id : $request->query('jemaat_id');
+             $klasisId = $user->hasRole('Admin Klasis') ? $user->klasis_id : $request->query('klasis_id');
+             $search = $request->query('search');
+             $nomorKkFilter = $request->query('nomor_kk_filter'); 
 
-             $export = new AnggotaJemaatExport($search, $klasisId, $jemaatId); // Pass filter ke Export class
+             $export = new AnggotaJemaatExport($search, $klasisId, $jemaatId, $nomorKkFilter);
              return Excel::download($export, $fileName);
-
-            // return Excel::download(new AnggotaJemaatExport, $fileName); // Kode lama (export semua)
         } catch (\Exception $e) {
              Log::error('Gagal export Anggota Jemaat: ' . $e->getMessage());
              return redirect()->route('admin.anggota-jemaat.index')
@@ -501,70 +507,41 @@ class AnggotaJemaatController extends Controller
         }
     }
 
-    /**
-     * Menampilkan halaman form import.
-     */
-    public function showImportForm()
+    public function cetakKartuKeluarga($id)
     {
-        // Permission check sudah di __construct
-         return view('admin.anggota_jemaat.import'); // View import.blade.php
-    }
-
-
-    /**
-     * Handle request import data.
-     */
-    public function import(Request $request)
-    {
-        // Permission check sudah di __construct
-
-        $request->validate([
-            'import_file' => 'required|file|mimes:xlsx,xls,csv', // Hanya izinkan file spreadsheet
-        ]);
-
-        $file = $request->file('import_file');
-
-        try {
-            // TODO: Tambahkan scoping import untuk Admin Klasis/Jemaat
-            // 👇👇👇 Contoh Scoping Import (bisa diaktifkan nanti) 👇👇👇
-            $user = Auth::user();
-            $jemaatIdConstraint = $user->hasRole('Admin Jemaat') ? $user->jemaat_id : null;
-            $klasisIdConstraint = $user->hasRole('Admin Klasis') ? $user->klasis_id : null;
-
-            $import = new AnggotaJemaatImport($jemaatIdConstraint, $klasisIdConstraint); // Pass constraint ke Import class
-            Excel::import($import, $file);
-
-            // $import = new AnggotaJemaatImport(); // Kode lama (tanpa scope)
-            // Excel::import($import, $file);
-
-            // Cek jika ada error validasi selama import (jika pakai SkipsOnError)
-             $failures = $import->failures();
-            if ($failures->isNotEmpty()) {
-                $errorRows = []; $errorCount = count($failures);
-                foreach ($failures as $failure) { $errorRows[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors()) . ' (Nilai: ' . implode(', ', array_slice($failure->values(), 0, 5)) . '...)';}
-                $errorMessage = "Import selesai, namun terdapat {$errorCount} kesalahan validasi:\n" . implode("\n", $errorRows);
-                Log::warning($errorMessage);
-                if (count($errorRows) > 10) { $errorMessage = "Import selesai, namun terdapat {$errorCount} kesalahan validasi (ditampilkan 10 error pertama):\n" . implode("\n", array_slice($errorRows, 0, 10)) . "\n... (silakan cek log aplikasi untuk detail)";}
-                return redirect()->route('admin.anggota-jemaat.index')->with('warning', $errorMessage);
+        $anggota = AnggotaJemaat::with(['jemaat.klasis'])->findOrFail($id);
+        
+        $user = Auth::user();
+        if ($user) {
+            if ($user->hasRole('Admin Jemaat') && $anggota->jemaat_id != $user->jemaat_id) { abort(403); }
+            elseif ($user->hasRole('Admin Klasis')) {
+                if (!$anggota->jemaat || $anggota->jemaat->klasis_id != $user->klasis_id) { abort(403); }
             }
-
-            return redirect()->route('admin.anggota-jemaat.index')->with('success', 'Data Anggota Jemaat berhasil diimpor.');
-
-        } catch (ValidationException $e) {
-            $failures = $e->failures(); $errorRows = []; $errorCount = count($failures);
-            foreach ($failures as $failure) { $errorRows[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors()) . ' (Nilai: ' . implode(', ', array_slice($failure->values(), 0, 5)) . '...)'; }
-            $errorMessage = "Gagal import karena {$errorCount} kesalahan validasi:\n" . implode("\n", $errorRows);
-            Log::error($errorMessage);
-            if (count($errorRows) > 10) { $errorMessage = "Gagal import karena {$errorCount} kesalahan validasi (ditampilkan 10 error pertama):\n" . implode("\n", array_slice($errorRows, 0, 10)) . "\n... (silakan cek log aplikasi untuk detail)"; }
-            return redirect()->back()->with('error', $errorMessage);
-
-        } catch (\InvalidArgumentException $e) { // <-- Tangkap error jika import dibatasi scope
-             Log::error('Gagal import Anggota Jemaat karena pembatasan scope: ' . $e->getMessage());
-             return redirect()->back()->with('error', $e->getMessage()); // Tampilkan pesan error dari Import Class
-        } catch (\Exception $e) {
-            Log::error('Gagal import Anggota Jemaat: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data. Silakan periksa format file atau hubungi administrator. Error: ' . $e->getMessage());
         }
-    }
 
-} // Akhir Class
+        $keluarga = collect();
+
+        if ($anggota->nomor_kk) {
+            $keluarga = AnggotaJemaat::where('nomor_kk', $anggota->nomor_kk)
+                        ->orderByRaw("FIELD(status_dalam_keluarga, 'Kepala Keluarga', 'Istri', 'Anak', 'Famili Lain')")
+                        ->orderBy('tanggal_lahir')
+                        ->get();
+        } elseif ($anggota->kode_keluarga_internal) {
+            $keluarga = AnggotaJemaat::where('kode_keluarga_internal', $anggota->kode_keluarga_internal)
+                        ->orderByRaw("FIELD(status_dalam_keluarga, 'Kepala Keluarga', 'Istri', 'Anak', 'Famili Lain')")
+                        ->orderBy('tanggal_lahir')
+                        ->get();
+        } else {
+            $keluarga = collect([$anggota]);
+        }
+
+        // --- AMBIL SETTING UTAMA (UNTUK LOGO) ---
+        $setting = Setting::first(); 
+
+        // --- PERBAIKAN PATH VIEW (Ganti 'anggota_jemaat' jadi 'anggota-jemaat') ---
+        $pdf = Pdf::loadView('admin.anggota_jemaat.cetak-kk', compact('anggota', 'keluarga', 'setting'))
+                  ->setPaper('a4', 'landscape'); 
+
+        return $pdf->stream('KK-' . Str::slug($anggota->nama_kepala_keluarga ?? $anggota->nama_lengkap) . '.pdf');
+    }
+}

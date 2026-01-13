@@ -1,119 +1,225 @@
 @extends('admin.layout')
 
 @section('title', 'Manajemen Klasis')
-@section('header-title', 'Daftar Klasis GPI Papua')
+@section('header-title', 'Data Wilayah Pelayanan (Klasis)')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h2 class="text-xl font-semibold text-gray-800">Data Klasis</h2>
-        {{-- Tombol Aksi --}}
+<div class="space-y-6">
+
+    {{-- 1. HEADER & ACTION --}}
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 class="text-xl font-black text-gray-800 tracking-tight uppercase">Direktori Klasis</h2>
+            <p class="text-sm text-gray-500">Daftar wilayah pelayanan tingkat Klasis se-Tanah Papua.</p>
+        </div>
         <div class="flex flex-wrap gap-2">
-             {{-- Tombol Import --}}
-             @can('import klasis') {{-- <-- Sesuaikan permission --}}
-             <a href="{{ route('admin.klasis.import-form') }}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-md shadow text-sm transition duration-150 ease-in-out whitespace-nowrap inline-flex items-center">
-                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                Import
+            @hasanyrole('Super Admin|Admin Bidang 3')
+             <a href="{{ route('admin.klasis.import-form') }}" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm text-xs uppercase tracking-wider flex items-center">
+                <i class="fas fa-file-excel mr-2"></i> Import
             </a>
-             @endcan
-
-             {{-- Tombol Export --}}
-             @can('export klasis') {{-- <-- Sesuaikan permission --}}
-             <a href="{{ route('admin.klasis.export', request()->query()) }}" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow text-sm transition duration-150 ease-in-out whitespace-nowrap inline-flex items-center"> {{-- <-- Tambahkan request()->query() --}}
-                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                 Export
+             <a href="{{ route('admin.klasis.export') }}" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm text-xs uppercase tracking-wider flex items-center">
+                 <i class="fas fa-download mr-2"></i> Export
              </a>
-            @endcan
-
-            {{-- Tombol Tambah --}}
-            @can('manage klasis') {{-- <-- Sesuaikan permission (misal 'manage klasis' atau 'create klasis') --}}
-            <a href="{{ route('admin.klasis.create') }}" class="bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow transition duration-150 ease-in-out whitespace-nowrap inline-flex items-center">
-                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                Tambah Klasis
+            <a href="{{ route('admin.klasis.create') }}" class="bg-primary hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-lg shadow-sm text-xs uppercase tracking-wider flex items-center">
+                <i class="fas fa-plus mr-2"></i> Tambah Klasis
             </a>
-            @endcan
+            @endhasanyrole
         </div>
     </div>
 
-    {{-- Form Pencarian (Sudah ada) --}}
-     <form method="GET" action="{{ route('admin.klasis.index') }}" class="mb-6"> {{-- <-- Ubah mb-4 ke mb-6 --}}
-        <div class="flex items-center max-w-lg"> {{-- Batasi lebar --}}
-            <input type="text" name="search" placeholder="Cari Nama/Kode/Pusat Klasis/Ketua..." value="{{ request('search') }}"
-                   class="flex-grow px-4 py-2 border border-gray-300 rounded-l-md focus:ring-primary focus:border-primary text-sm shadow-sm">
-            <button type="submit" class="bg-primary text-white px-3 py-2 rounded-r-md hover:bg-blue-700 transition duration-150 ease-in-out shadow-sm -ml-px"> {{-- Kurangi padding, tambah -ml-px --}}
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </button>
-             @if(request('search'))
-            <a href="{{ route('admin.klasis.index') }}" class="ml-3 text-sm text-gray-600 hover:text-primary underline">Reset</a> {{-- Perbaiki margin --}}
-            @endif
+    {{-- 2. PANEL ANALISA (STYLE SAMAKAN DENGAN JEMAAT) --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {{-- Card Total Klasis --}}
+        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-primary flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Klasis</p>
+                <p class="text-2xl font-black text-gray-800 mt-1">{{ number_format($stats->total_klasis ?? 0) }}</p>
+            </div>
+            <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-primary">
+                <i class="fas fa-map-marked-alt text-lg"></i>
+            </div>
         </div>
-    </form>
 
-    <div class="overflow-x-auto relative shadow-md sm:rounded-lg border border-gray-200">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                <tr>
-                    <th scope="col" class="px-6 py-3">Nama Klasis</th>
-                    <th scope="col" class="px-6 py-3">Kode</th>
-                    <th scope="col" class="px-6 py-3">Pusat</th>
-                    <th scope="col" class="px-6 py-3">Ketua MPK</th>
-                    <th scope="col" class="px-6 py-3 text-center">Jml Jemaat</th>
-                    <th scope="col" class="px-6 py-3 text-center">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($klasisData as $klasis)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                            <a href="{{ route('admin.klasis.show', $klasis->id) }}" class="text-primary hover:underline" title="Lihat Detail">
-                                {{ $klasis->nama_klasis }}
-                            </a>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">{{ $klasis->kode_klasis ?: '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">{{ $klasis->pusat_klasis ?: '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-xs">{{ $klasis->ketuaMp->nama_lengkap ?? '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">{{ $klasis->jemaat_count ?? '-' }}</td> {{-- Menggunakan jemaat_count dari controller --}}
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-center space-x-2"> {{-- <-- Tambah space-x-2 --}}
-                            {{-- Tombol Edit --}}
-                            @can('manage klasis') {{-- <-- Sesuaikan permission --}}
-                            <a href="{{ route('admin.klasis.edit', $klasis->id) }}" class="text-indigo-600 hover:text-indigo-900 font-medium inline-block" title="Edit">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            </a>
-                            @endcan
+        {{-- Card Total Jemaat (Pakai Style Indigo agar beda warna dikit tapi ukuran sama) --}}
+        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-indigo-500 flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Jemaat</p>
+                <p class="text-2xl font-black text-gray-800 mt-1">{{ number_format($stats->total_jemaat ?? 0) }}</p>
+            </div>
+            <div class="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500">
+                <i class="fas fa-church text-lg"></i>
+            </div>
+        </div>
 
-                            {{-- Tombol Hapus --}}
-                             @can('manage klasis') {{-- <-- Sesuaikan permission --}}
-                            <form action="{{ route('admin.klasis.destroy', $klasis->id) }}" method="POST" class="inline-block" onsubmit="return confirm('PERHATIAN:\nMenghapus Klasis juga akan menghapus SEMUA Jemaat di dalamnya!\n\nApakah Anda yakin ingin menghapus Klasis {{ $klasis->nama_klasis }}?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-900 font-medium" title="Hapus">
-                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                            </form>
-                            @endcan
-                        </td>
-                    </tr>
-                @empty
-                    <tr class="bg-white border-b">
-                        <td colspan="6" class="px-6 py-10 text-center text-gray-500 italic">
-                            Tidak ada data klasis yang ditemukan
-                            @if(request('search'))
-                                untuk pencarian "{{ request('search') }}"
-                            @endif
-                            .
-                            @can('manage klasis') {{-- <-- Sesuaikan permission --}}
-                            <a href="{{ route('admin.klasis.create') }}" class="text-primary hover:underline ml-2">Tambah Baru?</a>
-                            @endcan
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+        {{-- Card Jemaat Mandiri --}}
+        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500 flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Jemaat Mandiri</p>
+                <p class="text-2xl font-black text-gray-800 mt-1">{{ number_format($stats->total_jemaat_mandiri ?? 0) }}</p>
+            </div>
+            <div class="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-500">
+                <i class="fas fa-check-circle text-lg"></i>
+            </div>
+        </div>
+
+        {{-- Card Jemaat Pos/Bakal --}}
+        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pos Pelayanan</p>
+                <p class="text-2xl font-black text-gray-800 mt-1">
+                    {{ number_format($stats->total_jemaat_pos ?? 0) }}
+                </p>
+                <p class="text-[10px] text-gray-400">Termasuk Bakal Jemaat</p>
+            </div>
+            <div class="w-10 h-10 bg-yellow-50 rounded-full flex items-center justify-center text-yellow-500">
+                <i class="fas fa-home text-lg"></i>
+            </div>
+        </div>
     </div>
 
-    {{-- Pagination Links --}}
-    <div class="mt-6">
-        {{ $klasisData->appends(request()->query())->links('vendor.pagination.tailwind') }} {{-- <-- Pastikan appends ada --}}
+    {{-- 3. FILTER & TABEL DATA --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        
+        {{-- Toolbar Filter --}}
+        <div class="p-5 border-b border-gray-100 bg-gray-50">
+            <form method="GET" action="{{ route('admin.klasis.index') }}">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {{-- Search --}}
+                    <div class="md:col-span-4">
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Pencarian</label>
+                        <div class="relative">
+                            <input type="text" name="search" value="{{ $request->input('search') }}" class="w-full pl-9 border-gray-300 rounded-lg text-sm focus:ring-primary" placeholder="Cari Nama Klasis, Kode, atau Kota...">
+                            <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        {{-- Tabel --}}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-white text-gray-500 font-bold border-b">
+                    <tr>
+                        <th class="px-6 py-4 w-20 font-bold uppercase text-[10px] tracking-wider">Kode</th>
+                        <th class="px-6 py-4 uppercase text-[10px] tracking-wider">Klasis & Ketua</th>
+                        <th class="px-6 py-4 uppercase text-[10px] tracking-wider">Pusat & Kontak</th>
+                        <th class="px-6 py-4 uppercase text-[10px] tracking-wider hidden md:table-cell">Wilayah</th>
+                        <th class="px-6 py-4 text-center uppercase text-[10px] tracking-wider">Jemaat</th>
+                        <th class="px-6 py-4 text-center uppercase text-[10px] tracking-wider">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                    @forelse ($klasisData as $klasis)
+                        <tr class="hover:bg-blue-50/40 transition group">
+                            {{-- Kode --}}
+                            <td class="px-6 py-4">
+                                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono font-bold">
+                                    {{ $klasis->kode_klasis }}
+                                </span>
+                            </td>
+                            
+                            {{-- Nama & Ketua --}}
+                            <td class="px-6 py-4">
+                                <a href="{{ route('admin.klasis.show', $klasis->id) }}" class="font-bold text-gray-900 hover:text-primary hover:underline text-sm block">
+                                    {{ $klasis->nama_klasis }}
+                                </a>
+                                <div class="flex items-center text-xs text-gray-500 mt-1">
+                                    <i class="fas fa-user-tie mr-1.5 w-3 text-center"></i>
+                                    @if($klasis->ketuaMp)
+                                        <span class="text-gray-700">{{ $klasis->ketuaMp->nama_lengkap }}</span>
+                                    @else
+                                        <span class="text-red-400 italic">Belum ada Ketua</span>
+                                    @endif
+                                </div>
+                                @if($klasis->tanggal_pembentukan)
+                                <div class="flex items-center text-[10px] text-gray-400 mt-0.5">
+                                    <i class="fas fa-calendar-alt mr-1.5 w-3 text-center"></i>
+                                    <span>Est. {{ $klasis->tanggal_pembentukan->format('Y') }}</span>
+                                </div>
+                                @endif
+                            </td>
+
+                            {{-- Pusat & Kontak --}}
+                            <td class="px-6 py-4 text-gray-600">
+                                <div class="font-medium text-xs mb-1 flex items-center">
+                                    <i class="fas fa-map-pin mr-1.5 w-3 text-center text-red-400"></i>
+                                    {{ $klasis->pusat_klasis ?? '-' }}
+                                </div>
+                                @if($klasis->telepon_kantor)
+                                <div class="text-[11px] flex items-center">
+                                    <i class="fas fa-phone mr-1.5 w-3 text-center text-green-400"></i>
+                                    {{ $klasis->telepon_kantor }}
+                                </div>
+                                @endif
+                                @if($klasis->email_klasis)
+                                <div class="text-[11px] flex items-center truncate max-w-[150px]" title="{{ $klasis->email_klasis }}">
+                                    <i class="fas fa-envelope mr-1.5 w-3 text-center text-blue-400"></i>
+                                    {{ Str::limit($klasis->email_klasis, 20) }}
+                                </div>
+                                @endif
+                            </td>
+
+                            {{-- Wilayah (Hidden di mobile) --}}
+                            <td class="px-6 py-4 hidden md:table-cell">
+                                <p class="text-xs text-gray-500 line-clamp-2" title="{{ $klasis->wilayah_pelayanan }}">
+                                    {{ $klasis->wilayah_pelayanan ?? '-' }}
+                                </p>
+                            </td>
+
+                            {{-- Jumlah Jemaat --}}
+                            <td class="px-6 py-4 text-center">
+                                <span class="bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-indigo-100">
+                                    {{ $klasis->jemaat_count }}
+                                </span>
+                            </td>
+
+                            {{-- Aksi --}}
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <div class="flex justify-center items-center space-x-2">
+                                    <a href="{{ route('admin.klasis.show', $klasis->id) }}" class="p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-500 hover:text-white transition shadow-sm" title="Detail">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+
+                                    @hasanyrole('Super Admin|Admin Bidang 3')
+                                    <a href="{{ route('admin.klasis.edit', $klasis->id) }}" class="p-2 bg-yellow-50 text-yellow-600 rounded hover:bg-yellow-500 hover:text-white transition shadow-sm" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+
+                                    <form action="{{ route('admin.klasis.destroy', $klasis->id) }}" method="POST" class="inline-block" onsubmit="return confirm('PERHATIAN: Menghapus Klasis ini?\n\nSyarat: Klasis harus kosong (tidak ada Jemaat).\n\nLanjutkan hapus {{ $klasis->nama_klasis }}?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="p-2 bg-red-50 text-red-600 rounded hover:bg-red-500 hover:text-white transition shadow-sm" title="Hapus">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                    @endhasanyrole
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i class="fas fa-map-signs text-4xl mb-3 opacity-20"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Belum ada data Klasis</span>
+                                    @hasanyrole('Super Admin|Admin Bidang 3')
+                                    <a href="{{ route('admin.klasis.create') }}" class="mt-2 text-primary hover:underline text-sm">Tambah Baru?</a>
+                                    @endhasanyrole
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Pagination --}}
+        @if($klasisData->hasPages())
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50">
+                {{ $klasisData->links() }}
+            </div>
+        @endif
     </div>
 </div>
 @endsection
