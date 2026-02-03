@@ -246,3 +246,31 @@ Route::get('/api/jemaat-by-klasis/{klasisId}', function ($klasisId) {
 })->name('api.jemaat.by.klasis');
 
 require __DIR__.'/auth.php';
+
+// --- TEMPEL DI PALING BAWAH ROUTES/WEB.PHP ---
+Route::get('/perbaiki-server', function () {
+    // 1. Paksa Hapus Cache Konfigurasi
+    \Artisan::call('config:clear');
+    \Artisan::call('cache:clear');
+    \Artisan::call('view:clear');
+    
+    // 2. Cek Data Tanggal Lahir
+    $totalAnggota = \App\Models\AnggotaJemaat::count();
+    $punyaTglLahir = \App\Models\AnggotaJemaat::whereNotNull('tanggal_lahir')
+                        ->where('tanggal_lahir', '!=', '0000-00-00')
+                        ->count();
+    
+    // 3. Ambil 1 Sampel Data
+    $sampel = \App\Models\AnggotaJemaat::whereNotNull('tanggal_lahir')->first();
+    
+    return response()->json([
+        'Pesan' => 'Cache Server Berhasil Direset! Pengaturan Strict Mode sekarang sudah False.',
+        'Total Anggota di Database' => $totalAnggota,
+        'Anggota dengan Tgl Lahir Valid' => $punyaTglLahir,
+        'Contoh Data' => [
+            'Nama' => $sampel ? $sampel->nama_lengkap : 'Tidak ada data',
+            'Tgl Lahir (Database)' => $sampel ? $sampel->tanggal_lahir : '-',
+            'Tgl Lahir (Format)' => $sampel ? gettype($sampel->tanggal_lahir) : '-',
+        ]
+    ]);
+});
