@@ -46,7 +46,7 @@
 
     <section id="pelayanan" class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16 animate-slide-up"> <span class="text-primary font-semibold uppercase tracking-wider text-sm">Amanat Pelayanan</span> <h2 class="text-4xl font-bold text-gray-900 mt-2 mb-4">Pelayanan Holistik Kami</h2> <p class="text-xl text-gray-600 max-w-3xl mx-auto"> Meneladani pola pelayanan Yesus Kristus, kami hadir sebagai hamba, imam, nabi, dan gembala bagi umat dan masyarakat. </p> </div>
+            <div class="text-center mb-16 animate-slide-up"> <span class="text-primary font-semibold uppercase tracking-wider text-sm">Amanat Pelayanan</span> <h2 class="text-4xl font-bold text-gray-900 mt-2 mb-4">Pelayanan Holistik Kami</h2> <p class="text-xl text-gray-600 max-w-3xl mx-auto"> Meneladani pola pelayanan Yesus Kristus, kami hadir sebagai gembala bagi umat dan masyarakat. </p> </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 @forelse ($services as $service)
                     @php
