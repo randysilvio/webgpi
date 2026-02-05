@@ -12,214 +12,211 @@
         @method('PUT')
         <div class="space-y-6">
 
-            {{-- Info Akun --}}
-            <section class="border rounded-lg p-6">
+            {{-- 1. Info Akun --}}
+            <section class="border rounded-lg p-6 bg-gray-50">
                  <h3 class="text-lg font-semibold text-gray-700 mb-4">1. Informasi Akun</h3>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                     {{-- Nama User --}}
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap <span class="text-red-600">*</span></label>
                         <input type="text" id="name" name="name" value="{{ old('name', $user->name) }}" required
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm @error('name') border-red-500 @enderror">
-                        @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
-                     {{-- Email --}}
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Alamat Email <span class="text-red-600">*</span></label>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-600">*</span></label>
                         <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" required
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm @error('email') border-red-500 @enderror">
-                        @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
-                     {{-- Password --}}
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password Baru <span class="italic text-gray-500">(Opsional)</span></label>
-                        <input type="password" id="password" name="password" autocomplete="new-password"
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm @error('password') border-red-500 @enderror" placeholder="Kosongkan jika tidak diubah">
-                        @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                     {{-- Konfirmasi Password --}}
-                    <div>
-                        <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
-                        <input type="password" id="password_confirmation" name="password_confirmation"
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" placeholder="Kosongkan jika tidak diubah">
+                    <div class="md:col-span-2">
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+                        <input type="password" id="password" name="password" 
+                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="Biarkan kosong jika tidak ingin mengubah password">
+                        <p class="text-xs text-gray-500 mt-1">* Minimal 8 karakter.</p>
+                        @error('password') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                  </div>
             </section>
 
-            {{-- Roles & Relasi --}}
-             <section class="border rounded-lg p-6">
-                 <h3 class="text-lg font-semibold text-gray-700 mb-4">2. Peran (Role) & Relasi</h3>
-                 <div class="space-y-4">
-                     {{-- Roles --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Peran (Roles) <span class="text-red-600">*</span></label>
-                        {{-- Ditambahkan ID 'roles-container' --}}
-                        <div id="roles-container" class="grid grid-cols-2 md:grid-cols-4 gap-2 border p-3 rounded-md">
-                            @if($roles->isEmpty())
-                                <p class="text-sm text-gray-500 italic col-span-full">Role belum dibuat di database.</p>
-                            @else
-                                @foreach($roles as $roleName => $roleLabel)
-                                    <label class="flex items-center space-x-2">
-                                        {{-- Ditambahkan class 'role-checkbox' dan data-role attribute --}}
-                                        <input type="checkbox" name="roles[]" value="{{ $roleName }}"
-                                               data-role="{{ $roleName }}" {{-- Tambahkan ini --}}
-                                               class="role-checkbox rounded border-gray-300 text-primary shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 disabled:bg-gray-200 disabled:cursor-not-allowed"
-                                               {{ (is_array(old('roles')) && in_array($roleName, old('roles'))) || (!is_array(old('roles')) && in_array($roleName, $userRoles)) ? 'checked' : '' }}
-                                               {{-- Proteksi Super Admin ID 1 --}}
-                                               {{ $user->id == 1 && $roleName == 'Super Admin' ? 'disabled' : '' }}>
-                                        <span class="text-sm text-gray-700">{{ $roleLabel }}</span>
-                                    </label>
+            {{-- 2. Roles --}}
+            <section class="border rounded-lg p-6 bg-white">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">2. Peran & Hak Akses</h3>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Role User:</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" id="roles-container">
+                        @foreach($roles as $role)
+                            <div class="flex items-center p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                                {{-- PERBAIKAN: Tambahkan data-role agar JS bisa baca --}}
+                                <input type="checkbox" name="roles[]" 
+                                       value="{{ $role->name }}" 
+                                       id="role_{{ $role->id }}"
+                                       data-role="{{ $role->name }}" 
+                                       class="role-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                                       {{ in_array($role->name, $userRoles) ? 'checked' : '' }}>
+                                <label for="role_{{ $role->id }}" class="ml-2 text-sm text-gray-700 cursor-pointer select-none font-medium">
+                                    {{ $role->name }}
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+                    @error('roles') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                {{-- Area Konteks (Muncul sesuai Role) --}}
+                <div id="context-section" class="mt-6 pt-4 border-t space-y-4 hidden">
+                    <h4 class="text-md font-medium text-blue-800">Detail Wilayah & Penugasan</h4>
+
+                    {{-- Link ke Pegawai --}}
+                    <div id="pegawai-select-div" class="hidden">
+                        <label for="pegawai_id" class="block text-sm font-medium text-gray-700 mb-1">Tautkan ke Data Pegawai</label>
+                        <select id="pegawai_id" name="pegawai_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="">-- Pilih Pegawai --</option>
+                            @foreach($pegawais as $pegawai)
+                                <option value="{{ $pegawai->id }}" {{ old('pegawai_id', $user->pegawai_id) == $pegawai->id ? 'selected' : '' }}>
+                                    {{ $pegawai->nama_lengkap }} ({{ $pegawai->jenis_pegawai ?? 'Pegawai' }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Link ke Wadah --}}
+                    <div id="wadah-select-div" class="hidden">
+                        <label for="jenis_wadah_id" class="block text-sm font-medium text-gray-700 mb-1">Jenis Wadah Kategorial</label>
+                        <select id="jenis_wadah_id" name="jenis_wadah_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="">-- Pilih Wadah --</option>
+                            @foreach($jenisWadahs as $wadah)
+                                <option value="{{ $wadah->id }}" {{ old('jenis_wadah_id', $user->jenis_wadah_id) == $wadah->id ? 'selected' : '' }}>
+                                    {{ $wadah->nama_wadah }} ({{ $wadah->singkatan }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- Klasis --}}
+                        <div id="klasis-select-div" class="hidden">
+                            <label for="klasis_id" class="block text-sm font-medium text-gray-700 mb-1">Klasis</label>
+                            <select id="klasis_id" name="klasis_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <option value="">-- Pilih Klasis --</option>
+                                @foreach($klasisList as $klasis)
+                                    <option value="{{ $klasis->id }}" {{ old('klasis_id', $user->klasis_id) == $klasis->id ? 'selected' : '' }}>
+                                        {{ $klasis->nama_klasis }}
+                                    </option>
                                 @endforeach
-                                 {{-- Jika Super Admin ID 1 di-edit, tambahkan input hidden untuk memastikan rolenya tidak hilang --}}
-                                 @if($user->id == 1)
-                                    <input type="hidden" name="roles[]" value="Super Admin">
-                                 @endif
-                            @endif
+                            </select>
                         </div>
-                         @error('roles') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+
+                        {{-- Jemaat --}}
+                        <div id="jemaat-select-div" class="hidden">
+                            <label for="jemaat_id" class="block text-sm font-medium text-gray-700 mb-1">Jemaat</label>
+                            <select id="jemaat_id" name="jemaat_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <option value="">-- Pilih Jemaat --</option>
+                                @foreach($jemaatList as $jemaat)
+                                    <option value="{{ $jemaat->id }}" {{ old('jemaat_id', $user->jemaat_id) == $jemaat->id ? 'selected' : '' }}>
+                                        {{ $jemaat->nama_jemaat }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-blue-600 mt-1 hidden" id="loading-jemaat">Memuat data jemaat...</p>
+                        </div>
                     </div>
-
-                    <p class="text-sm text-gray-500 italic border-t pt-4">Jika user adalah 'Admin Klasis', 'Admin Jemaat', atau 'Pendeta', hubungkan dengan data di bawah ini:</p>
-
-                    {{-- Relasi Pendeta --}}
-                    {{-- Ditambahkan ID 'pendeta-select-div' dan class 'hidden' --}}
-                    <div id="pendeta-select-div" class="{{ old('pendeta_id', $user->pendeta_id) || (is_array(old('roles')) ? in_array('Pendeta', old('roles')) : in_array('Pendeta', $userRoles)) ? '' : 'hidden' }}">
-                        <label for="pendeta_id" class="block text-sm font-medium text-gray-700 mb-1">Hubungkan ke Pendeta <span class="italic text-gray-500">(Jika user adalah Pendeta)</span></label>
-                        <select id="pendeta_id" name="pendeta_id"
-                                class="block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm @error('pendeta_id') border-red-500 @enderror">
-                            <option value="">-- Tidak terhubung ke Pendeta --</option>
-                            @foreach ($pendetaOptions as $id => $nama)
-                                <option value="{{ $id }}" {{ old('pendeta_id', $user->pendeta_id) == $id ? 'selected' : '' }}>{{ $nama }} (NIPG: {{ \App\Models\Pendeta::find($id)->nipg ?? 'N/A' }})</option> {{-- Tampilkan NIPG jika perlu --}}
-                            @endforeach
-                        </select>
-                         <p class="mt-1 text-xs text-gray-500 italic">Hanya untuk user dengan role 'Pendeta'. Pastikan unik.</p>
-                        @error('pendeta_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Relasi Klasis --}}
-                    {{-- Ditambahkan ID 'klasis-select-div' dan class 'hidden' --}}
-                    <div id="klasis-select-div" class="{{ old('klasis_id', $user->klasis_id) || (is_array(old('roles')) ? in_array('Admin Klasis', old('roles')) : in_array('Admin Klasis', $userRoles)) ? '' : 'hidden' }}">
-                        <label for="klasis_id" class="block text-sm font-medium text-gray-700 mb-1">Hubungkan ke Klasis <span class="italic text-gray-500">(Jika user adalah Admin Klasis)</span></label>
-                        <select id="klasis_id" name="klasis_id"
-                                class="block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm @error('klasis_id') border-red-500 @enderror">
-                            <option value="">-- Tidak terhubung ke Klasis --</option>
-                            @foreach ($klasisOptions as $id => $nama)
-                                <option value="{{ $id }}" {{ old('klasis_id', $user->klasis_id) == $id ? 'selected' : '' }}>{{ $nama }}</option>
-                            @endforeach
-                        </select>
-                         <p class="mt-1 text-xs text-gray-500 italic">Hanya untuk user dengan role 'Admin Klasis'.</p>
-                        @error('klasis_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Relasi Jemaat --}}
-                    {{-- Ditambahkan ID 'jemaat-select-div' dan class 'hidden' --}}
-                    <div id="jemaat-select-div" class="{{ old('jemaat_id', $user->jemaat_id) || (is_array(old('roles')) ? in_array('Admin Jemaat', old('roles')) : in_array('Admin Jemaat', $userRoles)) ? '' : 'hidden' }}">
-                        <label for="jemaat_id" class="block text-sm font-medium text-gray-700 mb-1">Hubungkan ke Jemaat <span class="italic text-gray-500">(Jika user adalah Admin Jemaat)</span></label>
-                        <select id="jemaat_id" name="jemaat_id"
-                                class="block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm @error('jemaat_id') border-red-500 @enderror">
-                            <option value="">-- Tidak terhubung ke Jemaat --</option>
-                            @foreach ($jemaatOptions as $id => $nama)
-                                <option value="{{ $id }}" {{ old('jemaat_id', $user->jemaat_id) == $id ? 'selected' : '' }}>{{ $nama }}</option>
-                            @endforeach
-                        </select>
-                         <p class="mt-1 text-xs text-gray-500 italic">Hanya untuk user dengan role 'Admin Jemaat'.</p>
-                        @error('jemaat_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-
-                 </div>
+                </div>
             </section>
-        </div>
 
-        {{-- Tombol Aksi --}}
-        <div class="mt-8 flex justify-end space-x-3 border-t pt-6">
-            <a href="{{ route('admin.users.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md shadow transition duration-150 ease-in-out">
-                Batal
-            </a>
-            <button type="submit" class="bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md shadow hover:shadow-md transition duration-150 ease-in-out">
-                Simpan Perubahan
-            </button>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <a href="{{ route('admin.users.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition text-sm font-medium">Batal</a>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-lg text-sm font-medium">
+                    Simpan Perubahan
+                </button>
+            </div>
         </div>
     </form>
 </div>
 
-@push('styles')
-{{-- Style tetap sama --}}
-<style>
-    .error-message {
-        margin-top: 0.25rem;
-        font-size: 0.75rem; /* text-xs */
-        color: #DC2626; /* text-red-600 */
-    }
-    input.border-red-500, select.border-red-500, textarea.border-red-500 {
-         border-color: #EF4444 !important;
-    }
-    input.border-red-500:focus, select.border-red-500:focus, textarea.border-red-500:focus {
-         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
-    }
-</style>
-@endpush
-
-{{-- Ditambahkan blok script --}}
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const rolesContainer = document.getElementById('roles-container');
-        const pendetaSelectDiv = document.getElementById('pendeta-select-div');
+        const contextSection = document.getElementById('context-section');
+        
+        const pegawaiSelectDiv = document.getElementById('pegawai-select-div');
+        const wadahSelectDiv = document.getElementById('wadah-select-div');
         const klasisSelectDiv = document.getElementById('klasis-select-div');
         const jemaatSelectDiv = document.getElementById('jemaat-select-div');
-        const pendetaSelect = document.getElementById('pendeta_id');
+
         const klasisSelect = document.getElementById('klasis_id');
         const jemaatSelect = document.getElementById('jemaat_id');
+        const loadingJemaat = document.getElementById('loading-jemaat');
 
         function checkRoles() {
-            let hasPendetaRole = false;
+            let hasPegawaiRole = false;
             let hasKlasisRole = false;
             let hasJemaatRole = false;
+            let hasWadahRole = false;
 
             rolesContainer.querySelectorAll('.role-checkbox:checked').forEach(checkbox => {
-                const role = checkbox.dataset.role;
-                if (role === 'Pendeta') hasPendetaRole = true;
+                const role = checkbox.dataset.role; // PENTING: Baca data-role
+                
+                // Logika deteksi role (sama persis dengan create.blade.php)
+                if (role === 'Pendeta' || role === 'Pegawai') hasPegawaiRole = true;
                 if (role === 'Admin Klasis') hasKlasisRole = true;
                 if (role === 'Admin Jemaat') hasJemaatRole = true;
+                if (role && role.includes('Wadah')) { // Deteksi semua jenis wadah
+                    hasWadahRole = true;
+                    hasKlasisRole = true; // Wadah butuh lokasi
+                    hasJemaatRole = true;
+                }
             });
 
-            // Tampilkan/sembunyikan dropdown Pendeta
-            if (hasPendetaRole) {
-                pendetaSelectDiv.classList.remove('hidden');
+            // Toggle Tampilan
+            if (hasPegawaiRole || hasKlasisRole || hasJemaatRole || hasWadahRole) {
+                contextSection.classList.remove('hidden');
             } else {
-                pendetaSelectDiv.classList.add('hidden');
-                // Jangan reset value saat edit jika disembunyikan,
-                // karena user mungkin tidak sengaja menghilangkan centang lalu menyimpan
-                // Biarkan Controller yang menghandle null jika role tidak sesuai
-                 // pendetaSelect.value = '';
+                contextSection.classList.add('hidden');
             }
 
-            // Tampilkan/sembunyikan dropdown Klasis
-            if (hasKlasisRole) {
-                klasisSelectDiv.classList.remove('hidden');
-            } else {
-                klasisSelectDiv.classList.add('hidden');
-                // klasisSelect.value = ''; // Jangan reset
-            }
-
-            // Tampilkan/sembunyikan dropdown Jemaat
-            if (hasJemaatRole) {
-                jemaatSelectDiv.classList.remove('hidden');
-            } else {
-                jemaatSelectDiv.classList.add('hidden');
-                // jemaatSelect.value = ''; // Jangan reset
-            }
+            // Toggle per Item
+            if (hasPegawaiRole) pegawaiSelectDiv.classList.remove('hidden'); else pegawaiSelectDiv.classList.add('hidden');
+            if (hasWadahRole) wadahSelectDiv.classList.remove('hidden'); else wadahSelectDiv.classList.add('hidden');
+            if (hasKlasisRole) klasisSelectDiv.classList.remove('hidden'); else klasisSelectDiv.classList.add('hidden');
+            if (hasJemaatRole) jemaatSelectDiv.classList.remove('hidden'); else jemaatSelectDiv.classList.add('hidden');
         }
 
-        // Panggil checkRoles saat halaman dimuat
         checkRoles();
 
-        // Tambahkan event listener ke container role
         rolesContainer.addEventListener('change', function (event) {
             if (event.target.classList.contains('role-checkbox')) {
                 checkRoles();
             }
         });
+
+        // AJAX Jemaat
+        if (klasisSelect) {
+            klasisSelect.addEventListener('change', function() {
+                const klasisId = this.value;
+                jemaatSelect.innerHTML = '<option value="">-- Pilih Jemaat --</option>'; 
+                
+                if (klasisId) {
+                    loadingJemaat.classList.remove('hidden');
+                    jemaatSelect.disabled = true;
+
+                    fetch(`/api/jemaat-by-klasis/${klasisId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            data.forEach(jemaat => {
+                                const option = document.createElement('option');
+                                option.value = jemaat.id;
+                                option.textContent = jemaat.nama_jemaat;
+                                jemaatSelect.appendChild(option);
+                            });
+                            loadingJemaat.classList.add('hidden');
+                            jemaatSelect.disabled = false;
+                        });
+                }
+            });
+        }
     });
 </script>
 @endpush
