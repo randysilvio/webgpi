@@ -91,10 +91,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // 1. Dashboard Utama
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    // TAMBAHAN: Route khusus untuk Widget Peta (IFrame) agar tidak bentrok CSS
     Route::get('/dashboard/peta-widget', [DashboardController::class, 'petaWidget'])->name('dashboard.peta_widget');
 
-    // 2. Pengaturan & Konten Website
+    // 2. Pengaturan & Konten Website (Super Admin & Bidang 4)
     Route::middleware('role:Super Admin|Admin Bidang 4')->group(function () {
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
@@ -116,17 +115,14 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // 4. Administrasi Sakramen
     Route::prefix('sakramen')->name('sakramen.')->group(function () {
-        // --- BAPTIS ---
         Route::get('baptis', [SakramenController::class, 'baptisIndex'])->name('baptis.index');
         Route::post('baptis', [SakramenController::class, 'baptisStore'])->name('baptis.store');
         Route::get('baptis/{id}/cetak', [SakramenCetakController::class, 'cetakBaptis'])->name('baptis.cetak'); 
 
-        // --- SIDI ---
         Route::get('sidi', [SakramenController::class, 'sidiIndex'])->name('sidi.index');
         Route::post('sidi', [SakramenController::class, 'sidiStore'])->name('sidi.store');
         Route::get('sidi/{id}/cetak', [SakramenCetakController::class, 'cetakSidi'])->name('sidi.cetak'); 
         
-        // --- NIKAH ---
         Route::get('nikah', [SakramenNikahController::class, 'index'])->name('nikah.index');
         Route::post('nikah', [SakramenNikahController::class, 'store'])->name('nikah.store');
         Route::delete('nikah/{nikah}', [SakramenNikahController::class, 'destroy'])->name('nikah.destroy');
@@ -140,6 +136,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     });
 
     // 6. Data Master Wilayah & Jemaat
+    // Catatan: Bidang 3 hanya View (diatur via Controller/Middleware permission)
     Route::resource('klasis', KlasisController::class)->parameter('klasis', 'klasis');
     Route::get('klasis-export', [KlasisController::class, 'export'])->name('klasis.export');
     Route::get('klasis-import', [KlasisController::class, 'showImportForm'])->name('klasis.import-form');
@@ -152,9 +149,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // --- ANGGOTA JEMAAT ---
     Route::get('/anggota-jemaat/search', [AnggotaJemaatController::class, 'search'])->name('anggota-jemaat.search');
-    // TAMBAHAN BARU: Rute Cetak KK
     Route::get('anggota-jemaat/{id}/cetak-kk', [AnggotaJemaatController::class, 'cetakKartuKeluarga'])->name('anggota-jemaat.cetak-kk');
-    
     Route::resource('anggota-jemaat', AnggotaJemaatController::class);
     Route::get('anggota-jemaat-export', [AnggotaJemaatController::class, 'export'])->name('anggota-jemaat.export');
     Route::get('anggota-jemaat-import', [AnggotaJemaatController::class, 'showImportForm'])->name('anggota-jemaat.import-form');
@@ -165,48 +160,47 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::prefix('wadah')->name('wadah.')->group(function () {
         Route::get('statistik/cetak', [WadahStatistikController::class, 'print'])->name('statistik.print');
         Route::get('statistik', [WadahStatistikController::class, 'index'])->name('statistik.index');
-        
         Route::resource('pengurus', WadahKategorialPengurusController::class);
-        
         Route::get('program/get-parents', [WadahProgramKerjaController::class, 'getParentPrograms'])->name('program.get-parents'); 
         Route::resource('program', WadahProgramKerjaController::class);
         Route::get('anggaran/get-programs', [WadahAnggaranController::class, 'getPrograms'])->name('anggaran.get-programs');
         Route::resource('anggaran', WadahAnggaranController::class);
-        
         Route::post('transaksi', [WadahTransaksiController::class, 'store'])->name('transaksi.store');
         Route::delete('transaksi/{transaksi}', [WadahTransaksiController::class, 'destroy'])->name('transaksi.destroy');
     });
 
     // 9. Kepegawaian / HRIS (Unified: Pendeta + Staff)
-    Route::prefix('kepegawaian')->name('kepegawaian.')->group(function () {
-        // --- MANAJEMEN PEGAWAI (TERMASUK PENDETA) ---
-        Route::resource('pegawai', PegawaiController::class);
-        Route::get('pegawai/{pegawai}/print', [PegawaiController::class, 'print'])->name('pegawai.print');
-        
-        // Export & Import
-        Route::get('pegawai-export', [PegawaiController::class, 'export'])->name('pegawai.export');
-        Route::get('pegawai-import', [PegawaiController::class, 'showImportForm'])->name('pegawai.import-form');
-        Route::post('pegawai-import', [PegawaiController::class, 'import'])->name('pegawai.import');
+    // AKSES UTAMA: Super Admin & Admin Bidang 3
+    Route::prefix('kepegawaian')->name('kepegawaian.')
+        ->middleware(['role:Super Admin|Admin Bidang 3|Admin Sinode']) // Proteksi Bidang 3
+        ->group(function () {
+            
+            // --- MANAJEMEN PEGAWAI (TERMASUK PENDETA) ---
+            Route::resource('pegawai', PegawaiController::class);
+            Route::get('pegawai/{pegawai}/print', [PegawaiController::class, 'print'])->name('pegawai.print');
+            
+            // Export & Import
+            Route::get('pegawai-export', [PegawaiController::class, 'export'])->name('pegawai.export');
+            Route::get('pegawai-import', [PegawaiController::class, 'showImportForm'])->name('pegawai.import-form');
+            Route::post('pegawai-import', [PegawaiController::class, 'import'])->name('pegawai.import');
 
-        // --- SUB DATA PEGAWAI ---
-        Route::post('keluarga', [KeluargaPegawaiController::class, 'store'])->name('keluarga.store');
-        Route::put('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'update'])->name('keluarga.update');
-        Route::delete('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'destroy'])->name('keluarga.destroy');
-        
-        Route::post('pendidikan', [RiwayatPendidikanController::class, 'store'])->name('pendidikan.store');
-        Route::put('pendidikan/{pendidikan}', [RiwayatPendidikanController::class, 'update'])->name('pendidikan.update');
-        Route::delete('pendidikan/{pendidikan}', [RiwayatPendidikanController::class, 'destroy'])->name('pendidikan.destroy');
-        
-        Route::post('sk', [RiwayatSkController::class, 'store'])->name('sk.store');
-        Route::put('sk/{sk}', [RiwayatSkController::class, 'update'])->name('sk.update');
-        Route::delete('sk/{sk}', [RiwayatSkController::class, 'destroy'])->name('sk.destroy');
+            // --- SUB DATA PEGAWAI ---
+            Route::post('keluarga', [KeluargaPegawaiController::class, 'store'])->name('keluarga.store');
+            Route::put('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'update'])->name('keluarga.update');
+            Route::delete('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'destroy'])->name('keluarga.destroy');
+            
+            Route::post('pendidikan', [RiwayatPendidikanController::class, 'store'])->name('pendidikan.store');
+            Route::put('pendidikan/{pendidikan}', [RiwayatPendidikanController::class, 'update'])->name('pendidikan.update');
+            Route::delete('pendidikan/{pendidikan}', [RiwayatPendidikanController::class, 'destroy'])->name('pendidikan.destroy');
+            
+            Route::post('sk', [RiwayatSkController::class, 'store'])->name('sk.store');
+            Route::put('sk/{sk}', [RiwayatSkController::class, 'update'])->name('sk.update');
+            Route::delete('sk/{sk}', [RiwayatSkController::class, 'destroy'])->name('sk.destroy');
 
-        // --- MUTASI ---
-        Route::middleware('role:Super Admin|Admin Bidang 3')->group(function () {
+            // --- MUTASI (Sub-Route) ---
             Route::get('pegawai/{pegawai}/mutasi/create', [MutasiPendetaController::class, 'create'])->name('pegawai.mutasi.create');
             Route::post('pegawai/{pegawai}/mutasi', [MutasiPendetaController::class, 'store'])->name('pegawai.mutasi.store');
         });
-    });
 
     // Resource Mutasi Independen
     Route::middleware('role:Super Admin|Admin Bidang 3')->group(function () {
