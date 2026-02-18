@@ -1,123 +1,105 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('title', 'Mata Anggaran')
-@section('header-title', 'Daftar Mata Anggaran (COA)')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6">
-    {{-- Header & Tombol Tambah --}}
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-            <h2 class="text-xl font-semibold text-gray-800">Kategori Pendapatan & Belanja</h2>
-            <p class="text-sm text-gray-500 mt-1">Standar kode akun untuk pelaporan keuangan seragam (PP No. 5).</p>
-        </div>
-        @hasanyrole('Super Admin|Admin Sinode')
-        <a href="{{ route('admin.perbendaharaan.mata-anggaran.create') }}" class="bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow transition duration-150 inline-flex items-center">
-            <i class="fas fa-plus-circle mr-2"></i> Tambah Akun
-        </a>
-        @endhasanyrole
-    </div>
-
-    {{-- Form Filter & Pencarian --}}
-    <form method="GET" action="{{ route('admin.perbendaharaan.mata-anggaran.index') }}" class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="md:col-span-2">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cari Kode atau Nama</label>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cth: 1.1 atau Persembahan..." 
-                       class="w-full border-gray-300 rounded-md text-sm focus:ring-primary focus:border-primary">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Jenis Akun</label>
-                <select name="jenis" class="w-full border-gray-300 rounded-md text-sm focus:ring-primary focus:border-primary">
-                    <option value="">Semua Jenis</option>
+    <x-admin-index 
+        title="Mata Anggaran (COA)" 
+        subtitle="Daftar Kode Akun Standar untuk klasifikasi Pendapatan dan Belanja."
+        create-route="{{ route('admin.perbendaharaan.mata-anggaran.create') }}"
+        create-label="Tambah Akun"
+        :pagination="$mataAnggarans"
+    >
+        {{-- SLOT FILTERS --}}
+        <x-slot name="filters">
+            <form action="{{ route('admin.perbendaharaan.mata-anggaran.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                {{-- Filter Jenis --}}
+                <x-form-select name="jenis" onchange="this.form.submit()">
+                    <option value="">- Semua Jenis -</option>
                     <option value="Pendapatan" {{ request('jenis') == 'Pendapatan' ? 'selected' : '' }}>Pendapatan</option>
                     <option value="Belanja" {{ request('jenis') == 'Belanja' ? 'selected' : '' }}>Belanja</option>
-                </select>
-            </div>
-            <div class="flex items-end">
-                <button type="submit" class="w-full bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 text-sm font-bold transition">
-                    <i class="fas fa-search mr-2"></i> Cari
-                </button>
-            </div>
-        </div>
-    </form>
+                </x-form-select>
 
-    {{-- Tabel Data --}}
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kode Akun</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Mata Anggaran</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelompok</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @forelse($mataAnggarans as $ma)
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono font-bold text-blue-700">
+                {{-- Search --}}
+                <div class="md:col-span-2 relative">
+                    <x-form-input name="search" value="{{ request('search') }}" placeholder="Cari Kode atau Nama Akun..." />
+                    <button type="submit" class="absolute right-3 top-2 text-slate-400 hover:text-blue-600">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+        </x-slot>
+
+        {{-- SLOT TABLE HEAD --}}
+        <x-slot name="tableHead">
+            <th class="px-6 py-4 w-32">Kode Akun</th>
+            <th class="px-6 py-4">Nama Mata Anggaran</th>
+            <th class="px-6 py-4 text-center">Jenis</th>
+            <th class="px-6 py-4">Kelompok</th>
+            <th class="px-6 py-4 text-center">Status</th>
+            <th class="px-6 py-4 text-center">Aksi</th>
+        </x-slot>
+
+        {{-- LOOP DATA --}}
+        @forelse($mataAnggarans as $ma)
+            <tr class="hover:bg-slate-50 transition group">
+                <x-td>
+                    <span class="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs border border-blue-100">
                         {{ $ma->kode }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {{ $ma->nama_mata_anggaran }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2.5 py-1 text-xs font-bold rounded-full {{ $ma->jenis == 'Pendapatan' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                            {{ $ma->jenis }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ $ma->kelompok ?? '-' }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div class="flex justify-end space-x-2">
-                            <a href="{{ route('admin.perbendaharaan.mata-anggaran.edit', $ma->id) }}" class="text-indigo-600 hover:text-indigo-900 p-1">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            @hasanyrole('Super Admin')
-                            <form action="{{ route('admin.perbendaharaan.mata-anggaran.destroy', $ma->id) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menonaktifkan kode akun ini?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-900 p-1">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </form>
-                            @endhasanyrole
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">
-                        <div class="flex flex-col items-center">
-                            <i class="fas fa-folder-open fa-3x mb-3 text-gray-300"></i>
-                            <p>Data Mata Anggaran belum tersedia atau tidak ditemukan.</p>
-                        </div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                    </span>
+                </x-td>
+                <x-td>
+                    <div class="font-bold text-slate-800 text-sm">{{ $ma->nama_mata_anggaran }}</div>
+                    @if($ma->deskripsi)
+                        <div class="text-[10px] text-slate-400 mt-0.5 truncate max-w-xs">{{ $ma->deskripsi }}</div>
+                    @endif
+                </x-td>
+                <x-td class="text-center">
+                    <span class="px-2 py-1 rounded text-[10px] font-bold uppercase border {{ $ma->jenis == 'Pendapatan' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-red-100 text-red-700 border-red-200' }}">
+                        {{ $ma->jenis }}
+                    </span>
+                </x-td>
+                <x-td>
+                    <span class="text-xs text-slate-600 font-medium">{{ $ma->kelompok ?? '-' }}</span>
+                </x-td>
+                <x-td class="text-center">
+                    @if($ma->is_active)
+                        <i class="fas fa-check-circle text-green-500" title="Aktif"></i>
+                    @else
+                        <i class="fas fa-times-circle text-slate-300" title="Tidak Aktif"></i>
+                    @endif
+                </x-td>
+                <x-td class="text-center">
+                    <div class="flex justify-center gap-2">
+                        <a href="{{ route('admin.perbendaharaan.mata-anggaran.edit', $ma->id) }}" class="text-slate-400 hover:text-yellow-600 transition" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        
+                        @hasanyrole('Super Admin')
+                        <form action="{{ route('admin.perbendaharaan.mata-anggaran.destroy', $ma->id) }}" method="POST" class="inline" onsubmit="return confirm('Non-aktifkan akun ini? Data historis tidak akan hilang, namun akun tidak bisa dipilih untuk transaksi baru.')">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="text-slate-400 hover:text-red-600 transition" title="Hapus / Non-aktifkan">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                        @endhasanyrole
+                    </div>
+                </x-td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center text-slate-400 italic">Belum ada mata anggaran yang terdaftar.</td>
+            </tr>
+        @endforelse
 
-    {{-- Pagination --}}
-    <div class="mt-4">
-        {{ $mataAnggarans->links() }}
-    </div>
-</div>
+        {{-- INFO FOOTER --}}
+        <div class="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
+            <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+            <div class="text-xs text-blue-800">
+                <strong>Catatan:</strong> Mata Anggaran (COA) ini menjadi referensi utama dalam penyusunan <strong>Rencana APB</strong> dan pencatatan <strong>Buku Kas Umum</strong>. Pastikan kode akun sesuai dengan standarisasi Sinode.
+            </div>
+        </div>
 
-{{-- Tips Info --}}
-<div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded shadow-sm">
-    <div class="flex">
-        <div class="flex-shrink-0">
-            <i class="fas fa-info-circle text-blue-400"></i>
-        </div>
-        <div class="ml-3">
-            <p class="text-sm text-blue-700">
-                <strong>Tips:</strong> Mata Anggaran (COA) ini akan menjadi referensi utama saat menyusun <strong>Rencana APB</strong> dan pencatatan <strong>Buku Kas Umum</strong>. Pastikan kode akun sesuai dengan ketentuan Sinode.
-            </p>
-        </div>
-    </div>
-</div>
+    </x-admin-index>
 @endsection

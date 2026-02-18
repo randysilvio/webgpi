@@ -1,125 +1,134 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Keuangan (RAB)')
-@section('header-title', 'Anggaran & Realisasi Wadah')
+@section('title', 'Anggaran & Realisasi')
 
 @section('content')
-    <div class="mb-6 flex justify-between items-center">
-        <div class="text-gray-700 text-sm">
-            Kelola Rencana Anggaran Belanja (RAB) dan catat transaksi harian.
-        </div>
-        <a href="{{ route('admin.wadah.anggaran.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-sm text-sm transition">
-            <i class="fas fa-plus mr-2"></i> Buat Pos Anggaran
-        </a>
-    </div>
-
-    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6 p-6">
-        <form method="GET" action="{{ route('admin.wadah.anggaran.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Tahun</label>
-                <select name="tahun" class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-primary focus:ring-primary">
-                    <option value="">- Semua -</option>
+    <x-admin-index 
+        title="Anggaran & Realisasi Wadah" 
+        subtitle="Kelola Rencana Anggaran Belanja (RAB) dan monitoring realisasi keuangan."
+        create-route="{{ route('admin.wadah.anggaran.create') }}"
+        create-label="Buat Pos Anggaran"
+        :pagination="$anggarans"
+    >
+        {{-- SLOT FILTERS --}}
+        <x-slot name="filters">
+            <form action="{{ route('admin.wadah.anggaran.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                
+                {{-- Filter Tahun --}}
+                <x-form-select name="tahun" onchange="this.form.submit()">
+                    <option value="">- Semua Tahun -</option>
                     @foreach($years as $y)
                         <option value="{{ $y }}" {{ request('tahun') == $y ? 'selected' : '' }}>{{ $y }}</option>
                     @endforeach
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Wadah</label>
-                <select name="wadah" class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-primary focus:ring-primary">
-                    <option value="">- Semua -</option>
+                </x-form-select>
+
+                {{-- Filter Wadah --}}
+                <x-form-select name="wadah" onchange="this.form.submit()">
+                    <option value="">- Semua Wadah -</option>
                     @foreach($jenisWadahs as $w)
                         <option value="{{ $w->id }}" {{ request('wadah') == $w->id ? 'selected' : '' }}>{{ $w->nama_wadah }}</option>
                     @endforeach
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Tingkat</label>
-                <select name="tingkat" class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-primary focus:ring-primary">
-                    <option value="">- Semua -</option>
+                </x-form-select>
+
+                {{-- Filter Tingkat --}}
+                <x-form-select name="tingkat" onchange="this.form.submit()">
+                    <option value="">- Semua Tingkat -</option>
                     <option value="sinode" {{ request('tingkat') == 'sinode' ? 'selected' : '' }}>Sinode</option>
                     <option value="klasis" {{ request('tingkat') == 'klasis' ? 'selected' : '' }}>Klasis</option>
                     <option value="jemaat" {{ request('tingkat') == 'jemaat' ? 'selected' : '' }}>Jemaat</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
-                <select name="jenis" class="block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-primary focus:ring-primary">
-                    <option value="">- Semua -</option>
+                </x-form-select>
+
+                {{-- Filter Jenis --}}
+                <x-form-select name="jenis" onchange="this.form.submit()">
+                    <option value="">- Jenis Anggaran -</option>
                     <option value="penerimaan" {{ request('jenis') == 'penerimaan' ? 'selected' : '' }}>Penerimaan</option>
                     <option value="pengeluaran" {{ request('jenis') == 'pengeluaran' ? 'selected' : '' }}>Pengeluaran</option>
-                </select>
-            </div>
-            <div class="flex items-end">
-                <button type="submit" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm h-[38px] transition">
-                    Filter
-                </button>
-            </div>
-        </form>
-    </div>
+                </x-form-select>
 
-    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pos Anggaran</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target (Rp)</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Realisasi (Rp)</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capaian</th>
-                        <th class="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($anggarans as $a)
-                        @php
-                            $persen = $a->jumlah_target > 0 ? ($a->jumlah_realisasi / $a->jumlah_target) * 100 : 0;
-                            $color = $persen >= 100 ? 'green' : ($persen >= 50 ? 'yellow' : 'red');
-                            if($a->jenis_anggaran == 'pengeluaran') {
-                                $color = $persen > 100 ? 'red' : ($persen >= 80 ? 'yellow' : 'green');
-                            }
-                        @endphp
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="px-6 py-4 text-sm text-gray-900">
-                                <div class="font-bold">{{ $a->nama_pos_anggaran }}</div>
-                                <div class="text-xs text-gray-500 mt-0.5">
-                                    {{ $a->tahun_anggaran }} | {{ $a->jenisWadah->nama_wadah }} | {{ strtoupper($a->tingkat) }}
-                                    @if($a->programKerja)
-                                        <span class="text-blue-600 block mt-0.5"><i class="fas fa-link mr-1"></i> {{ Str::limit($a->programKerja->nama_program, 30) }}</span>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $a->jenis_anggaran == 'penerimaan' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800' }}">
-                                    {{ ucfirst($a->jenis_anggaran) }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-sm font-mono">{{ number_format($a->jumlah_target, 0, ',', '.') }}</td>
-                            <td class="px-6 py-4 text-sm font-mono font-bold">{{ number_format($a->jumlah_realisasi, 0, ',', '.') }}</td>
-                            <td class="px-6 py-4 text-sm w-1/6">
-                                <div class="flex items-center">
-                                    <span class="mr-2 text-xs font-bold text-{{ $color }}-600">{{ round($persen) }}%</span>
-                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div class="bg-{{ $color }}-500 h-2.5 rounded-full" style="width: {{ min($persen, 100) }}%"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
-                                <a href="{{ route('admin.wadah.anggaran.show', $a->id) }}" class="text-blue-600 hover:text-blue-900 mr-3" title="Transaksi & Detail"><i class="fas fa-list-alt"></i></a>
-                                <a href="{{ route('admin.wadah.anggaran.edit', $a->id) }}" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Edit"><i class="fas fa-edit"></i></a>
-                                <form action="{{ route('admin.wadah.anggaran.destroy', $a->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus pos anggaran ini? Transaksi terkait juga akan terhapus.');">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-900" title="Hapus"><i class="fas fa-trash"></i></button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 italic">Belum ada pos anggaran yang dibuat.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-            <div class="p-4 border-t border-gray-100">{{ $anggarans->links() }}</div>
-        </div>
-    </div>
+                {{-- Tombol Filter (Optional jika onchange sudah ada, tapi bagus untuk UX) --}}
+                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-4 rounded text-sm transition shadow-sm flex items-center justify-center">
+                    <i class="fas fa-filter mr-2"></i> Terapkan
+                </button>
+            </form>
+        </x-slot>
+
+        {{-- SLOT TABLE HEAD --}}
+        <x-slot name="tableHead">
+            <th class="px-6 py-4">Detail Pos Anggaran</th>
+            <th class="px-6 py-4 text-center">Jenis</th>
+            <th class="px-6 py-4 text-right">Target (Rp)</th>
+            <th class="px-6 py-4 text-right">Realisasi (Rp)</th>
+            <th class="px-6 py-4 w-1/6">Capaian</th>
+            <th class="px-6 py-4 text-center">Aksi</th>
+        </x-slot>
+
+        {{-- LOOP DATA --}}
+        @forelse($anggarans as $a)
+            @php
+                $persen = $a->jumlah_target > 0 ? ($a->jumlah_realisasi / $a->jumlah_target) * 100 : 0;
+                // Logika Warna Progress Bar
+                $color = $persen >= 100 ? 'bg-green-500' : ($persen >= 50 ? 'bg-yellow-500' : 'bg-red-500');
+                $textColor = $persen >= 100 ? 'text-green-600' : ($persen >= 50 ? 'text-yellow-600' : 'text-red-600');
+                
+                // Jika Pengeluaran, logika warna dibalik (Over budget = Merah)
+                if($a->jenis_anggaran == 'pengeluaran') {
+                    $color = $persen > 100 ? 'bg-red-500' : ($persen >= 80 ? 'bg-yellow-500' : 'bg-green-500');
+                    $textColor = $persen > 100 ? 'text-red-600' : ($persen >= 80 ? 'text-yellow-600' : 'text-green-600');
+                }
+            @endphp
+            <tr class="hover:bg-slate-50 transition group">
+                <x-td>
+                    <div class="font-bold text-slate-800">{{ $a->nama_pos_anggaran }}</div>
+                    <div class="text-[10px] text-slate-500 mt-1 uppercase tracking-wide">
+                        {{ $a->tahun_anggaran }} <span class="mx-1">•</span> {{ $a->jenisWadah->nama_wadah }} <span class="mx-1">•</span> {{ strtoupper($a->tingkat) }}
+                    </div>
+                    @if($a->programKerja)
+                        <div class="text-xs text-blue-600 mt-1 flex items-center">
+                            <i class="fas fa-link mr-1"></i> {{ Str::limit($a->programKerja->nama_program, 30) }}
+                        </div>
+                    @endif
+                </x-td>
+                <x-td class="text-center">
+                    <span class="px-2 py-1 rounded text-[10px] font-bold uppercase {{ $a->jenis_anggaran == 'penerimaan' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800' }}">
+                        {{ ucfirst($a->jenis_anggaran) }}
+                    </span>
+                </x-td>
+                <x-td class="text-right font-mono text-slate-600">
+                    {{ number_format($a->jumlah_target, 0, ',', '.') }}
+                </x-td>
+                <x-td class="text-right font-mono font-bold text-slate-800">
+                    {{ number_format($a->jumlah_realisasi, 0, ',', '.') }}
+                </x-td>
+                <x-td>
+                    <div class="flex items-center">
+                        <span class="mr-2 text-xs font-bold {{ $textColor }}">{{ round($persen) }}%</span>
+                        <div class="w-full bg-slate-200 rounded-full h-1.5">
+                            <div class="{{ $color }} h-1.5 rounded-full" style="width: {{ min($persen, 100) }}%"></div>
+                        </div>
+                    </div>
+                </x-td>
+                <x-td class="text-center">
+                    <div class="flex justify-center gap-2">
+                        <a href="{{ route('admin.wadah.anggaran.show', $a->id) }}" class="text-blue-500 hover:text-blue-700" title="Detail & Transaksi">
+                            <i class="fas fa-list-alt"></i>
+                        </a>
+                        <a href="{{ route('admin.wadah.anggaran.edit', $a->id) }}" class="text-slate-400 hover:text-yellow-600" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form action="{{ route('admin.wadah.anggaran.destroy', $a->id) }}" method="POST" class="inline" onsubmit="return confirm('Hapus pos anggaran ini? Transaksi terkait juga akan terhapus.');">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="text-slate-400 hover:text-red-600" title="Hapus">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </x-td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center text-slate-400 italic">Belum ada pos anggaran yang dibuat.</td>
+            </tr>
+        @endforelse
+
+    </x-admin-index>
 @endsection

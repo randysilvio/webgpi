@@ -1,93 +1,91 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('title', 'Catat Aset Baru')
-@section('header-title', 'Registrasi Inventaris Aset')
 
 @section('content')
-<div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6 md:p-8">
-    <h2 class="text-xl font-bold text-gray-800 mb-6 border-b pb-3">Formulir Inventaris</h2>
-
-    <form action="{{ route('admin.perbendaharaan.aset.store') }}" method="POST" enctype="multipart/form-data">
-        @csrf
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="col-span-2"><h3 class="text-sm font-bold text-blue-600 uppercase mb-3">Informasi Utama</h3></div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Aset <span class="text-red-500">*</span></label>
-                <input type="text" name="nama_aset" required class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="Contoh: Gedung Gereja Utama">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Kode Aset (Opsional)</label>
-                <input type="text" name="kode_aset" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="Kosongkan untuk auto-generate">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Kategori <span class="text-red-500">*</span></label>
-                <select name="kategori" required class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <option value="Tanah">Tanah</option>
-                    <option value="Gedung">Gedung</option>
-                    <option value="Kendaraan">Kendaraan</option>
-                    <option value="Peralatan Elektronik">Peralatan Elektronik</option>
-                    <option value="Meubelair">Meubelair</option>
-                    <option value="Lainnya">Lainnya</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Kondisi <span class="text-red-500">*</span></label>
-                <select name="kondisi" required class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <option value="Baik">Baik</option>
-                    <option value="Rusak Ringan">Rusak Ringan</option>
-                    <option value="Rusak Berat">Rusak Berat</option>
-                </select>
-            </div>
-
-            <div class="col-span-2 mt-4"><h3 class="text-sm font-bold text-blue-600 uppercase mb-3">Nilai & Legalitas</h3></div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Perolehan</label>
-                <input type="date" name="tanggal_perolehan" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nilai Perolehan (Rupiah)</label>
-                <input type="number" name="nilai_perolehan" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="Cth: 500000000">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Status Kepemilikan</label>
-                <select name="status_kepemilikan" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <option value="Milik Sendiri">Milik Sendiri</option>
-                    <option value="Sewa">Sewa</option>
-                    <option value="Pinjam Pakai">Pinjam Pakai</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">No. Sertifikat / BPKB</label>
-                <input type="text" name="nomor_dokumen" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-            </div>
-
-            <div class="col-span-2 mt-4"><h3 class="text-sm font-bold text-blue-600 uppercase mb-3">Lokasi & Berkas</h3></div>
+    <x-admin-form 
+        title="Registrasi Inventaris Aset" 
+        action="{{ route('admin.perbendaharaan.aset.store') }}" 
+        back-route="{{ route('admin.perbendaharaan.aset.index') }}"
+        has-file="true"
+    >
+        <div class="space-y-6">
             
-            <div class="col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Lokasi Fisik</label>
-                <input type="text" name="lokasi_fisik" class="w-full border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="Cth: Ruang Kantor Jemaat">
+            {{-- INFORMASI UTAMA --}}
+            <div class="bg-slate-50 p-4 rounded border border-slate-200">
+                <h3 class="text-xs font-bold text-blue-600 uppercase mb-4 border-b border-blue-100 pb-2">Informasi Dasar</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-form-input label="Nama Aset" name="nama_aset" required placeholder="Contoh: Gedung Gereja Utama" />
+                    <x-form-input label="Kode Aset (Opsional)" name="kode_aset" placeholder="Kosongkan untuk auto-generate" />
+                    
+                    <x-form-select label="Kategori Aset" name="kategori" required>
+                        @foreach(['Tanah', 'Gedung', 'Kendaraan', 'Peralatan Elektronik', 'Meubelair', 'Alat Musik', 'Lainnya'] as $cat)
+                            <option value="{{ $cat }}">{{ $cat }}</option>
+                        @endforeach
+                    </x-form-select>
+
+                    <x-form-select label="Kondisi Fisik" name="kondisi" required>
+                        <option value="Baik">Baik</option>
+                        <option value="Rusak Ringan">Rusak Ringan</option>
+                        <option value="Rusak Berat">Rusak Berat</option>
+                    </x-form-select>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Scan Dokumen (PDF/JPG)</label>
-                <input type="file" name="file_dokumen" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Foto Aset</label>
-                <input type="file" name="foto_aset" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" onchange="previewImage(event, 'foto-preview')">
-                <img id="foto-preview" src="#" alt="Preview" class="mt-2 h-32 hidden rounded border shadow-sm">
-            </div>
-        </div>
+            {{-- NILAI & LEGALITAS --}}
+            <div class="bg-slate-50 p-4 rounded border border-slate-200">
+                <h3 class="text-xs font-bold text-blue-600 uppercase mb-4 border-b border-blue-100 pb-2">Nilai & Legalitas</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-form-input type="date" label="Tanggal Perolehan" name="tanggal_perolehan" />
+                    <x-form-input type="number" label="Nilai Perolehan (Rp)" name="nilai_perolehan" placeholder="0" />
+                    
+                    <x-form-select label="Status Kepemilikan" name="status_kepemilikan">
+                        <option value="Milik Sendiri">Milik Sendiri</option>
+                        <option value="Sewa">Sewa</option>
+                        <option value="Pinjam Pakai">Pinjam Pakai</option>
+                    </x-form-select>
 
-        <div class="flex justify-end gap-3 pt-6 border-t">
-            <a href="{{ route('admin.perbendaharaan.aset.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md font-medium">Batal</a>
-            <button type="submit" class="px-6 py-2 bg-primary text-white rounded-md font-bold shadow-lg">Simpan Inventaris</button>
+                    <x-form-input label="No. Sertifikat / BPKB / Dokumen" name="nomor_dokumen" />
+                </div>
+            </div>
+
+            {{-- LOKASI & BERKAS --}}
+            <div class="bg-slate-50 p-4 rounded border border-slate-200">
+                <h3 class="text-xs font-bold text-blue-600 uppercase mb-4 border-b border-blue-100 pb-2">Lokasi & Berkas Pendukung</h3>
+                <div class="grid grid-cols-1 gap-4">
+                    <x-form-input label="Lokasi Fisik (Ruangan/Tempat)" name="lokasi_fisik" placeholder="Contoh: Ruang Kantor Jemaat" />
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Scan Dokumen (PDF/JPG)</label>
+                            <input type="file" name="file_dokumen" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Foto Fisik Aset</label>
+                            <input type="file" name="foto_aset" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer" onchange="previewImage(event, 'foto-preview')">
+                            <img id="foto-preview" src="#" alt="Preview" class="mt-3 h-32 hidden rounded border shadow-sm object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
-    </form>
-</div>
+    </x-admin-form>
+
+    @push('scripts')
+    <script>
+        function previewImage(event, id) {
+            const input = event.target;
+            const preview = document.getElementById(id);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+    @endpush
 @endsection

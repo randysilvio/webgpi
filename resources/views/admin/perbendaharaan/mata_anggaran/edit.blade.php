@@ -1,58 +1,48 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('title', 'Edit Mata Anggaran')
-@section('header-title', 'Ubah Kode Akun')
 
 @section('content')
-<div class="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-6 md:p-8">
-    <div class="flex justify-between items-center mb-6 border-b pb-3">
-        <h2 class="text-xl font-bold text-gray-800">Ubah Akun: {{ $mataAnggaran->kode }}</h2>
-        <a href="{{ route('admin.perbendaharaan.mata-anggaran.index') }}" class="text-sm text-gray-500 hover:text-gray-700">&larr; Kembali</a>
-    </div>
+    <x-admin-form 
+        title="Edit Kode Akun: {{ $mataAnggaran->kode }}" 
+        action="{{ route('admin.perbendaharaan.mata-anggaran.update', $mataAnggaran->id) }}" 
+        method="PUT"
+        back-route="{{ route('admin.perbendaharaan.mata-anggaran.index') }}"
+    >
+        <div class="space-y-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {{-- Kode Akun --}}
+                <x-form-input label="Kode Akun" name="kode" value="{{ $mataAnggaran->kode }}" required />
 
-    <form action="{{ route('admin.perbendaharaan.mata-anggaran.update', $mataAnggaran->id) }}" method="POST">
-        @csrf
-        @method('PUT')
-        
-        <div class="space-y-5">
+                {{-- Nama Akun --}}
+                <x-form-input label="Nama Mata Anggaran" name="nama_mata_anggaran" value="{{ $mataAnggaran->nama_mata_anggaran }}" required />
+            </div>
+
+            {{-- Jenis & Kelompok --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded border border-slate-200">
+                <x-form-select label="Jenis Akun" name="jenis" required>
+                    <option value="Pendapatan" {{ $mataAnggaran->jenis == 'Pendapatan' ? 'selected' : '' }}>Pendapatan</option>
+                    <option value="Belanja" {{ $mataAnggaran->jenis == 'Belanja' ? 'selected' : '' }}>Belanja</option>
+                </x-form-select>
+
+                <x-form-input label="Kelompok" name="kelompok" value="{{ $mataAnggaran->kelompok }}" />
+            </div>
+
+            {{-- Deskripsi --}}
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Kode Akun <span class="text-red-500">*</span></label>
-                <input type="text" name="kode" value="{{ old('kode', $mataAnggaran->kode) }}" required 
-                       class="w-full border-gray-300 rounded-md focus:ring-primary">
-                @error('kode') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Deskripsi Tambahan</label>
+                <textarea name="deskripsi" rows="3" class="w-full border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">{{ old('deskripsi', $mataAnggaran->deskripsi) }}</textarea>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Mata Anggaran <span class="text-red-500">*</span></label>
-                <input type="text" name="nama_mata_anggaran" value="{{ old('nama_mata_anggaran', $mataAnggaran->nama_mata_anggaran) }}" required 
-                       class="w-full border-gray-300 rounded-md focus:ring-primary">
+            {{-- Status Aktif --}}
+            <div class="flex items-center space-x-3 border-t border-slate-100 pt-4">
+                <input type="checkbox" name="is_active" value="1" id="is_active" {{ $mataAnggaran->is_active ? 'checked' : '' }} class="rounded text-slate-800 focus:ring-slate-500 w-4 h-4 border-slate-300">
+                <label for="is_active" class="text-sm font-bold text-slate-700 cursor-pointer select-none">
+                    Akun Aktif <span class="text-slate-400 font-normal">(Muncul di pilihan saat menyusun anggaran)</span>
+                </label>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Akun</label>
-                    <select name="jenis" required class="w-full border-gray-300 rounded-md focus:ring-primary">
-                        <option value="Pendapatan" {{ $mataAnggaran->jenis == 'Pendapatan' ? 'selected' : '' }}>Pendapatan</option>
-                        <option value="Belanja" {{ $mataAnggaran->jenis == 'Belanja' ? 'selected' : '' }}>Belanja</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kelompok</label>
-                    <input type="text" name="kelompok" value="{{ old('kelompok', $mataAnggaran->kelompok) }}" 
-                           class="w-full border-gray-300 rounded-md">
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-2 py-2">
-                <input type="checkbox" name="is_active" value="1" id="is_active" {{ $mataAnggaran->is_active ? 'checked' : '' }} class="rounded text-primary focus:ring-primary">
-                <label for="is_active" class="text-sm font-medium text-gray-700">Akun Aktif (Muncul di Form RAPB)</label>
-            </div>
         </div>
-
-        <div class="mt-8 flex justify-end gap-3 border-t pt-6">
-            <a href="{{ route('admin.perbendaharaan.mata-anggaran.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md font-medium hover:bg-gray-300">Batal</a>
-            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-md font-bold shadow-lg hover:bg-blue-700 transition">Simpan Perubahan</button>
-        </div>
-    </form>
-</div>
+    </x-admin-form>
 @endsection

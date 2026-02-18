@@ -1,155 +1,162 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('title', 'Detail Anggaran')
-@section('header-title', 'Detail Pos & Transaksi')
 
 @section('content')
-    <div class="mb-6">
-        <a href="{{ route('admin.wadah.anggaran.index') }}" class="text-gray-500 hover:text-gray-700 text-sm flex items-center">
-            <i class="fas fa-arrow-left mr-2"></i> Kembali ke Daftar Anggaran
+<div class="max-w-6xl mx-auto space-y-6">
+    
+    {{-- Header & Navigasi --}}
+    <div class="flex items-center justify-between">
+        <a href="{{ route('admin.wadah.anggaran.index') }}" class="text-slate-500 hover:text-slate-800 text-xs font-bold uppercase tracking-wide flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Kembali
         </a>
+        <h2 class="text-lg font-bold text-slate-800">Detail Pos & Transaksi</h2>
     </div>
 
-    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6 border border-gray-200">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h3 class="text-2xl font-bold text-gray-900">{{ $anggaran->nama_pos_anggaran }}</h3>
-                <div class="text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
-                    <span class="px-2 py-0.5 bg-gray-100 rounded">{{ ucfirst($anggaran->jenis_anggaran) }}</span>
-                    <span class="px-2 py-0.5 bg-gray-100 rounded">{{ $anggaran->tahun_anggaran }}</span>
-                    <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded">{{ $anggaran->jenisWadah->nama_wadah }}</span>
+    {{-- Kartu Ringkasan --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative overflow-hidden">
+        {{-- Background Decoration --}}
+        <div class="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -mr-8 -mt-8 z-0"></div>
+
+        <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2">
+                <h1 class="text-2xl font-black text-slate-800 mb-2">{{ $anggaran->nama_pos_anggaran }}</h1>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold uppercase">{{ $anggaran->tahun_anggaran }}</span>
+                    <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold uppercase">{{ $anggaran->jenisWadah->nama_wadah }}</span>
+                    <span class="px-2 py-1 bg-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'orange' }}-50 text-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'orange' }}-700 rounded text-xs font-bold uppercase border border-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'orange' }}-200">
+                        {{ ucfirst($anggaran->jenis_anggaran) }}
+                    </span>
                 </div>
                 @if($anggaran->programKerja)
-                    <p class="text-sm text-blue-600 mt-2"><i class="fas fa-link mr-1"></i> Program: {{ $anggaran->programKerja->nama_program }}</p>
-                @endif
-                @if($anggaran->keterangan)
-                    <p class="text-sm text-gray-600 mt-2 italic">"{{ $anggaran->keterangan }}"</p>
+                    <p class="text-sm text-blue-600"><i class="fas fa-link mr-1"></i> Program: {{ $anggaran->programKerja->nama_program }}</p>
                 @endif
             </div>
-            <div class="text-left md:text-right bg-gray-50 p-4 rounded-lg border border-gray-100 min-w-[200px]">
-                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Target Anggaran</p>
-                <p class="text-2xl font-bold text-gray-800 font-mono">Rp {{ number_format($anggaran->jumlah_target, 0, ',', '.') }}</p>
+            
+            {{-- Statistik Angka --}}
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 text-right">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Target Anggaran</p>
+                <div class="text-xl font-mono font-bold text-slate-700 mb-3">Rp {{ number_format($anggaran->jumlah_target, 0, ',', '.') }}</div>
+                
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Realisasi Saat Ini</p>
+                <div class="text-2xl font-mono font-black text-blue-600">Rp {{ number_format($anggaran->jumlah_realisasi, 0, ',', '.') }}</div>
             </div>
         </div>
 
-        <div class="mt-8">
-            <div class="flex justify-between text-sm mb-2 font-medium">
-                <span class="text-blue-700">Realisasi: Rp {{ number_format($anggaran->jumlah_realisasi, 0, ',', '.') }}</span>
-                <span class="text-gray-600">
-                    {{ $anggaran->selisih >= 0 ? 'Sisa Target: ' : 'Surplus/Over: ' }} 
-                    Rp {{ number_format(abs($anggaran->selisih), 0, ',', '.') }}
-                </span>
-            </div>
+        {{-- Progress Bar --}}
+        <div class="mt-6 pt-6 border-t border-slate-100">
             @php
                 $persen = $anggaran->jumlah_target > 0 ? ($anggaran->jumlah_realisasi / $anggaran->jumlah_target) * 100 : 0;
-                $color = $persen >= 100 ? 'green' : 'blue';
-                if($anggaran->jenis_anggaran == 'pengeluaran' && $persen > 100) $color = 'red';
+                $barColor = $persen >= 100 ? 'bg-green-500' : 'bg-blue-500';
+                if($anggaran->jenis_anggaran == 'pengeluaran' && $persen > 100) $barColor = 'bg-red-500';
             @endphp
-            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                <div class="bg-{{ $color }}-500 h-4 rounded-full transition-all duration-1000 ease-out" style="width: {{ min($persen, 100) }}%"></div>
+            <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                <span>Capaian Realisasi</span>
+                <span>{{ round($persen, 1) }}%</span>
             </div>
-            <div class="text-right text-xs text-gray-500 mt-1 font-bold">{{ round($persen, 1) }}% Tercapai</div>
+            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                <div class="{{ $barColor }} h-3 rounded-full transition-all duration-1000" style="width: {{ min($persen, 100) }}%"></div>
+            </div>
+            <p class="text-xs text-slate-400 mt-2 text-right">
+                {{ $anggaran->selisih >= 0 ? 'Sisa Target: ' : 'Surplus/Over: ' }} 
+                <span class="font-mono font-bold text-slate-600">Rp {{ number_format(abs($anggaran->selisih), 0, ',', '.') }}</span>
+            </p>
         </div>
     </div>
 
+    {{-- Layout Grid: Form Input & Tabel Riwayat --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {{-- Kolom Kiri: Form Input Transaksi --}}
         <div class="lg:col-span-1">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 border border-gray-200 sticky top-4">
-                <h4 class="font-bold text-lg mb-4 text-gray-800 border-b pb-2">
-                    <i class="fas fa-plus-circle mr-2 text-primary"></i> Catat Transaksi
-                </h4>
-                
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sticky top-4">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">
+                    <i class="fas fa-plus-circle mr-2 text-blue-600"></i> Catat Transaksi Baru
+                </h3>
+
                 @if(session('success'))
-                    <div class="mb-4 bg-green-50 text-green-700 px-3 py-2 rounded border border-green-200 text-sm flex items-center">
+                    <div class="mb-4 bg-green-50 text-green-700 px-3 py-2 rounded text-xs flex items-center border border-green-200">
                         <i class="fas fa-check-circle mr-2"></i> {{ session('success') }}
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('admin.wadah.transaksi.store') }}" enctype="multipart/form-data">
+                <form action="{{ route('admin.wadah.transaksi.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                     @csrf
                     <input type="hidden" name="anggaran_id" value="{{ $anggaran->id }}">
 
-                    <div class="mb-4">
-                        <label for="tanggal_transaksi" class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
-                        <input id="tanggal_transaksi" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary sm:text-sm" type="date" name="tanggal_transaksi" value="{{ date('Y-m-d') }}" required />
+                    <x-form-input type="date" label="Tanggal" name="tanggal_transaksi" value="{{ date('Y-m-d') }}" required />
+                    
+                    <x-form-input type="number" label="Jumlah (Rp)" name="jumlah" required placeholder="Contoh: 500000" />
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Uraian / Keterangan</label>
+                        <textarea name="uraian" rows="3" class="w-full border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500 placeholder-slate-400" required placeholder="Contoh: Terima persembahan..."></textarea>
                     </div>
 
-                    <div class="mb-4">
-                        <label for="jumlah" class="block text-sm font-medium text-gray-700 mb-1">Jumlah (Rp)</label>
-                        <input id="jumlah" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary sm:text-sm" type="number" name="jumlah" required placeholder="Contoh: 500000" />
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Bukti (Opsional)</label>
+                        <input type="file" name="bukti_transaksi" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
                     </div>
 
-                    <div class="mb-4">
-                        <label for="uraian" class="block text-sm font-medium text-gray-700 mb-1">Uraian / Keterangan</label>
-                        <textarea id="uraian" name="uraian" rows="3" class="block w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary sm:text-sm" required placeholder="Contoh: Terima dari Sektor A"></textarea>
-                    </div>
-
-                    <div class="mb-6">
-                        <label for="bukti_transaksi" class="block text-sm font-medium text-gray-700 mb-1">Bukti (Foto/PDF)</label>
-                        <input type="file" name="bukti_transaksi" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
-                        <p class="text-xs text-gray-500 mt-1">Opsional. Max 2MB.</p>
-                    </div>
-
-                    <button type="submit" class="w-full bg-primary hover:bg-blue-800 text-white font-bold py-2.5 px-4 rounded shadow-sm transition duration-150">
+                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded text-sm shadow-md transition">
                         Simpan Transaksi
                     </button>
                 </form>
             </div>
         </div>
 
+        {{-- Kolom Kanan: Tabel Riwayat --}}
         <div class="lg:col-span-2">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
-                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                    <h4 class="font-bold text-lg text-gray-800">Riwayat Transaksi</h4>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Riwayat Transaksi</h3>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uraian</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
-                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-white border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase">Tanggal</th>
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase">Uraian</th>
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase text-right">Jumlah</th>
+                            <th class="px-6 py-3 text-center text-[10px] font-bold text-slate-400 uppercase">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        @forelse($anggaran->transaksi()->latest('tanggal_transaksi')->get() as $t)
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-6 py-3 text-xs text-slate-600 whitespace-nowrap align-top">
+                                    {{ $t->tanggal_transaksi->format('d/m/Y') }}
+                                </td>
+                                <td class="px-6 py-3 text-xs text-slate-700 align-top">
+                                    <div class="font-medium">{{ $t->uraian }}</div>
+                                    @if($t->bukti_transaksi)
+                                        <a href="{{ Storage::url($t->bukti_transaksi) }}" target="_blank" class="text-blue-500 hover:underline mt-1 inline-block text-[10px]">
+                                            <i class="fas fa-paperclip mr-1"></i> Lihat Bukti
+                                        </a>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-3 text-xs font-mono font-bold text-slate-800 text-right align-top">
+                                    Rp {{ number_format($t->jumlah, 0, ',', '.') }}
+                                </td>
+                                <td class="px-6 py-3 text-center align-top">
+                                    <form action="{{ route('admin.wadah.transaksi.destroy', $t->id) }}" method="POST" onsubmit="return confirm('Hapus transaksi ini? Saldo akan disesuaikan kembali.');">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-slate-300 hover:text-red-500 transition" title="Hapus">
+                                            <i class="fas fa-times-circle"></i>
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 bg-white">
-                            @forelse($anggaran->transaksi as $t)
-                                <tr class="hover:bg-gray-50 transition">
-                                    <td class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
-                                        {{ $t->tanggal_transaksi->format('d/m/Y') }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-900">
-                                        <div class="font-medium">{{ $t->uraian }}</div>
-                                        @if($t->bukti_transaksi)
-                                            <a href="{{ Storage::url($t->bukti_transaksi) }}" target="_blank" class="text-blue-600 text-xs inline-flex items-center mt-1 hover:underline">
-                                                <i class="fas fa-paperclip mr-1"></i> Lihat Bukti
-                                            </a>
-                                        @endif
-                                        <div class="text-xs text-gray-400 mt-1">Input oleh: {{ $t->user->name ?? 'System' }}</div>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-900 text-right font-mono font-bold">
-                                        Rp {{ number_format($t->jumlah, 0, ',', '.') }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-center">
-                                        <form action="{{ route('admin.wadah.transaksi.destroy', $t->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus transaksi ini? Saldo akan otomatis disesuaikan kembali.');">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="text-red-500 hover:text-red-700 transition" title="Hapus Transaksi">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="px-6 py-8 text-center text-gray-500 italic">
-                                        Belum ada transaksi yang tercatat.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic text-sm">Belum ada transaksi yang dicatat.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
+
     </div>
+</div>
 @endsection

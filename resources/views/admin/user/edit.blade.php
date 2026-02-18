@@ -1,94 +1,82 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('title', 'Edit User')
-@section('header-title', 'Edit Data User: ' . $user->name)
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6 md:p-8 max-w-3xl mx-auto">
-    <h2 class="text-xl font-semibold text-gray-800 mb-6 border-b pb-3">Formulir Edit User</h2>
+<div class="max-w-4xl mx-auto">
+    
+    <div class="mb-6">
+        <a href="{{ route('admin.users.index') }}" class="text-slate-500 hover:text-slate-800 text-xs font-bold uppercase tracking-wide mb-2 inline-block">
+            <i class="fas fa-arrow-left mr-1"></i> Kembali
+        </a>
+        <h2 class="text-xl font-bold text-slate-800">Edit Data: {{ $user->name }}</h2>
+    </div>
 
     <form action="{{ route('admin.users.update', $user->id) }}" method="POST">
         @csrf
         @method('PUT')
         <div class="space-y-6">
 
-            {{-- 1. Info Akun --}}
-            <section class="border rounded-lg p-6 bg-gray-50">
-                 <h3 class="text-lg font-semibold text-gray-700 mb-4">1. Informasi Akun</h3>
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {{-- BAGIAN 1 --}}
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Informasi Akun</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap <span class="text-red-600">*</span></label>
-                        <input type="text" id="name" name="name" value="{{ old('name', $user->name) }}" required
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                        @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nama Lengkap</label>
+                        {{-- PERBAIKAN: Tambah class border --}}
+                        <input type="text" name="name" value="{{ old('name', $user->name) }}" required class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
                     </div>
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-600">*</span></label>
-                        <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" required
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                        @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Email</label>
+                        <input type="email" name="email" value="{{ old('email', $user->email) }}" required class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
-                        <input type="password" id="password" name="password" 
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                               placeholder="Biarkan kosong jika tidak ingin mengubah password">
-                        <p class="text-xs text-gray-500 mt-1">* Minimal 8 karakter.</p>
-                        @error('password') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Password Baru (Opsional)</label>
+                        <input type="password" name="password" placeholder="Isi hanya jika ingin mengubah password..." class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
                     </div>
-                 </div>
-            </section>
+                </div>
+            </div>
 
-            {{-- 2. Roles --}}
-            <section class="border rounded-lg p-6 bg-white">
-                <h3 class="text-lg font-semibold text-gray-700 mb-4">2. Peran & Hak Akses</h3>
+            {{-- BAGIAN 2: ROLE --}}
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Peran & Hak Akses</h3>
                 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Role User:</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" id="roles-container">
-                        @foreach($roles as $role)
-                            <div class="flex items-center p-2 border rounded hover:bg-gray-50 cursor-pointer">
-                                {{-- PERBAIKAN: Tambahkan data-role agar JS bisa baca --}}
-                                <input type="checkbox" name="roles[]" 
-                                       value="{{ $role->name }}" 
-                                       id="role_{{ $role->id }}"
-                                       data-role="{{ $role->name }}" 
-                                       class="role-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                                       {{ in_array($role->name, $userRoles) ? 'checked' : '' }}>
-                                <label for="role_{{ $role->id }}" class="ml-2 text-sm text-gray-700 cursor-pointer select-none font-medium">
-                                    {{ $role->name }}
-                                </label>
-                            </div>
-                        @endforeach
-                    </div>
-                    @error('roles') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                <div id="roles-container" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    @foreach($roles as $role)
+                        <label class="flex items-center p-3 border border-slate-200 rounded cursor-pointer hover:bg-slate-50 transition">
+                            <input type="checkbox" name="roles[]" value="{{ $role->name }}" data-role="{{ $role->name }}"
+                                   class="role-checkbox rounded border-gray-300 text-slate-800 focus:ring-slate-500 mr-3"
+                                   {{ in_array($role->name, $userRoles) ? 'checked' : '' }}>
+                            <span class="text-sm font-bold text-slate-700">{{ $role->name }}</span>
+                        </label>
+                    @endforeach
                 </div>
 
-                {{-- Area Konteks (Muncul sesuai Role) --}}
-                <div id="context-section" class="mt-6 pt-4 border-t space-y-4 hidden">
-                    <h4 class="text-md font-medium text-blue-800">Detail Wilayah & Penugasan</h4>
+                {{-- Konteks Dinamis --}}
+                <div id="context-section" class="hidden bg-slate-50 p-4 rounded border border-slate-200 space-y-4">
+                    <h4 class="text-xs font-bold text-blue-600 uppercase mb-2">Detail Wilayah & Penugasan</h4>
 
-                    {{-- Link ke Pegawai --}}
+                    {{-- Pegawai --}}
                     <div id="pegawai-select-div" class="hidden">
-                        <label for="pegawai_id" class="block text-sm font-medium text-gray-700 mb-1">Tautkan ke Data Pegawai</label>
-                        <select id="pegawai_id" name="pegawai_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Tautkan ke Data Pegawai</label>
+                        <select name="pegawai_id" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
                             <option value="">-- Pilih Pegawai --</option>
                             @foreach($pegawais as $pegawai)
                                 <option value="{{ $pegawai->id }}" {{ old('pegawai_id', $user->pegawai_id) == $pegawai->id ? 'selected' : '' }}>
-                                    {{ $pegawai->nama_lengkap }} ({{ $pegawai->jenis_pegawai ?? 'Pegawai' }})
+                                    {{ $pegawai->nama_lengkap }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
-                    {{-- Link ke Wadah --}}
+                    {{-- Wadah --}}
                     <div id="wadah-select-div" class="hidden">
-                        <label for="jenis_wadah_id" class="block text-sm font-medium text-gray-700 mb-1">Jenis Wadah Kategorial</label>
-                        <select id="jenis_wadah_id" name="jenis_wadah_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Wadah Kategorial</label>
+                        <select name="jenis_wadah_id" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
                             <option value="">-- Pilih Wadah --</option>
                             @foreach($jenisWadahs as $wadah)
                                 <option value="{{ $wadah->id }}" {{ old('jenis_wadah_id', $user->jenis_wadah_id) == $wadah->id ? 'selected' : '' }}>
-                                    {{ $wadah->nama_wadah }} ({{ $wadah->singkatan }})
+                                    {{ $wadah->nama_wadah }}
                                 </option>
                             @endforeach
                         </select>
@@ -97,8 +85,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {{-- Klasis --}}
                         <div id="klasis-select-div" class="hidden">
-                            <label for="klasis_id" class="block text-sm font-medium text-gray-700 mb-1">Klasis</label>
-                            <select id="klasis_id" name="klasis_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Klasis</label>
+                            <select id="klasis_id" name="klasis_id" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
                                 <option value="">-- Pilih Klasis --</option>
                                 @foreach($klasisList as $klasis)
                                     <option value="{{ $klasis->id }}" {{ old('klasis_id', $user->klasis_id) == $klasis->id ? 'selected' : '' }}>
@@ -110,8 +98,8 @@
 
                         {{-- Jemaat --}}
                         <div id="jemaat-select-div" class="hidden">
-                            <label for="jemaat_id" class="block text-sm font-medium text-gray-700 mb-1">Jemaat</label>
-                            <select id="jemaat_id" name="jemaat_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Jemaat</label>
+                            <select id="jemaat_id" name="jemaat_id" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
                                 <option value="">-- Pilih Jemaat --</option>
                                 @foreach($jemaatList as $jemaat)
                                     <option value="{{ $jemaat->id }}" {{ old('jemaat_id', $user->jemaat_id) == $jemaat->id ? 'selected' : '' }}>
@@ -119,16 +107,14 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <p class="text-xs text-blue-600 mt-1 hidden" id="loading-jemaat">Memuat data jemaat...</p>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            <div class="flex justify-end space-x-3 pt-4 border-t">
-                <a href="{{ route('admin.users.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition text-sm font-medium">Batal</a>
-                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-lg text-sm font-medium">
-                    Simpan Perubahan
+            <div class="flex justify-end pt-4">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-bold uppercase tracking-wide shadow-lg transition">
+                    Update Data User
                 </button>
             </div>
         </div>
@@ -141,77 +127,56 @@
         const rolesContainer = document.getElementById('roles-container');
         const contextSection = document.getElementById('context-section');
         
-        const pegawaiSelectDiv = document.getElementById('pegawai-select-div');
-        const wadahSelectDiv = document.getElementById('wadah-select-div');
-        const klasisSelectDiv = document.getElementById('klasis-select-div');
-        const jemaatSelectDiv = document.getElementById('jemaat-select-div');
+        const pegawaiDiv = document.getElementById('pegawai-select-div');
+        const wadahDiv   = document.getElementById('wadah-select-div');
+        const klasisDiv  = document.getElementById('klasis-select-div');
+        const jemaatDiv  = document.getElementById('jemaat-select-div');
 
         const klasisSelect = document.getElementById('klasis_id');
         const jemaatSelect = document.getElementById('jemaat_id');
-        const loadingJemaat = document.getElementById('loading-jemaat');
 
         function checkRoles() {
-            let hasPegawaiRole = false;
-            let hasKlasisRole = false;
-            let hasJemaatRole = false;
-            let hasWadahRole = false;
+            let showPegawai = false;
+            let showWadah   = false;
+            let showKlasis  = false;
+            let showJemaat  = false;
+            let hasAnyContext = false;
 
             rolesContainer.querySelectorAll('.role-checkbox:checked').forEach(checkbox => {
-                const role = checkbox.dataset.role; // PENTING: Baca data-role
-                
-                // Logika deteksi role (sama persis dengan create.blade.php)
-                if (role === 'Pendeta' || role === 'Pegawai') hasPegawaiRole = true;
-                if (role === 'Admin Klasis') hasKlasisRole = true;
-                if (role === 'Admin Jemaat') hasJemaatRole = true;
-                if (role && role.includes('Wadah')) { // Deteksi semua jenis wadah
-                    hasWadahRole = true;
-                    hasKlasisRole = true; // Wadah butuh lokasi
-                    hasJemaatRole = true;
-                }
+                const role = checkbox.dataset.role;
+                if (role === 'Pendeta' || role === 'Pegawai') showPegawai = true;
+                if (role === 'Admin Klasis') showKlasis = true;
+                if (role === 'Admin Jemaat') { showJemaat = true; showKlasis = true; }
+                if (role && role.includes('Wadah')) { showWadah = true; showKlasis = true; showJemaat = true; }
             });
 
-            // Toggle Tampilan
-            if (hasPegawaiRole || hasKlasisRole || hasJemaatRole || hasWadahRole) {
-                contextSection.classList.remove('hidden');
-            } else {
-                contextSection.classList.add('hidden');
-            }
+            if (showPegawai || showWadah || showKlasis || showJemaat) hasAnyContext = true;
 
-            // Toggle per Item
-            if (hasPegawaiRole) pegawaiSelectDiv.classList.remove('hidden'); else pegawaiSelectDiv.classList.add('hidden');
-            if (hasWadahRole) wadahSelectDiv.classList.remove('hidden'); else wadahSelectDiv.classList.add('hidden');
-            if (hasKlasisRole) klasisSelectDiv.classList.remove('hidden'); else klasisSelectDiv.classList.add('hidden');
-            if (hasJemaatRole) jemaatSelectDiv.classList.remove('hidden'); else jemaatSelectDiv.classList.add('hidden');
+            contextSection.classList.toggle('hidden', !hasAnyContext);
+            pegawaiDiv.classList.toggle('hidden', !showPegawai);
+            wadahDiv.classList.toggle('hidden', !showWadah);
+            klasisDiv.classList.toggle('hidden', !showKlasis);
+            jemaatDiv.classList.toggle('hidden', !showJemaat);
         }
 
+        rolesContainer.addEventListener('change', function (e) {
+            if (e.target.classList.contains('role-checkbox')) checkRoles();
+        });
+        
         checkRoles();
 
-        rolesContainer.addEventListener('change', function (event) {
-            if (event.target.classList.contains('role-checkbox')) {
-                checkRoles();
-            }
-        });
-
-        // AJAX Jemaat
         if (klasisSelect) {
             klasisSelect.addEventListener('change', function() {
                 const klasisId = this.value;
-                jemaatSelect.innerHTML = '<option value="">-- Pilih Jemaat --</option>'; 
-                
+                jemaatSelect.innerHTML = '<option value="">-- Pilih Jemaat --</option>';
                 if (klasisId) {
-                    loadingJemaat.classList.remove('hidden');
                     jemaatSelect.disabled = true;
-
                     fetch(`/api/jemaat-by-klasis/${klasisId}`)
-                        .then(response => response.json())
+                        .then(res => res.json())
                         .then(data => {
-                            data.forEach(jemaat => {
-                                const option = document.createElement('option');
-                                option.value = jemaat.id;
-                                option.textContent = jemaat.nama_jemaat;
-                                jemaatSelect.appendChild(option);
+                            data.forEach(j => {
+                                jemaatSelect.innerHTML += `<option value="${j.id}">${j.nama_jemaat}</option>`;
                             });
-                            loadingJemaat.classList.add('hidden');
                             jemaatSelect.disabled = false;
                         });
                 }
@@ -220,5 +185,4 @@
     });
 </script>
 @endpush
-
 @endsection

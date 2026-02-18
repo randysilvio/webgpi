@@ -13,6 +13,7 @@ use App\Models\WadahKategorialAnggaran;
 use App\Models\AnggaranInduk;
 use App\Models\Pegawai;
 use App\Models\AsetGereja;
+use App\Models\PopupAd; // Pastikan model ini di-import
 
 class DashboardController extends Controller
 {
@@ -28,22 +29,21 @@ class DashboardController extends Controller
         ];
 
         // 2. Statistik Wilayah 
-        // Super Admin & Admin Sinode lihat semua.
-        // Admin Bidang 3 (Kepegawaian) melihat jumlah Klasis sebagai referensi saja.
-        if ($user->hasRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3'])) {
+        // Super Admin, Sinode, & Bidang (3/4) lihat semua klasis
+        if ($user->hasRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3', 'Admin Bidang 4'])) {
             $stats['klasis'] = Klasis::count();
         } elseif ($user->hasRole('Admin Klasis')) {
             $stats['klasis'] = 1;
         }
 
-        // Query Builders Dasar
+        // 3. Query Builders Dasar (Scope Wilayah)
         $jemaatQuery = Jemaat::query();
         $anggotaQuery = AnggotaJemaat::query()->where('status_keanggotaan', 'Aktif');
         $asetQuery = AsetGereja::query();
         $indukQuery = AnggaranInduk::with('mataAnggaran')->where('tahun_anggaran', $tahunSekarang);
         $wadahQuery = WadahKategorialAnggaran::where('tahun_anggaran', $tahunSekarang);
 
-        // Filter Scoping Wilayah
+        // Filter Scope: Jika Admin Klasis
         if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
             $jemaatQuery->where('klasis_id', $user->klasis_id);
             $anggotaQuery->whereHas('jemaat', fn($q) => $q->where('klasis_id', $user->klasis_id));
@@ -61,22 +61,23 @@ class DashboardController extends Controller
         $stats['jemaat'] = $jemaatQuery->count();
         $stats['anggota'] = $anggotaQuery->count();
         
-        // Jika Bidang 3, tidak perlu statistik aset/keuangan (set 0 atau biarkan)
+        // Statistik Aset (Bidang 3 biasanya fokus kepegawaian, jadi opsional, tapi default ditampilkan)
         if (!$user->hasRole('Admin Bidang 3')) {
             $stats['aset'] = $asetQuery->count();
         }
 
-        // --- STATISTIK PEGAWAI (FOKUS UTAMA BIDANG 3) ---
+        // --- STATISTIK PEGAWAI ---
         if (class_exists(Pegawai::class)) {
             $pegawaiQuery = Pegawai::query()->where('status_aktif', 'Aktif');
-            if ($user->hasRole('Admin Klasis') && $user->klasis_id) $pegawaiQuery->where('klasis_id', $user->klasis_id);
-            elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) $pegawaiQuery->where('jemaat_id', $user->jemaat_id);
+            if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
+                $pegawaiQuery->where('klasis_id', $user->klasis_id);
+            }
             $stats['pendeta'] = $pegawaiQuery->count();
         } else {
             $stats['pendeta'] = Pendeta::query()->where('status_kepegawaian', 'Aktif')->count();
         }
 
-        // --- STATISTIK KEUANGAN (SKIP UNTUK BIDANG 3) ---
+        // --- STATISTIK KEUANGAN (Skip untuk Bidang 3 agar dashboard lebih bersih) ---
         if (!$user->hasRole('Admin Bidang 3')) {
             $dataInduk = $indukQuery->get();
             $indukTarget = $dataInduk->sum('jumlah_target');
@@ -95,9 +96,9 @@ class DashboardController extends Controller
             $stats['saldo_kas'] = ($indukMasuk + $wadahMasuk) - ($indukKeluar + $wadahKeluar);
         }
 
-        // Peringatan Pensiun (Tampilkan untuk Bidang 3 juga)
+        // --- PENSIUN ---
         $pensiunAkanDatang = collect();
-        if (class_exists(Pegawai::class) && $user->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Klasis', 'Admin Bidang 3'])) {
+        if (class_exists(Pegawai::class)) {
             $pensiunQuery = Pegawai::where('status_aktif', 'Aktif')
                 ->whereBetween('tanggal_pensiun', [now(), now()->addYear()])
                 ->orderBy('tanggal_pensiun', 'asc');
@@ -105,12 +106,27 @@ class DashboardController extends Controller
             if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
                 $pensiunQuery->where('klasis_id', $user->klasis_id);
             }
-            // Bidang 3 melihat semua (tanpa filter wilayah khusus)
-            
             $pensiunAkanDatang = $pensiunQuery->take(5)->get();
         }
 
-        return view('admin.dashboard', compact('stats', 'pensiunAkanDatang'));
+        // ============================================================
+        // 🔥 UPDATE: POPUP IKLAN MUNCUL UNTUK SEMUA ROLE 🔥
+        // Logika ini ditaruh di luar blok if role manapun.
+        // ============================================================
+        $activePopup = null;
+        try {
+            if (class_exists(PopupAd::class)) {
+                $activePopup = PopupAd::where('is_active', true)
+                    ->whereDate('mulai_tanggal', '<=', now())
+                    ->whereDate('selesai_tanggal', '>=', now())
+                    ->latest()
+                    ->first();
+            }
+        } catch (\Exception $e) {
+            // Silent fail jika tabel belum dimigrasi
+        }
+
+        return view('admin.dashboard', compact('stats', 'pensiunAkanDatang', 'activePopup'));
     }
 
     public function petaWidget(Request $request)
@@ -118,7 +134,8 @@ class DashboardController extends Controller
         $user = Auth::user();
         $petaKlasis = collect();
 
-        if ($user->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Klasis', 'Admin Bidang 3'])) {
+        // Peta widget bisa diakses oleh role manajemen
+        if ($user->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Klasis', 'Admin Bidang 3', 'Admin Bidang 4'])) {
             $queryPeta = Klasis::whereNotNull('latitude')->whereNotNull('longitude');
             if ($user->hasRole('Admin Klasis')) {
                 $queryPeta->where('id', $user->klasis_id);

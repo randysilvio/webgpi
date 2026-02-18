@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\AnggotaJemaatController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MutasiPendetaController;
+use App\Http\Controllers\Admin\PopupAdController; 
 
 // Wadah Kategorial Controllers
 use App\Http\Controllers\Admin\WadahKategorialPengurusController;
@@ -46,12 +47,13 @@ use App\Http\Controllers\Admin\SuratMasukController;
 use App\Http\Controllers\Admin\SuratKeluarController;
 
 // Sakramen Controllers
-use App\Http\Controllers\Admin\SakramenController;
+use App\Http\Controllers\Admin\SakramenBaptisController;
 use App\Http\Controllers\Admin\SakramenNikahController;
+use App\Http\Controllers\Admin\SakramenSidiController; 
 use App\Http\Controllers\Admin\SakramenCetakController;
 
 // Pejabat & Sidang Controllers
-use App\Http\Controllers\Admin\PejabatGerejawiController;
+use App\Http\Controllers\Admin\PejabatGerejawiController; // <-- Controller Pejabat
 use App\Http\Controllers\Admin\PersidanganController;
 
 // Models
@@ -69,13 +71,19 @@ use App\Models\Klasis;
 
 /* --- RUTE PUBLIK --- */
 Route::get('/', function () {
-    $setting = Setting::firstOrCreate(['id' => 1]);
-    $posts = Post::whereNotNull('published_at')
-                 ->where('published_at', '<=', now())
-                 ->latest('published_at')
-                 ->take(3)
-                 ->get();
-    $services = Service::orderBy('order')->orderBy('created_at')->get();
+    try {
+        $setting = Setting::firstOrCreate(['id' => 1]);
+        $posts = Post::whereNotNull('published_at')
+                     ->where('published_at', '<=', now())
+                     ->latest('published_at')
+                     ->take(3)
+                     ->get();
+        $services = Service::orderBy('order')->orderBy('created_at')->get();
+    } catch (\Exception $e) {
+        $setting = new Setting();
+        $posts = collect();
+        $services = collect();
+    }
     return view('welcome', compact('setting', 'posts', 'services'));
 })->name('home');
 
@@ -93,7 +101,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/peta-widget', [DashboardController::class, 'petaWidget'])->name('dashboard.peta_widget');
 
-    // 2. Pengaturan & Konten Website (Super Admin & Bidang 4)
+    // 2. Pengaturan, Konten Website & POPUP ADS
     Route::middleware('role:Super Admin|Admin Bidang 4')->group(function () {
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
@@ -104,6 +112,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         
         Route::resource('posts', AdminPostController::class);
         Route::resource('services', ServiceController::class);
+
+        Route::get('/popup-ads', [PopupAdController::class, 'index'])->name('popup.index');
+        Route::post('/popup-ads', [PopupAdController::class, 'store'])->name('popup.store');
+        Route::delete('/popup-ads/{popup}', [PopupAdController::class, 'destroy'])->name('popup.destroy');
+        Route::patch('/popup-ads/{popup}/toggle', [PopupAdController::class, 'toggle'])->name('popup.toggle');
     });
 
     // 3. E-Office / Persuratan Digital
@@ -113,30 +126,47 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('surat-masuk/{surat}/disposisi', [SuratMasukController::class, 'disposisi'])->name('surat-masuk.disposisi');
     });
 
-    // 4. Administrasi Sakramen
+    // 4. Administrasi Sakramen (Bidang 1)
     Route::prefix('sakramen')->name('sakramen.')->group(function () {
-        Route::get('baptis', [SakramenController::class, 'baptisIndex'])->name('baptis.index');
-        Route::post('baptis', [SakramenController::class, 'baptisStore'])->name('baptis.store');
-        Route::get('baptis/{id}/cetak', [SakramenCetakController::class, 'cetakBaptis'])->name('baptis.cetak'); 
+        // Baptis
+        Route::get('baptis', [SakramenBaptisController::class, 'index'])->name('baptis.index');
+        Route::get('baptis/create', [SakramenBaptisController::class, 'create'])->name('baptis.create');
+        Route::post('baptis', [SakramenBaptisController::class, 'store'])->name('baptis.store');
+        Route::get('baptis/{id}/edit', [SakramenBaptisController::class, 'edit'])->name('baptis.edit');
+        Route::put('baptis/{id}', [SakramenBaptisController::class, 'update'])->name('baptis.update');
+        Route::delete('baptis/{id}', [SakramenBaptisController::class, 'destroy'])->name('baptis.destroy');
+        Route::get('baptis/{id}/cetak', [SakramenBaptisController::class, 'cetakSurat'])->name('baptis.cetak'); 
 
-        Route::get('sidi', [SakramenController::class, 'sidiIndex'])->name('sidi.index');
-        Route::post('sidi', [SakramenController::class, 'sidiStore'])->name('sidi.store');
-        Route::get('sidi/{id}/cetak', [SakramenCetakController::class, 'cetakSidi'])->name('sidi.cetak'); 
+        // Sidi
+        Route::get('sidi', [SakramenSidiController::class, 'index'])->name('sidi.index');
+        Route::get('sidi/create', [SakramenSidiController::class, 'create'])->name('sidi.create');
+        Route::post('sidi', [SakramenSidiController::class, 'store'])->name('sidi.store');
+        Route::get('sidi/{id}/edit', [SakramenSidiController::class, 'edit'])->name('sidi.edit');
+        Route::put('sidi/{id}', [SakramenSidiController::class, 'update'])->name('sidi.update');
+        Route::delete('sidi/{id}', [SakramenSidiController::class, 'destroy'])->name('sidi.destroy');
+        Route::get('sidi/{id}/cetak', [SakramenSidiController::class, 'cetakSurat'])->name('sidi.cetak'); 
         
+        // Nikah
         Route::get('nikah', [SakramenNikahController::class, 'index'])->name('nikah.index');
+        Route::get('nikah/create', [SakramenNikahController::class, 'create'])->name('nikah.create');
         Route::post('nikah', [SakramenNikahController::class, 'store'])->name('nikah.store');
-        Route::delete('nikah/{nikah}', [SakramenNikahController::class, 'destroy'])->name('nikah.destroy');
-        Route::get('nikah/{id}/cetak', [SakramenCetakController::class, 'cetakNikah'])->name('nikah.cetak');
+        Route::get('nikah/{id}/edit', [SakramenNikahController::class, 'edit'])->name('nikah.edit');
+        Route::put('nikah/{id}', [SakramenNikahController::class, 'update'])->name('nikah.update');
+        Route::delete('nikah/{id}', [SakramenNikahController::class, 'destroy'])->name('nikah.destroy');
+        Route::get('nikah/{id}/cetak', [SakramenNikahController::class, 'cetakSurat'])->name('nikah.cetak');
     });
 
-    // 5. Pejabat & Persidangan
+    // 5. Pejabat & Persidangan (Bidang 1)
     Route::prefix('tata-gereja')->name('tata-gereja.')->group(function () {
+        // --- PEJABAT GEREJAWI (UPDATED) ---
+        // Route::resource otomatis membuat route: index, create, store, show, edit, update, destroy
         Route::resource('pejabat', PejabatGerejawiController::class);
+        
+        // Sidang
         Route::resource('sidang', PersidanganController::class);
     });
 
     // 6. Data Master Wilayah & Jemaat
-    // Catatan: Bidang 3 hanya View (diatur via Controller/Middleware permission)
     Route::resource('klasis', KlasisController::class)->parameter('klasis', 'klasis');
     Route::get('klasis-export', [KlasisController::class, 'export'])->name('klasis.export');
     Route::get('klasis-import', [KlasisController::class, 'showImportForm'])->name('klasis.import-form');
@@ -155,8 +185,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('anggota-jemaat-import', [AnggotaJemaatController::class, 'showImportForm'])->name('anggota-jemaat.import-form');
     Route::post('anggota-jemaat-import', [AnggotaJemaatController::class, 'import'])->name('anggota-jemaat.import');
 
-
-    // 8. Wadah Kategorial
+    // 7. Wadah Kategorial
     Route::prefix('wadah')->name('wadah.')->group(function () {
         Route::get('statistik/cetak', [WadahStatistikController::class, 'print'])->name('statistik.print');
         Route::get('statistik', [WadahStatistikController::class, 'index'])->name('statistik.index');
@@ -169,20 +198,21 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::delete('transaksi/{transaksi}', [WadahTransaksiController::class, 'destroy'])->name('transaksi.destroy');
     });
 
-    // 9. Kepegawaian / HRIS (Unified: Pendeta + Staff)
-    // AKSES UTAMA: Super Admin & Admin Bidang 3
+    // 8. KEPEGAWAIAN / HRIS
     Route::prefix('kepegawaian')->name('kepegawaian.')
-        ->middleware(['role:Super Admin|Admin Bidang 3|Admin Sinode']) // Proteksi Bidang 3
+        ->middleware(['auth'])
         ->group(function () {
             
-            // --- MANAJEMEN PEGAWAI (TERMASUK PENDETA) ---
+            // --- MANAJEMEN PEGAWAI ---
             Route::resource('pegawai', PegawaiController::class);
             Route::get('pegawai/{pegawai}/print', [PegawaiController::class, 'print'])->name('pegawai.print');
             
             // Export & Import
-            Route::get('pegawai-export', [PegawaiController::class, 'export'])->name('pegawai.export');
-            Route::get('pegawai-import', [PegawaiController::class, 'showImportForm'])->name('pegawai.import-form');
-            Route::post('pegawai-import', [PegawaiController::class, 'import'])->name('pegawai.import');
+            Route::middleware('role:Super Admin|Admin Bidang 3')->group(function(){
+                Route::get('pegawai-export', [PegawaiController::class, 'export'])->name('pegawai.export');
+                Route::get('pegawai-import', [PegawaiController::class, 'showImportForm'])->name('pegawai.import-form');
+                Route::post('pegawai-import', [PegawaiController::class, 'import'])->name('pegawai.import');
+            });
 
             // --- SUB DATA PEGAWAI ---
             Route::post('keluarga', [KeluargaPegawaiController::class, 'store'])->name('keluarga.store');
@@ -209,7 +239,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
              ->parameters(['mutasi' => 'mutasiPendeta']);
     });
 
-    // 10. Perbendaharaan, Aset & Keuangan
+    // 9. Perbendaharaan, Aset & Keuangan
     Route::prefix('perbendaharaan')->name('perbendaharaan.')->group(function () {
         Route::resource('aset', AsetController::class);
         Route::resource('mata-anggaran', MataAnggaranController::class);
@@ -221,7 +251,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('laporan/gabungan', [LaporanController::class, 'gabungan'])->name('laporan.gabungan');
     });
 
-    // 11. Manajemen User (Hanya Super Admin)
+    // 10. Manajemen User
     Route::resource('users', UserController::class)->middleware('role:Super Admin');
 
 });
@@ -233,7 +263,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// API Dropdown Dinamis Jemaat by Klasis
 Route::get('/api/jemaat-by-klasis/{klasisId}', function ($klasisId) {
     $jemaat = Jemaat::where('klasis_id', $klasisId)->orderBy('nama_jemaat')->select('id', 'nama_jemaat')->get();
     return response()->json($jemaat);

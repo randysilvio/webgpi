@@ -1,157 +1,200 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Dashboard Utama')
-@section('header-title', 'Ringkasan Eksekutif')
+@section('header-title', 'Overview & Statistik')
 
 @section('content')
-    {{-- HEADER SAMBUTAN --}}
-    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-800">Selamat Datang, {{ Auth::user()->name }}!</h2>
-            <p class="text-gray-600 mt-1">
-                Akses Level:
-                @forelse (Auth::user()->getRoleNames() as $role)
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 mr-1 uppercase">{{ $role }}</span>
-                @empty
-                    <span class="text-gray-500 italic">Guest</span>
-                @endforelse
-                
-                @if (Auth::user()->klasisTugas)
-                    <span class="text-gray-400 mx-2">|</span>
-                    <span class="text-sm text-gray-600 font-medium"><i class="fas fa-map-marker-alt text-red-500 mr-1"></i> {{ Auth::user()->klasisTugas->nama_klasis }}</span>
-                @endif
-            </p>
+
+{{-- 1. KPI CARDS (Corporate Style) --}}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    {{-- Card Klasis --}}
+    @if(isset($stats['klasis']))
+    <div class="bg-white rounded border border-slate-200 p-5 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Klasis</p>
+                <h3 class="text-3xl font-bold text-slate-800 mt-1">{{ number_format($stats['klasis']) }}</h3>
+            </div>
+            <span class="text-slate-300 bg-slate-50 p-2 rounded"><i class="fas fa-map text-lg"></i></span>
         </div>
-        <div class="mt-4 md:mt-0">
-            <span class="inline-flex items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 text-sm font-bold text-gray-700">
-                <i class="far fa-calendar-alt text-primary mr-2"></i> {{ now()->isoFormat('dddd, D MMMM Y') }}
-            </span>
+    </div>
+    @endif
+
+    {{-- Card Jemaat --}}
+    @if(isset($stats['jemaat']))
+    <div class="bg-white rounded border border-slate-200 p-5 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Jemaat</p>
+                <h3 class="text-3xl font-bold text-slate-800 mt-1">{{ number_format($stats['jemaat']) }}</h3>
+            </div>
+            <span class="text-slate-300 bg-slate-50 p-2 rounded"><i class="fas fa-church text-lg"></i></span>
+        </div>
+    </div>
+    @endif
+
+    {{-- Card Anggota --}}
+    @if(isset($stats['anggota']))
+    <div class="bg-white rounded border border-slate-200 p-5 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Jiwa</p>
+                <h3 class="text-3xl font-bold text-slate-800 mt-1">{{ number_format($stats['anggota']) }}</h3>
+            </div>
+            <span class="text-slate-300 bg-slate-50 p-2 rounded"><i class="fas fa-users text-lg"></i></span>
+        </div>
+    </div>
+    @endif
+
+    {{-- Card Pegawai --}}
+    @if(isset($stats['pendeta']))
+    <div class="bg-white rounded border border-slate-200 p-5 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pegawai Organik</p>
+                <h3 class="text-3xl font-bold text-slate-800 mt-1">{{ number_format($stats['pendeta']) }}</h3>
+            </div>
+            <span class="text-slate-300 bg-slate-50 p-2 rounded"><i class="fas fa-user-tie text-lg"></i></span>
+        </div>
+    </div>
+    @endif
+</div>
+
+{{-- 2. QUICK ACCESS / PINTASAN (Outline Style) --}}
+<div class="mb-8">
+    <div class="flex flex-wrap gap-3">
+        
+        {{-- JEMAAT / KLASIS --}}
+        @can('create anggota jemaat')
+        <a href="{{ route('admin.anggota-jemaat.create') }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-50 text-sm font-medium transition shadow-sm flex items-center">
+            <i class="fas fa-plus mr-2 text-slate-400"></i> Data Jemaat Baru
+        </a>
+        @endcan
+
+        {{-- KEUANGAN --}}
+        @can('manage keuangan')
+        <a href="{{ route('admin.perbendaharaan.transaksi.create') }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-50 text-sm font-medium transition shadow-sm flex items-center">
+            <i class="fas fa-file-invoice-dollar mr-2 text-slate-400"></i> Input Transaksi Kas
+        </a>
+        @endcan
+
+        {{-- KEPEGAWAIAN --}}
+        @can('manage pegawai')
+        <a href="{{ route('admin.kepegawaian.pegawai.create') }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-50 text-sm font-medium transition shadow-sm flex items-center">
+            <i class="fas fa-user-plus mr-2 text-slate-400"></i> Tambah Pegawai
+        </a>
+        <a href="{{ route('admin.mutasi.index') }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-50 text-sm font-medium transition shadow-sm flex items-center">
+            <i class="fas fa-exchange-alt mr-2 text-slate-400"></i> Mutasi
+        </a>
+        @endcan
+
+        {{-- E-OFFICE --}}
+        <a href="{{ route('admin.e-office.surat-masuk.create') }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 rounded hover:bg-slate-50 text-sm font-medium transition shadow-sm flex items-center">
+            <i class="fas fa-envelope mr-2 text-slate-400"></i> Catat Surat Masuk
+        </a>
+    </div>
+</div>
+
+{{-- 3. WIDGETS --}}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {{-- Peta --}}
+    <div class="lg:col-span-2 bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+            <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Peta Sebaran Pelayanan</h3>
+            <a href="{{ route('admin.dashboard.peta_widget') }}" class="text-xs text-blue-600 hover:underline">Mode Penuh</a>
+        </div>
+        <div class="h-80 w-full relative bg-slate-100">
+            <iframe src="{{ route('admin.dashboard.peta_widget') }}" class="w-full h-full border-0 absolute inset-0"></iframe>
         </div>
     </div>
 
-    {{-- 1. GRID STATISTIK UTAMA --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {{-- Kartu Anggota --}}
-        <div class="bg-white rounded-xl shadow-sm p-6 border-b-4 border-blue-600 flex items-center justify-between transition hover:shadow-lg">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Anggota</p>
-                <p class="text-3xl font-extrabold text-gray-900 mt-1">{{ number_format($stats['anggota'] ?? 0) }}</p>
-                <p class="text-xs text-blue-600 mt-1 font-semibold italic">Jiwa Aktif</p>
-            </div>
-            <div class="p-4 rounded-xl bg-blue-50 text-blue-600"><i class="fas fa-users fa-2x"></i></div>
+    {{-- Pensiun --}}
+    <div class="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
+            <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Jadwal Pensiun (1 Thn)</h3>
         </div>
-        
-        {{-- Kartu Jemaat --}}
-        <div class="bg-white rounded-xl shadow-sm p-6 border-b-4 border-green-600 flex items-center justify-between transition hover:shadow-lg">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Jemaat</p>
-                <p class="text-3xl font-extrabold text-gray-900 mt-1">{{ number_format($stats['jemaat'] ?? 0) }}</p>
-                <p class="text-xs text-green-600 mt-1 font-semibold italic">Gereja / Pos PI</p>
-            </div>
-            <div class="p-4 rounded-xl bg-green-50 text-green-600"><i class="fas fa-church fa-2x"></i></div>
-        </div>
-
-        {{-- Kartu Pegawai --}}
-        <div class="bg-white rounded-xl shadow-sm p-6 border-b-4 border-orange-500 flex items-center justify-between transition hover:shadow-lg">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Pegawai</p>
-                <p class="text-3xl font-extrabold text-gray-900 mt-1">{{ number_format($stats['pendeta'] ?? 0) }}</p>
-                <p class="text-xs text-orange-600 mt-1 font-semibold italic">Organik & Kontrak</p>
-            </div>
-            <div class="p-4 rounded-xl bg-orange-50 text-orange-600"><i class="fas fa-user-tie fa-2x"></i></div>
-        </div>
-
-        {{-- Kartu Aset --}}
-        <div class="bg-white rounded-xl shadow-sm p-6 border-b-4 border-purple-600 flex items-center justify-between transition hover:shadow-lg">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Inventaris Aset</p>
-                <p class="text-3xl font-extrabold text-gray-900 mt-1">{{ number_format($stats['aset'] ?? 0) }}</p>
-                <p class="text-xs text-purple-600 mt-1 font-semibold italic">Harta Milik Gereja</p>
-            </div>
-            <div class="p-4 rounded-xl bg-purple-50 text-purple-600"><i class="fas fa-boxes fa-2x"></i></div>
+        <div class="p-0">
+            @if(isset($pensiunAkanDatang) && $pensiunAkanDatang->count() > 0)
+                <ul class="divide-y divide-slate-100">
+                    @foreach($pensiunAkanDatang as $p)
+                    <li class="px-5 py-3 hover:bg-slate-50 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-bold text-slate-700">{{ $p->nama_lengkap ?? $p->nama }}</p>
+                                <p class="text-xs text-slate-500">{{ $p->jabatan ?? 'Pegawai' }}</p>
+                            </div>
+                            <span class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100">
+                                {{ \Carbon\Carbon::parse($p->tanggal_pensiun)->format('M Y') }}
+                            </span>
+                        </div>
+                    </li>
+                    @endforeach
+                </ul>
+            @else
+                <div class="text-center py-12 text-slate-400 text-sm">
+                    <i class="fas fa-check-circle mb-2 text-slate-300 text-2xl block"></i>
+                    Tidak ada pensiun dalam waktu dekat.
+                </div>
+            @endif
         </div>
     </div>
+</div>
 
-    {{-- 2. GRID WIDGET (PETA & KEUANGAN) --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+{{-- MODAL POPUP (Formal) --}}
+@if(isset($activePopup) && $activePopup)
+<div id="info-popup" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/80 backdrop-blur-sm transition-opacity duration-300 p-4">
+    <div class="relative w-full max-w-4xl transform overflow-hidden rounded-lg shadow-2xl transition-all scale-95 opacity-0" id="popup-content">
         
-        {{-- WIDGET PETA PELAYANAN (IFRAME) --}}
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="text-sm font-black text-gray-800 uppercase tracking-widest">
-                    <i class="fas fa-map text-blue-600 mr-1"></i> Peta Pelayanan
-                </h3>
-                <span class="text-[10px] text-gray-400 italic">Klik tombol cetak di dalam peta</span>
-            </div>
+        <button onclick="closePopup()" class="absolute top-2 right-2 z-50 flex h-8 w-8 items-center justify-center rounded bg-white/20 text-white hover:bg-white/40 transition backdrop-blur-md">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="flex justify-center bg-transparent">
+             <img src="{{ asset('storage/' . $activePopup->gambar_path) }}" alt="Info Popup" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-xl">
+        </div>
+        
+        <div class="bg-white/90 backdrop-blur-sm p-3 absolute bottom-4 left-1/2 transform -translate-x-1/2 rounded-full px-6 shadow-lg border border-white/50">
+            <p class="text-xs font-medium text-slate-700 uppercase tracking-wide">{{ $activePopup->judul }}</p>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const popupId = "{{ $activePopup->id }}";
+        const hasSeen = sessionStorage.getItem("seen_popup_" + popupId);
+        
+        if (!hasSeen) {
+            const popup = document.getElementById('info-popup');
+            const content = document.getElementById('popup-content');
             
-            {{-- KOTAK PETA (ISOLASI) --}}
-            <div class="w-full overflow-hidden rounded-lg border bg-gray-100" style="height: 300px;">
-                <iframe src="{{ route('admin.dashboard.peta_widget') }}" 
-                        width="100%" 
-                        height="100%" 
-                        frameborder="0" 
-                        scrolling="no"
-                        title="Peta Pelayanan">
-                </iframe>
-            </div>
-        </div>
+            popup.classList.remove('hidden');
+            popup.classList.add('flex');
+            
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 100);
 
-        {{-- WIDGET KEUANGAN & AKSES --}}
-        <div class="lg:col-span-2 space-y-6">
-             {{-- Ringkasan Keuangan --}}
-             <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-                <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                    <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-chart-line text-primary mr-2"></i> Rencana vs Realisasi APB ({{ date('Y') }})
-                    </h3>
-                    <a href="{{ route('admin.perbendaharaan.anggaran.index') }}" class="text-xs font-bold text-blue-600 hover:underline">DETAIL</a>
-                </div>
-                <div class="p-6 grid grid-cols-2 gap-6">
-                    {{-- Progress Pendapatan --}}
-                    <div>
-                        @php 
-                            $target = $stats['keuangan_target'] ?? 0;
-                            $realisasi = $stats['keuangan_realisasi'] ?? 0;
-                            $persen = ($target > 0) ? ($realisasi / $target * 100) : 0;
-                        @endphp
-                        <div class="flex justify-between items-end mb-1">
-                            <span class="text-xs font-bold text-gray-500 uppercase">Realisasi Pendapatan</span>
-                            <span class="text-xs font-extrabold text-green-600">{{ round($persen, 1) }}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
-                            <div class="bg-green-500 h-2 rounded-full" style="width: {{ min($persen, 100) }}%"></div>
-                        </div>
-                        <p class="text-xs text-gray-500">Target: Rp {{ number_format($target) }}</p>
-                    </div>
+            sessionStorage.setItem("seen_popup_" + popupId, "true");
+        }
+    });
 
-                    {{-- Saldo Kas --}}
-                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
-                        <span class="text-xs font-bold text-blue-400 uppercase tracking-widest block mb-1">Saldo Kas Riil</span>
-                        <p class="text-2xl font-black text-blue-800">Rp {{ number_format(($stats['saldo_kas'] ?? 0), 0, ',', '.') }}</p>
-                    </div>
-                </div>
-             </div>
+    function closePopup() {
+        const popup = document.getElementById('info-popup');
+        const content = document.getElementById('popup-content');
 
-             {{-- Akses Cepat --}}
-             <div class="grid grid-cols-2 gap-4">
-                <a href="{{ route('admin.anggota-jemaat.create') }}" class="flex items-center p-4 bg-white border rounded-xl hover:shadow-md transition group">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3"><i class="fas fa-user-plus"></i></div>
-                    <div><span class="text-sm font-bold text-gray-700">Sensus Baru</span></div>
-                </a>
-                <a href="{{ route('admin.perbendaharaan.transaksi.create') }}" class="flex items-center p-4 bg-white border rounded-xl hover:shadow-md transition group">
-                    <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3"><i class="fas fa-cash-register"></i></div>
-                    <div><span class="text-sm font-bold text-gray-700">Input Kas</span></div>
-                </a>
-             </div>
-        </div>
-    </div>
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
 
-    {{-- FOOTER INFO --}}
-    <div class="mt-8 bg-gray-900 rounded-2xl p-6 text-white flex flex-col md:flex-row items-center justify-between shadow-lg relative overflow-hidden">
-        <div class="absolute top-0 right-0 p-4 opacity-10"><i class="fas fa-church fa-6x"></i></div>
-        <div class="z-10 text-center md:text-left">
-            <h4 class="text-lg font-black tracking-tight">SINODE GPI PAPUA</h4>
-            <p class="text-blue-300 text-xs mt-1">Sistem Informasi Manajemen Terintegrasi | Versi 1.5.0</p>
-        </div>
-    </div>
+        setTimeout(() => {
+            popup.classList.add('hidden');
+            popup.classList.remove('flex');
+        }, 300);
+    }
+
+    document.getElementById('info-popup').addEventListener('click', function(e) {
+        if (e.target === this) { closePopup(); }
+    });
+</script>
+@endif
+
 @endsection

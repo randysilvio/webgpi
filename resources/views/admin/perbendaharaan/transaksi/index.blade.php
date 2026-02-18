@@ -1,78 +1,124 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('title', 'Buku Kas Umum')
-@section('header-title', 'Buku Kas Umum (BKU)')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6">
-    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h2 class="text-xl font-semibold text-gray-800">Catatan Transaksi Keuangan</h2>
-        <a href="{{ route('admin.perbendaharaan.transaksi.create') }}" class="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-md shadow-lg transition duration-150 inline-flex items-center">
-            <i class="fas fa-plus-circle mr-2"></i> Catat Kas Baru
-        </a>
-    </div>
+    <x-admin-index 
+        title="Buku Kas Umum (BKU)" 
+        subtitle="Pencatatan harian transaksi penerimaan dan pengeluaran kas."
+        create-route="{{ route('admin.perbendaharaan.transaksi.create') }}"
+        create-label="Catat Kas Baru"
+        :pagination="$transaksis"
+    >
+        {{-- SLOT FILTERS --}}
+        <x-slot name="filters">
+            <form action="{{ route('admin.perbendaharaan.transaksi.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                {{-- Filter Bulan --}}
+                <div class="relative">
+                    <i class="fas fa-calendar absolute left-3 top-2.5 text-slate-400"></i>
+                    <select name="bulan" onchange="this.form.submit()" class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-slate-500 focus:border-slate-500 text-slate-600 font-medium">
+                        <option value="">- Semua Bulan -</option>
+                        @for($i=1; $i<=12; $i++)
+                            <option value="{{ $i }}" {{ request('bulan') == $i ? 'selected' : '' }}>{{ date('F', mktime(0,0,0,$i,1)) }}</option>
+                        @endfor
+                    </select>
+                </div>
 
-    {{-- Filter Sederhana --}}
-    <form method="GET" action="{{ route('admin.perbendaharaan.transaksi.index') }}" class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg border">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Ket / No Bukti..." class="border-gray-300 rounded-md text-sm">
-        <select name="bulan" class="border-gray-300 rounded-md text-sm">
-            <option value="">Semua Bulan</option>
-            @for($i=1; $i<=12; $i++)
-                <option value="{{ $i }}" {{ request('bulan') == $i ? 'selected' : '' }}>{{ date('F', mktime(0,0,0,$i,1)) }}</option>
-            @endfor
-        </select>
-        <button type="submit" class="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 text-sm font-bold">Filter</button>
-        <a href="{{ route('admin.perbendaharaan.transaksi.index') }}" class="text-center py-2 text-sm text-gray-500 hover:underline">Reset</a>
-    </form>
+                {{-- Filter Tahun (Optional jika controller mendukung) --}}
+                {{-- <x-form-select name="tahun" ... /> --}}
 
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Tanggal</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Kode / Mata Anggaran</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Keterangan</th>
-                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Penerimaan (Rp)</th>
-                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Pengeluaran (Rp)</th>
-                    <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                @forelse($transaksis as $trx)
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 text-sm whitespace-nowrap">{{ $trx->tanggal_transaksi->format('d/m/Y') }}</td>
-                    <td class="px-6 py-4 text-sm">
-                        <span class="font-mono font-bold text-blue-700">{{ $trx->mataAnggaran->kode }}</span><br>
-                        <span class="text-xs text-gray-500">{{ $trx->mataAnggaran->nama_mata_anggaran }}</span>
-                    </td>
-                    <td class="px-6 py-4 text-sm">
-                        <div class="font-medium text-gray-900">{{ $trx->keterangan }}</div>
-                        <div class="text-xs text-gray-400">Bukti: {{ $trx->nomor_bukti ?? '-' }}</div>
-                    </td>
-                    <td class="px-6 py-4 text-right text-sm font-bold text-green-600">
-                        {{ $trx->mataAnggaran->jenis == 'Pendapatan' ? number_format($trx->nominal, 0, ',', '.') : '-' }}
-                    </td>
-                    <td class="px-6 py-4 text-right text-sm font-bold text-red-600">
-                        {{ $trx->mataAnggaran->jenis == 'Belanja' ? number_format($trx->nominal, 0, ',', '.') : '-' }}
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <div class="flex justify-center space-x-2">
-                            @if($trx->file_bukti_path)
-                                <a href="{{ Storage::url($trx->file_bukti_path) }}" target="_blank" class="text-blue-600 hover:text-blue-900"><i class="fas fa-file-invoice"></i></a>
-                            @endif
-                            <form action="{{ route('admin.perbendaharaan.transaksi.destroy', $trx->id) }}" method="POST" onsubmit="return confirm('Batalkan transaksi ini?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-                            </form>
+                {{-- Pencarian --}}
+                <div class="md:col-span-2 relative">
+                    <x-form-input name="search" value="{{ request('search') }}" placeholder="Cari Uraian / No. Bukti..." />
+                    <button type="submit" class="absolute right-3 top-2 text-slate-400 hover:text-blue-600">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+
+                {{-- Reset --}}
+                <div>
+                    <a href="{{ route('admin.perbendaharaan.transaksi.index') }}" class="inline-flex items-center justify-center w-full py-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
+                        <i class="fas fa-undo mr-2"></i> Reset
+                    </a>
+                </div>
+            </form>
+        </x-slot>
+
+        {{-- SLOT TABLE HEAD --}}
+        <x-slot name="tableHead">
+            <th class="px-6 py-4 w-32">Tanggal</th>
+            <th class="px-6 py-4">Kode & Uraian</th>
+            <th class="px-6 py-4 text-right">Penerimaan (Rp)</th>
+            <th class="px-6 py-4 text-right">Pengeluaran (Rp)</th>
+            <th class="px-6 py-4 text-center">Bukti & Aksi</th>
+        </x-slot>
+
+        {{-- LOOP DATA --}}
+        @forelse($transaksis as $trx)
+            <tr class="hover:bg-slate-50 transition group">
+                <x-td>
+                    <div class="font-bold text-slate-700 text-sm">{{ $trx->tanggal_transaksi->format('d/m/Y') }}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">{{ $trx->tanggal_transaksi->format('H:i') }}</div>
+                </x-td>
+                <x-td>
+                    <div class="flex items-start gap-3">
+                        <span class="font-mono font-bold text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 mt-0.5">
+                            {{ $trx->mataAnggaran->kode }}
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-800 text-sm">{{ $trx->keterangan }}</div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">
+                                Akun: {{ $trx->mataAnggaran->nama_mata_anggaran }}
+                                @if($trx->nomor_bukti)
+                                    <span class="mx-1 text-slate-300">|</span> No. Bukti: <span class="font-mono text-slate-600">{{ $trx->nomor_bukti }}</span>
+                                @endif
+                            </div>
                         </div>
-                    </td>
-                </tr>
-                @empty
-                <tr><td colspan="6" class="px-6 py-10 text-center text-gray-500 italic">Belum ada transaksi bulan ini.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-    <div class="mt-4">{{ $transaksis->links() }}</div>
-</div>
+                    </div>
+                </x-td>
+                <x-td class="text-right">
+                    @if($trx->mataAnggaran->jenis == 'Pendapatan')
+                        <span class="font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                            {{ number_format($trx->nominal, 0, ',', '.') }}
+                        </span>
+                    @else
+                        <span class="text-slate-300">-</span>
+                    @endif
+                </x-td>
+                <x-td class="text-right">
+                    @if($trx->mataAnggaran->jenis == 'Belanja')
+                        <span class="font-mono font-bold text-red-600 bg-red-50 px-2 py-1 rounded">
+                            {{ number_format($trx->nominal, 0, ',', '.') }}
+                        </span>
+                    @else
+                        <span class="text-slate-300">-</span>
+                    @endif
+                </x-td>
+                <x-td class="text-center">
+                    <div class="flex justify-center gap-2">
+                        @if($trx->file_bukti_path)
+                            <a href="{{ Storage::url($trx->file_bukti_path) }}" target="_blank" class="text-blue-500 hover:text-blue-700 p-1" title="Lihat Bukti Lampiran">
+                                <i class="fas fa-file-invoice"></i>
+                            </a>
+                        @endif
+                        
+                        <form action="{{ route('admin.perbendaharaan.transaksi.destroy', $trx->id) }}" method="POST" class="inline" onsubmit="return confirm('Batalkan transaksi ini? Saldo akan disesuaikan kembali.');">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="text-slate-400 hover:text-red-600 p-1 transition" title="Batalkan Transaksi">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                </x-td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-slate-400 italic">
+                    Belum ada transaksi pada periode ini.
+                </td>
+            </tr>
+        @endforelse
+
+    </x-admin-index>
 @endsection

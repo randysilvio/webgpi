@@ -1,110 +1,100 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Detail Jemaat: ' . $jemaat->nama_jemaat)
-@section('header-title', 'Detail Data Jemaat')
+@section('title', 'Detail Jemaat')
+@section('header-title', 'Detail Data Wilayah')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6 mb-6">
-    {{-- HEADER --}}
-    <div class="flex justify-between items-start mb-4">
-        <div>
-            <h2 class="text-2xl font-semibold text-gray-800">{{ $jemaat->nama_jemaat }}</h2>
-            <p class="text-sm text-gray-500">
-                {{-- Safe Access ke Klasis --}}
-                Klasis: {{ $jemaat->klasis ? $jemaat->klasis->nama_klasis : 'Tanpa Klasis' }} 
-                | Status: {{ $jemaat->status_jemaat ?? '-' }}
-            </p>
+<div class="max-w-5xl mx-auto">
+    {{-- Header Card --}}
+    <div class="bg-white rounded-t-lg shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row items-center md:items-start gap-6">
+        <div class="h-24 w-24 rounded bg-slate-100 flex items-center justify-center border border-slate-200 overflow-hidden shrink-0">
+            @if($jemaat->foto_gereja_path)
+                <img src="{{ Storage::url($jemaat->foto_gereja_path) }}" class="h-full w-full object-cover">
+            @else
+                <i class="fas fa-church text-4xl text-slate-300"></i>
+            @endif
         </div>
-        <div>
-             @if(auth()->check() && auth()->user()->hasAnyRole(['Super Admin', 'Admin Bidang 3', 'Admin Klasis', 'Admin Jemaat']))
-                 <a href="{{ route('admin.jemaat.edit', $jemaat->id) }}" class="bg-indigo-500 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md shadow text-sm transition duration-150 ease-in-out">
-                     Edit Jemaat
-                 </a>
-             @endif
+        <div class="flex-1 text-center md:text-left">
+            <h1 class="text-2xl font-bold text-slate-800 mb-1">{{ $jemaat->nama_jemaat }}</h1>
+            <p class="text-slate-500 text-sm mb-3">
+                <i class="fas fa-map-marker-alt mr-1"></i> {{ $jemaat->klasis->nama_klasis ?? 'Tanpa Klasis' }} 
+                <span class="mx-2 text-slate-300">|</span> 
+                Status: <strong>{{ $jemaat->status_jemaat }}</strong>
+            </p>
+            
+            <div class="flex flex-wrap justify-center md:justify-start gap-3">
+                <div class="px-4 py-2 bg-slate-50 rounded border border-slate-200 text-center">
+                    <span class="block text-[10px] uppercase text-slate-400 font-bold">Total KK</span>
+                    <span class="text-xl font-bold text-slate-800">{{ number_format($jemaat->jumlah_kk ?? 0) }}</span>
+                </div>
+                <div class="px-4 py-2 bg-slate-50 rounded border border-slate-200 text-center">
+                    <span class="block text-[10px] uppercase text-slate-400 font-bold">Total Jiwa</span>
+                    <span class="text-xl font-bold text-slate-800">{{ number_format($jemaat->jumlah_total_jiwa ?? 0) }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-2 shrink-0">
+            <a href="{{ route('admin.jemaat.index') }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold uppercase rounded hover:bg-slate-50 transition">Kembali</a>
+            @can('edit jemaat')
+            <a href="{{ route('admin.jemaat.edit', $jemaat->id) }}" class="px-4 py-2 bg-yellow-500 text-white text-xs font-bold uppercase rounded hover:bg-yellow-600 transition">Edit Data</a>
+            @endcan
         </div>
     </div>
 
-    {{-- GRID INFORMASI --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 border-t pt-4">
+    {{-- Detail Grid --}}
+    <div class="bg-white rounded-b-lg shadow-sm border-x border-b border-slate-200 p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {{-- KOLOM 1: Info Dasar --}}
-        <div class="md:col-span-1 space-y-3 text-sm">
-            <p><strong class="font-medium text-gray-700 w-28 inline-block">Kode:</strong> {{ $jemaat->kode_jemaat ?: '-' }}</p>
-            <p><strong class="font-medium text-gray-700 w-28 inline-block">Jenis:</strong> {{ $jemaat->jenis_jemaat ?: '-' }}</p>
-            
-            <p>
-                <strong class="font-medium text-gray-700 w-28 inline-block">Tgl Berdiri:</strong> 
-                {{-- Safe Date Parsing --}}
-                @if(!empty($jemaat->tanggal_berdiri))
-                    {{ \Carbon\Carbon::parse($jemaat->tanggal_berdiri)->isoFormat('D MMMM YYYY') }}
-                @else
-                    -
-                @endif
-            </p>
-
-            <p><strong class="font-medium text-gray-700 w-28 inline-block">Alamat:</strong></p>
-            <p class="pl-4 whitespace-pre-line">{{ $jemaat->alamat_gereja ?: '-' }}</p>
-            
-            <p><strong class="font-medium text-gray-700 w-28 inline-block">Telepon:</strong> {{ $jemaat->telepon_kantor ?: '-' }}</p>
-            <p><strong class="font-medium text-gray-700 w-28 inline-block">Email:</strong> {{ $jemaat->email_jemaat ?: '-' }}</p>
+        {{-- Info Dasar --}}
+        <div class="space-y-4 text-sm">
+            <h3 class="text-xs font-bold text-slate-400 uppercase border-b border-slate-100 pb-2">Informasi Umum</h3>
+            <div class="grid grid-cols-3 gap-2">
+                <span class="text-slate-500 text-xs font-medium">Kode</span>
+                <span class="col-span-2 text-slate-800">{{ $jemaat->kode_jemaat ?? '-' }}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <span class="text-slate-500 text-xs font-medium">Tgl Berdiri</span>
+                <span class="col-span-2 text-slate-800">{{ $jemaat->tanggal_berdiri ? $jemaat->tanggal_berdiri->isoFormat('D MMMM Y') : '-' }}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <span class="text-slate-500 text-xs font-medium">Alamat</span>
+                <span class="col-span-2 text-slate-800 leading-snug">{{ $jemaat->alamat_gereja ?? '-' }}</span>
+            </div>
         </div>
 
-        {{-- KOLOM 2: Statistik & Kepemimpinan --}}
-        <div class="md:col-span-1 space-y-3 text-sm border-l md:pl-6">
-            <p><strong class="font-medium text-gray-700 w-32 inline-block">Ketua Majelis:</strong> {{ $jemaat->nama_ketua_majelis ?: '-' }}</p>
-             <p><strong class="font-medium text-gray-700 w-32 inline-block">Sekretaris:</strong> {{ $jemaat->nama_sekretaris_majelis ?: '-' }}</p>
-             <p><strong class="font-medium text-gray-700 w-32 inline-block">Periode:</strong> {{ $jemaat->periode_majelis ?: '-' }}</p>
-             <hr class="my-3">
-             <p><strong class="font-medium text-gray-700 w-32 inline-block">Jumlah KK:</strong> {{ number_format($jemaat->jumlah_kk ?? 0) }}</p>
-             <p><strong class="font-medium text-gray-700 w-32 inline-block">Total Jiwa:</strong> {{ number_format($jemaat->jumlah_total_jiwa ?? 0) }}</p>
-             
-             <p>
-                 <strong class="font-medium text-gray-700 w-32 inline-block">Data per:</strong> 
-                 @if(!empty($jemaat->updated_at))
-                    {{ \Carbon\Carbon::parse($jemaat->updated_at)->isoFormat('D MMMM YYYY') }}
-                 @else
-                    -
-                 @endif
-             </p>
+        {{-- Kontak --}}
+        <div class="space-y-4 text-sm">
+            <h3 class="text-xs font-bold text-slate-400 uppercase border-b border-slate-100 pb-2">Kontak</h3>
+            <div class="grid grid-cols-3 gap-2">
+                <span class="text-slate-500 text-xs font-medium">Telepon</span>
+                <span class="col-span-2 text-slate-800">{{ $jemaat->telepon_kantor ?? '-' }}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <span class="text-slate-500 text-xs font-medium">Email</span>
+                <span class="col-span-2 text-slate-800 truncate" title="{{ $jemaat->email_jemaat }}">{{ $jemaat->email_jemaat ?? '-' }}</span>
+            </div>
         </div>
 
-        {{-- KOLOM 3: Foto --}}
-        <div class="md:col-span-1 border-l md:pl-6">
-             <strong class="font-medium text-gray-700 text-sm block mb-2">Foto Gedung Gereja:</strong>
-             @if ($jemaat->foto_gereja_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($jemaat->foto_gereja_path))
-                <img src="{{ \Illuminate\Support\Facades\Storage::url($jemaat->foto_gereja_path) }}" alt="Foto {{ $jemaat->nama_jemaat }}" class="rounded-md shadow border max-w-full h-auto">
+        {{-- Pendeta --}}
+        <div class="bg-slate-50 p-4 rounded border border-slate-100 h-64 overflow-y-auto">
+            <h3 class="text-xs font-bold text-slate-500 uppercase mb-3">Pendeta Bertugas</h3>
+            @if($jemaat->pendetaDitempatkan->count() > 0)
+                <ul class="space-y-2">
+                    @foreach($jemaat->pendetaDitempatkan as $p)
+                    <li class="bg-white p-2 rounded shadow-sm border border-slate-200 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold">
+                            {{ substr($p->nama_lengkap, 0, 1) }}
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-700">{{ $p->nama_lengkap }}</p>
+                            <p class="text-[10px] text-slate-400">{{ $p->nip ?? 'Non-Organik' }}</p>
+                        </div>
+                    </li>
+                    @endforeach
+                </ul>
             @else
-                <div class="w-full h-40 bg-gray-50 border border-dashed border-gray-300 rounded flex items-center justify-center">
-                    <p class="text-sm text-gray-400 italic">Tidak ada foto.</p>
-                </div>
+                <p class="text-xs text-slate-400 italic text-center mt-10">Belum ada pendeta tercatat.</p>
             @endif
         </div>
     </div>
-    
-    {{-- BAGIAN PENDETA (Data Tambahan) --}}
-    <div class="mt-6 border-t pt-4">
-        <h4 class="font-bold text-gray-700 mb-3">Pendeta Bertugas</h4>
-        @if($jemaat->pendetaDitempatkan->count() > 0)
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                @foreach($jemaat->pendetaDitempatkan as $pendeta)
-                <div class="flex items-center space-x-3 bg-gray-50 p-3 rounded border">
-                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                        {{ substr($pendeta->nama_lengkap, 0, 1) }}
-                    </div>
-                    <div>
-                        <p class="text-sm font-bold text-gray-800">{{ $pendeta->nama_lengkap }}</p>
-                        <p class="text-xs text-gray-500">NIP: {{ $pendeta->nip ?? '-' }}</p>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-        @else
-            <p class="text-sm text-gray-400 italic">Belum ada data pendeta yang ditempatkan.</p>
-        @endif
-    </div>
-</div>
-
-<div class="mt-6">
-    <a href="{{ route('admin.jemaat.index') }}" class="text-primary hover:underline font-semibold">&larr; Kembali ke Daftar Jemaat</a>
 </div>
 @endsection

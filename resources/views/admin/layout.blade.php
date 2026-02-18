@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Admin Dashboard') - Sinode GPI Papua</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'Admin Dashboard') - {{ config('app.name', 'Sinode GPI Papua') }}</title>
     
     <link rel="icon" href="{{ asset('gpi_logo.png') }}" type="image/png">
+    
+    {{-- CDN Tailwind CSS --}}
     <script src="https://cdn.tailwindcss.com"></script>
     <script> 
         tailwind.config = { 
@@ -17,7 +20,9 @@
             } 
         } 
     </script>
+    {{-- Font Awesome --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px;}
         ::-webkit-scrollbar-track { background: #1f2937;}
@@ -35,7 +40,7 @@
         @keyframes fadeOut { 0% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; display: none; } }
     </style>
 </head>
-<body class="h-full flex antialiased text-gray-800">
+<body class="h-full flex antialiased text-gray-800 font-sans">
 
     {{-- SIDEBAR --}}
     <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-gray-300 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 -translate-x-full shadow-2xl" id="sidebar">
@@ -52,22 +57,19 @@
             </div>
         </div>
 
+        {{-- MENU NAVIGASI --}}
         <nav class="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
             
-            {{-- DASHBOARD (Semua Role Bisa Lihat) --}}
+            {{-- DASHBOARD --}}
             <a href="{{ route('admin.dashboard') }}" class="sidebar-link flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-all mb-4 @if(Request::routeIs('admin.dashboard')) active @endif">
                 <i class="fas fa-th-large w-6 h-6 mr-1 text-center"></i>
                 <span class="font-medium">Dashboard</span>
             </a>
 
-            {{-- ==========================================================
-                 BIDANG 1: TEOLOGI & PELAYANAN
-                 Hanya: Super Admin & Admin Bidang 1
-            ========================================================== --}}
+            {{-- 1. BIDANG 1: TEOLOGI & PELAYANAN --}}
             @hasanyrole('Super Admin|Admin Bidang 1')
             <div class="px-3 mt-6 mb-2 text-[10px] font-bold uppercase text-gray-500 tracking-wider">Bidang 1: Pelayanan</div>
 
-            {{-- Sakramen --}}
             <div class="menu-group" id="group-sakramen">
                 <button onclick="toggleMenu('sakramen')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm group">
                     <div class="flex items-center">
@@ -83,7 +85,6 @@
                 </div>
             </div>
 
-            {{-- Tata Gereja --}}
             <div class="menu-group" id="group-tata">
                 <button onclick="toggleMenu('tata')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm group">
                     <div class="flex items-center">
@@ -97,28 +98,9 @@
                     <a href="{{ route('admin.tata-gereja.sidang.index') }}" class="sub-link block py-2 @if(Request::routeIs('admin.tata-gereja.sidang.*')) active @endif">Risalah Sidang</a>
                 </div>
             </div>
-            
-            {{-- Wadah Kategorial (Bidang 1 - Pembinaan) --}}
-            <div class="menu-group" id="group-wadah-b1">
-                <button onclick="toggleMenu('wadah-b1')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm group">
-                    <div class="flex items-center">
-                        <i class="fas fa-users w-6 text-center mr-1 text-purple-400"></i>
-                        <span class="font-medium">Wadah Kategorial</span>
-                    </div>
-                    <i class="fas fa-chevron-down text-xs rotate-icon"></i>
-                </button>
-                <div class="submenu pl-9 space-y-1 text-sm" id="submenu-wadah-b1">
-                    <a href="{{ route('admin.wadah.statistik.index') }}" class="sub-link block py-2">Statistik Anggota</a>
-                    <a href="{{ route('admin.wadah.program.index') }}" class="sub-link block py-2">Program Kerja</a>
-                </div>
-            </div>
             @endhasanyrole
 
-
-            {{-- ==========================================================
-                 BIDANG 2: PEMBANGUNAN & EKONOMI
-                 Hanya: Super Admin & Admin Bidang 2
-            ========================================================== --}}
+            {{-- 2. BIDANG 2: PEMBANGUNAN & EKONOMI --}}
             @hasanyrole('Super Admin|Admin Bidang 2')
             <div class="px-3 mt-6 mb-2 text-[10px] font-bold uppercase text-gray-500 tracking-wider">Bidang 2: Pembangunan</div>
 
@@ -135,8 +117,6 @@
                     <a href="{{ route('admin.perbendaharaan.anggaran.index') }}" class="sub-link block py-2 @if(Request::routeIs('admin.perbendaharaan.anggaran.*')) active @endif">Rencana APB</a>
                     <a href="{{ route('admin.perbendaharaan.mata-anggaran.index') }}" class="sub-link block py-2 @if(Request::routeIs('admin.perbendaharaan.mata-anggaran.*')) active @endif">Mata Anggaran</a>
                     <a href="{{ route('admin.perbendaharaan.aset.index') }}" class="sub-link block py-2 @if(Request::routeIs('admin.perbendaharaan.aset.*')) active @endif">Inventaris Aset</a>
-                    
-                    {{-- Laporan --}}
                     <div class="pt-2 mt-2 border-t border-gray-700">
                         <span class="text-[10px] uppercase text-gray-500 font-bold">Laporan</span>
                     </div>
@@ -147,11 +127,7 @@
             </div>
             @endhasanyrole
 
-
-            {{-- ==========================================================
-                 BIDANG 3: KEPEGAWAIAN & ORGANISASI
-                 Hanya: Super Admin & Admin Bidang 3
-            ========================================================== --}}
+            {{-- 3. BIDANG 3: KEPEGAWAIAN --}}
             @hasanyrole('Super Admin|Admin Bidang 3')
             <div class="px-3 mt-6 mb-2 text-[10px] font-bold uppercase text-gray-500 tracking-wider">Bidang 3: Kepegawaian</div>
 
@@ -170,7 +146,6 @@
                 </div>
             </div>
 
-            {{-- Referensi Wilayah (Hanya untuk melihat di mana pegawai ditempatkan) --}}
             <div class="menu-group" id="group-master-b3">
                 <button onclick="toggleMenu('master-b3')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm group">
                     <div class="flex items-center">
@@ -186,11 +161,7 @@
             </div>
             @endhasanyrole
 
-
-            {{-- ==========================================================
-                 BIDANG 4: INFORKOM
-                 Hanya: Super Admin & Admin Bidang 4
-            ========================================================== --}}
+            {{-- 4. BIDANG 4: INFORKOM --}}
             @hasanyrole('Super Admin|Admin Bidang 4')
             <div class="px-3 mt-6 mb-2 text-[10px] font-bold uppercase text-gray-500 tracking-wider">Bidang 4: Inforkom</div>
 
@@ -203,6 +174,9 @@
                     <i class="fas fa-chevron-down text-xs rotate-icon"></i>
                 </button>
                 <div class="submenu pl-9 space-y-1 text-sm" id="submenu-web">
+                    <a href="{{ route('admin.popup.index') }}" class="sub-link block py-2 text-yellow-500 font-bold hover:text-yellow-400">
+                        <i class="fas fa-bullhorn mr-1 text-xs"></i> Info Popup / Iklan
+                    </a>
                     <a href="{{ route('admin.posts.index') }}" class="sub-link block py-2">Berita & Kegiatan</a>
                     <a href="{{ route('admin.services.index') }}" class="sub-link block py-2">Jadwal Layanan</a>
                     <a href="{{ route('admin.messages') }}" class="sub-link block py-2">Pesan Masuk</a>
@@ -229,14 +203,12 @@
             </a>
             @endhasanyrole
 
-
-            {{-- ==========================================================
-                 ADMIN KLASIS & JEMAAT (MANAJEMEN WILAYAH)
-                 Hanya: Super Admin, Admin Klasis, Admin Jemaat
-            ========================================================== --}}
+            {{-- 5. ADMIN WILAYAH (KLASIS/JEMAAT) --}}
             @hasanyrole('Super Admin|Admin Klasis|Admin Jemaat')
-            
-            <div class="px-3 mt-6 mb-2 text-[10px] font-bold uppercase text-gray-500 tracking-wider">Manajemen Wilayah</div>
+            {{-- Kecuali jika dia juga pengurus bidang, judul ini disembunyikan agar tidak dobel --}}
+            @unlessrole('Admin Bidang 1|Admin Bidang 2|Admin Bidang 3|Admin Bidang 4')
+                <div class="px-3 mt-6 mb-2 text-[10px] font-bold uppercase text-gray-500 tracking-wider">Manajemen Wilayah</div>
+            @endunlessrole
 
             <div class="menu-group" id="group-master-wilayah">
                 <button onclick="toggleMenu('master-wilayah')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm group">
@@ -263,7 +235,6 @@
                 </div>
             </div>
             
-            {{-- Wadah Kategorial Lokal --}}
             <div class="menu-group" id="group-wadah-wilayah">
                 <button onclick="toggleMenu('wadah-wilayah')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm group">
                     <div class="flex items-center">
@@ -279,7 +250,7 @@
             </div>
             @endhasanyrole
 
-            {{-- MENU USER MANAGEMENT (SUPER ADMIN ONLY) --}}
+            {{-- SUPER ADMIN --}}
             @role('Super Admin')
             <div class="px-3 mt-6 mb-2 text-[10px] font-bold uppercase text-gray-500 tracking-wider">Super Admin</div>
             <a href="{{ route('admin.users.index') }}" class="sidebar-link flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors group">
@@ -288,6 +259,7 @@
             </a>
             @endrole
 
+            {{-- LOGOUT --}}
             <div class="mt-8 pt-4 border-t border-gray-800 pb-6">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -300,7 +272,9 @@
         </nav>
     </aside>
 
+    {{-- MAIN CONTENT WRAPPER --}}
     <div class="flex-1 flex flex-col md:pl-64 h-full">
+        {{-- Header Bar --}}
         <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 flex-shrink-0 z-20">
             <div class="flex items-center">
                 <button class="md:hidden text-gray-500 hover:text-primary mr-4" id="hamburger-btn">
@@ -326,6 +300,7 @@
             </div>
         </header>
 
+        {{-- Main Content --}}
         <main class="flex-1 p-6 overflow-y-auto bg-gray-50">
              @if (session('success'))
                  <div class="flash-message mb-6 bg-green-50 border-l-4 border-green-500 text-green-700 p-4 rounded-md shadow-sm flex items-center"> 
@@ -341,10 +316,19 @@
              @endif
             @yield('content')
         </main>
+
+        {{-- Footer --}}
+        <footer class="bg-white border-t border-gray-200 py-3 px-6 text-center md:text-right text-xs text-gray-400">
+             &copy; {{ date('Y') }} Sistem Informasi Manajemen Gereja - Sinode GPI Papua.
+        </footer>
     </div>
 
+    {{-- Mobile Sidebar Overlay --}}
     <div class="fixed inset-0 bg-black/50 z-40 hidden md:hidden transition-opacity" id="sidebar-overlay"></div>
+
+    {{-- SCRIPTS --}}
     <script>
+        // Toggle Sidebar Dropdown
         function toggleMenu(id) {
             const submenu = document.getElementById(`submenu-${id}`);
             const group = document.getElementById(`group-${id}`);
@@ -356,6 +340,8 @@
                 group.classList.add('active');
             }
         }
+        
+        // Auto Open Active Menu
         document.addEventListener("DOMContentLoaded", function() {
             const submenus = document.querySelectorAll('.submenu');
             submenus.forEach(menu => {
@@ -365,6 +351,8 @@
                 }
             });
         });
+        
+        // Mobile Sidebar Toggle
         const sidebar = document.getElementById('sidebar');
         const hamburgerBtn = document.getElementById('hamburger-btn');
         const overlay = document.getElementById('sidebar-overlay');
@@ -374,7 +362,9 @@
         }
         if (hamburgerBtn) hamburgerBtn.addEventListener('click', toggleSidebar);
         if (overlay) overlay.addEventListener('click', toggleSidebar);
-         setTimeout(function(){ window.location.href = "{{ route('login') }}"; }, 900000);
+        
+        // Auto Logout
+        setTimeout(function(){ window.location.href = "{{ route('login') }}"; }, 900000);
     </script>
     @stack('scripts')
 </body>
