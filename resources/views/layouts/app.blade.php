@@ -170,6 +170,7 @@
                     <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                 </button>
                 <div class="submenu pl-10 space-y-1 mt-1" id="submenu-web">
+                    <a href="{{ route('admin.popup.index') }}" class="sub-link block py-1.5 text-yellow-500 font-medium @if(Request::routeIs('admin.popup.*')) active-page @endif">Kelola Popup Info</a>
                     <a href="{{ route('admin.posts.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.posts.*')) active-page @endif">Berita & Post</a>
                     <a href="{{ route('admin.messages') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.messages*')) active-page @endif">Pesan Masuk</a>
                 </div>
@@ -327,25 +328,18 @@
         
         document.addEventListener("DOMContentLoaded", function() {
             // Restore State from LocalStorage
-            const menus = ['sakramen', 'tata', 'keuangan', 'hris', 'web', 'eoffice', 'master-wilayah', 'wadah-wilayah'];
-            menus.forEach(id => {
+            const menuIds = ['sakramen', 'tata', 'keuangan', 'hris', 'web', 'eoffice', 'master-wilayah', 'wadah-wilayah'];
+            menuIds.forEach(id => {
                 const state = localStorage.getItem(`menu-${id}`);
                 const submenu = document.getElementById(`submenu-${id}`);
                 const btn = document.getElementById(`btn-${id}`);
 
-                if (state === 'open' && submenu) {
+                // Cek apakah submenu mengandung link yang sedang aktif
+                const hasActivePage = submenu ? submenu.querySelector('.active-page') : null;
+
+                if ((state === 'open' || hasActivePage) && submenu) {
                     submenu.classList.add('open');
                     if(btn) btn.classList.add('active');
-                }
-            });
-
-            // Auto-open submenu if internal link is active
-            const submenus = document.querySelectorAll('.submenu');
-            submenus.forEach(menu => {
-                if (menu.querySelector('.active-page')) {
-                    menu.classList.add('open');
-                    const parentBtn = menu.previousElementSibling;
-                    if(parentBtn) parentBtn.classList.add('active');
                 }
             });
         });
