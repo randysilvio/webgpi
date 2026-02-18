@@ -6,7 +6,12 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin Dashboard') - {{ config('app.name', 'Sinode GPI Papua') }}</title>
     
-    <link rel="icon" href="{{ asset('gpi_logo.png') }}" type="image/png">
+    {{-- Ambil Favicon dari Setting jika ada --}}
+    @php
+        $appSetting = \App\Models\Setting::first();
+        $faviconUrl = ($appSetting && $appSetting->logo_path) ? \Illuminate\Support\Facades\Storage::url($appSetting->logo_path) : asset('gpi_logo.png');
+    @endphp
+    <link rel="icon" href="{{ $faviconUrl }}" type="image/png">
     
     {{-- CDN Tailwind CSS & Font Configuration --}}
     <script src="https://cdn.tailwindcss.com"></script>
@@ -50,25 +55,31 @@
         .sub-link:hover { color: #e0f2fe; transform: translateX(4px); transition: transform 0.2s; }
         .sub-link.active-page { color: #38bdf8; font-weight: 600; }
     </style>
+    @stack('styles')
 </head>
 <body class="h-full flex antialiased text-slate-800 bg-slate-50 font-sans">
 
     {{-- SIDEBAR --}}
     <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-400 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 -translate-x-full shadow-2xl" id="sidebar">
         
-        {{-- LOGO AREA --}}
+        {{-- LOGO AREA (DINAMIS DARI DATABASE) --}}
         <div class="h-16 flex items-center px-5 border-b border-slate-800 bg-slate-950">
              <div class="flex items-center gap-3">
-                 {{-- Tampilkan Logo dari Setting jika tersedia --}}
-                 @if(isset($setting) && $setting->logo_path && Storage::disk('public')->exists($setting->logo_path))
-                    <img src="{{ Storage::url($setting->logo_path) }}" alt="Logo" class="w-9 h-9 object-contain shadow-sm">
+                 @if($appSetting && $appSetting->logo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($appSetting->logo_path))
+                    {{-- Logo Uploaded --}}
+                    <img src="{{ \Illuminate\Support\Facades\Storage::url($appSetting->logo_path) }}" alt="Logo App" class="w-9 h-9 object-contain drop-shadow-sm">
                  @else
-                    <div class="w-9 h-9 bg-brand-600 rounded flex items-center justify-center text-white font-black text-sm shadow-md">GPI</div>
+                    {{-- Fallback Logo --}}
+                    <div class="w-9 h-9 bg-brand-600 rounded flex items-center justify-center text-white font-black text-xs shadow-md">GPI</div>
                  @endif
                  
-                 <div class="flex flex-col">
-                    <span class="text-white text-sm font-bold tracking-tight uppercase leading-none">SIM-G</span>
-                    <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">GPI PAPUA</span>
+                 <div class="flex flex-col overflow-hidden">
+                    <span class="text-white text-sm font-bold tracking-tight uppercase leading-none truncate block w-40" title="{{ $appSetting->site_name ?? 'SISTEM GEREJA' }}">
+                        {{ $appSetting->site_name ?? 'SIM-GPI' }}
+                    </span>
+                    <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1 truncate">
+                        {{ $appSetting->site_tagline ?? 'SINODE GPI PAPUA' }}
+                    </span>
                  </div>
             </div>
         </div>
@@ -131,8 +142,6 @@
                     <a href="{{ route('admin.perbendaharaan.transaksi.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.transaksi.*')) active-page @endif">Buku Kas Umum</a>
                     <a href="{{ route('admin.perbendaharaan.anggaran.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.anggaran.*')) active-page @endif">Rencana RAPB</a>
                     <a href="{{ route('admin.perbendaharaan.aset.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.aset.*')) active-page @endif">Inventaris Aset</a>
-                    <div class="py-1 text-[10px] text-slate-600 uppercase mt-2">Laporan</div>
-                    <a href="{{ route('admin.perbendaharaan.laporan.gabungan') }}" class="sub-link block py-1.5 text-yellow-500 font-medium @if(Request::routeIs('admin.perbendaharaan.laporan.*')) active-page @endif">Konsolidasi Kas</a>
                 </div>
             </div>
             @endhasanyrole
@@ -230,8 +239,51 @@
                     <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                 </button>
                 <div class="submenu pl-10 space-y-1 mt-1" id="submenu-wadah-wilayah">
-                    <a href="{{ route('admin.wadah.statistik.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.statistik.*')) active-page @endif">Statistik</a>
                     <a href="{{ route('admin.wadah.pengurus.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.pengurus.*')) active-page @endif">Pengurus</a>
+                </div>
+            </div>
+            @endhasanyrole
+
+            {{-- PELAPORAN & ANALISIS (PUSAT LAPORAN TERPADU) --}}
+            @hasanyrole('Super Admin|Admin Klasis|Admin Jemaat|Admin Bidang 2')
+            <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Pelaporan & Analisis</div>
+            
+            <div class="menu-group">
+                <button onclick="toggleMenu('pusat-laporan')" id="btn-pusat-laporan" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
+                    <div class="flex items-center">
+                        {{-- ICON SERAGAM / CLEAN (Sama seperti menu lain) --}}
+                        <i class="fas fa-file-alt w-5 text-center mr-3"></i>
+                        <span>Pusat Laporan</span>
+                    </div>
+                    <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
+                </button>
+                
+                <div class="submenu pl-10 space-y-1 mt-1" id="submenu-pusat-laporan">
+                    
+                    {{-- GROUP 1: STRATEGIS & JEMAAT --}}
+                    <div class="py-1 text-[9px] text-slate-500 uppercase mt-1 font-extrabold tracking-wider">Perencanaan Strategis</div>
+                    
+                    <a href="{{ route('admin.laporan.renstra.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.laporan.renstra.*')) active-page @endif">
+                        Analisis Renstra
+                    </a>
+                    
+                    <a href="{{ route('admin.wadah.statistik.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.statistik.*')) active-page @endif">
+                        Statistik Wadah
+                    </a>
+
+                    {{-- GROUP 2: KEUANGAN (Hanya User Berwenang) --}}
+                    @hasanyrole('Super Admin|Admin Bidang 2')
+                        <div class="py-1 text-[9px] text-slate-500 uppercase mt-2 font-bold tracking-wider">Keuangan & Aset</div>
+                        <a href="{{ route('admin.perbendaharaan.laporan.gabungan') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.laporan.gabungan')) active-page @endif">
+                            Konsolidasi Kas
+                        </a>
+                        <a href="{{ route('admin.perbendaharaan.laporan.realisasi') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.laporan.realisasi')) active-page @endif">
+                            Realisasi Anggaran
+                        </a>
+                        <a href="{{ route('admin.perbendaharaan.laporan.aset') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.laporan.aset')) active-page @endif">
+                            Laporan Aset
+                        </a>
+                    @endhasanyrole
                 </div>
             </div>
             @endhasanyrole
@@ -328,7 +380,8 @@
         
         document.addEventListener("DOMContentLoaded", function() {
             // Restore State from LocalStorage
-            const menuIds = ['sakramen', 'tata', 'keuangan', 'hris', 'web', 'eoffice', 'master-wilayah', 'wadah-wilayah'];
+            // ID 'pusat-laporan' ditambahkan ke sini agar status dropdown tersimpan
+            const menuIds = ['sakramen', 'tata', 'keuangan', 'hris', 'web', 'eoffice', 'master-wilayah', 'wadah-wilayah', 'pusat-laporan'];
             menuIds.forEach(id => {
                 const state = localStorage.getItem(`menu-${id}`);
                 const submenu = document.getElementById(`submenu-${id}`);

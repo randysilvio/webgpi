@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MutasiPendetaController;
 use App\Http\Controllers\Admin\PopupAdController; 
+use App\Http\Controllers\Admin\LaporanRenstraController;
 
 // Wadah Kategorial Controllers
 use App\Http\Controllers\Admin\WadahKategorialPengurusController;
@@ -174,7 +175,6 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('jemaat-import', [JemaatController::class, 'import'])->name('jemaat.import');
 
     // --- ANGGOTA JEMAAT ---
-    // Pastikan route search diletakkan sebelum resource agar tidak tertimpa 'show'
     Route::get('/anggota-jemaat/search', [AnggotaJemaatController::class, 'search'])->name('anggota-jemaat.search');
     Route::get('anggota-jemaat/{id}/cetak-kk', [AnggotaJemaatController::class, 'cetakKartuKeluarga'])->name('anggota-jemaat.cetak-kk');
     Route::resource('anggota-jemaat', AnggotaJemaatController::class);
@@ -245,6 +245,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // 10. Manajemen User
     Route::resource('users', UserController::class)->middleware('role:Super Admin');
+
+    // 11. Laporan Renstra (BARU)
+    Route::prefix('laporan')->name('laporan.')->group(function () {
+        Route::get('renstra', [LaporanRenstraController::class, 'index'])->name('renstra.index');
+        Route::get('renstra/cetak', [LaporanRenstraController::class, 'cetakPdf'])->name('renstra.print');
+    });
 
 });
 
