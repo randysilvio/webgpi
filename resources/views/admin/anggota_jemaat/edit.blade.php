@@ -33,6 +33,13 @@
                     @endforeach
                 </x-form-select>
 
+                {{-- UPDATE RENSTRA: Disabilitas --}}
+                <x-form-select label="Disabilitas" name="disabilitas">
+                    @foreach(['Tidak Ada','Tuna Netra','Tuna Daksa','Tuna Rungu/Wicara','Lainnya'] as $d)
+                        <option value="{{ $d }}" {{ $anggotaJemaat->disabilitas == $d ? 'selected' : '' }}>{{ $d }}</option>
+                    @endforeach
+                </x-form-select>
+
                 <x-form-select label="Status Pernikahan" name="status_pernikahan">
                     @foreach(['Belum Menikah','Menikah','Cerai Hidup','Cerai Mati'] as $s)
                         <option value="{{ $s }}" {{ $anggotaJemaat->status_pernikahan == $s ? 'selected' : '' }}>{{ $s }}</option>
@@ -101,6 +108,63 @@
                             <option value="{{ $s }}" {{ $anggotaJemaat->status_dalam_keluarga == $s ? 'selected' : '' }}>{{ $s }}</option>
                         @endforeach
                     </x-form-select>
+                </div>
+            </div>
+        </div>
+
+        {{-- SECTION 4: ANALISIS RENSTRA (UPDATE MINOR) --}}
+        <div class="bg-slate-50 p-5 rounded border border-slate-200 mb-8">
+            <h3 class="text-xs font-bold text-slate-700 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wide">IV. Analisis Kesejahteraan & Digital (Renstra)</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-4">
+                <x-form-select label="Kondisi Rumah" name="kondisi_rumah">
+                    @foreach(['Permanen','Semi-Permanen','Darurat/Kayu'] as $kr)
+                        <option value="{{ $kr }}" {{ $anggotaJemaat->kondisi_rumah == $kr ? 'selected' : '' }}>{{ $kr }}</option>
+                    @endforeach
+                </x-form-select>
+                
+                <x-form-select label="Status Rumah" name="status_kepemilikan_rumah">
+                    @foreach(['Milik Sendiri','Sewa','Menumpang','Dinas'] as $sr)
+                        <option value="{{ $sr }}" {{ $anggotaJemaat->status_kepemilikan_rumah == $sr ? 'selected' : '' }}>{{ $sr }}</option>
+                    @endforeach
+                </x-form-select>
+
+                <x-form-select label="Rentang Pengeluaran" name="rentang_pengeluaran">
+                    @foreach(['< 1jt','1jt - 3jt','> 3jt'] as $rp)
+                        <option value="{{ $rp }}" {{ $anggotaJemaat->rentang_pengeluaran == $rp ? 'selected' : '' }}>{{ $rp }}</option>
+                    @endforeach
+                </x-form-select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-4">
+                <x-form-input label="Pekerjaan Utama" name="pekerjaan_utama" value="{{ $anggotaJemaat->pekerjaan_utama }}" />
+                
+                <x-form-select label="Smartphone" name="punya_smartphone">
+                    <option value="0" {{ $anggotaJemaat->punya_smartphone == 0 ? 'selected' : '' }}>Tidak Memiliki</option>
+                    <option value="1" {{ $anggotaJemaat->punya_smartphone == 1 ? 'selected' : '' }}>Ya, Memiliki</option>
+                </x-form-select>
+
+                <x-form-select label="Akses Internet" name="akses_internet">
+                    <option value="0" {{ $anggotaJemaat->akses_internet == 0 ? 'selected' : '' }}>Tidak Ada</option>
+                    <option value="1" {{ $anggotaJemaat->akses_internet == 1 ? 'selected' : '' }}>Ya, Ada (Wifi/Data)</option>
+                </x-form-select>
+            </div>
+
+            {{-- Aset Ekonomi (Checkbox Logic) --}}
+            <div class="mt-4 p-3 bg-white rounded border border-slate-200">
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-3">Potensi Ekonomi & Aset</label>
+                <div class="flex flex-wrap gap-4">
+                    @php 
+                        $asetArray = $anggotaJemaat->aset_ekonomi ? explode(', ', $anggotaJemaat->aset_ekonomi) : [];
+                    @endphp
+                    @foreach(['Perkebunan', 'Peternakan', 'Perikanan', 'Kehutanan', 'Usaha Mikro', 'Transportasi'] as $aset)
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="aset_ekonomi[]" value="{{ $aset }}" 
+                               class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                               {{ in_array($aset, $asetArray) ? 'checked' : '' }}>
+                        <span class="ml-2 text-sm text-slate-600">{{ $aset }}</span>
+                    </label>
+                    @endforeach
                 </div>
             </div>
         </div>

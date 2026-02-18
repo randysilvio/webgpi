@@ -12,7 +12,6 @@
         {{-- Foto Profil --}}
         <div class="flex-shrink-0">
             <div class="h-32 w-32 rounded-full border-4 border-slate-100 overflow-hidden shadow-inner bg-slate-200 flex items-center justify-center">
-                {{-- Logika Foto (Jika ada fitur upload foto) --}}
                 @if(isset($anggotaJemaat->foto_profil) && $anggotaJemaat->foto_profil)
                     <img src="{{ Storage::url($anggotaJemaat->foto_profil) }}" class="h-full w-full object-cover">
                 @else
@@ -25,7 +24,6 @@
         <div class="flex-grow text-center md:text-left">
             <div class="flex flex-col md:flex-row md:items-center gap-2 mb-1">
                 <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tight">{{ $anggotaJemaat->nama_lengkap }}</h1>
-                {{-- Badge Status --}}
                 @php
                     $statusClass = match($anggotaJemaat->status_keanggotaan) {
                         'Aktif' => 'bg-green-100 text-green-700 border-green-200',
@@ -76,6 +74,11 @@
                 class="whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm uppercase tracking-wide transition">
                 Data Gerejawi
             </button>
+            <button @click="activeTab = 'renstra'" 
+                :class="activeTab === 'renstra' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'"
+                class="whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm uppercase tracking-wide transition">
+                Analisis Renstra
+            </button>
             <button @click="activeTab = 'keluarga'" 
                 :class="activeTab === 'keluarga' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'"
                 class="whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm uppercase tracking-wide transition">
@@ -93,13 +96,9 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
                 <dl class="space-y-4">
                     <div class="grid grid-cols-3 gap-4">
-                        <dt class="text-sm font-medium text-slate-500">Tempat Lahir</dt>
-                        <dd class="text-sm font-bold text-slate-800 col-span-2">{{ $anggotaJemaat->tempat_lahir ?? '-' }}</dd>
-                    </div>
-                    <div class="grid grid-cols-3 gap-4">
-                        <dt class="text-sm font-medium text-slate-500">Tanggal Lahir</dt>
+                        <dt class="text-sm font-medium text-slate-500">Tempat, Tgl Lahir</dt>
                         <dd class="text-sm font-bold text-slate-800 col-span-2">
-                            {{ $anggotaJemaat->tanggal_lahir ? \Carbon\Carbon::parse($anggotaJemaat->tanggal_lahir)->isoFormat('D MMMM Y') : '-' }}
+                            {{ $anggotaJemaat->tempat_lahir }}, {{ $anggotaJemaat->tanggal_lahir ? \Carbon\Carbon::parse($anggotaJemaat->tanggal_lahir)->isoFormat('D MMMM Y') : '-' }}
                             <span class="text-slate-400 font-normal ml-1">({{ $anggotaJemaat->tanggal_lahir ? \Carbon\Carbon::parse($anggotaJemaat->tanggal_lahir)->age . ' Tahun' : '' }})</span>
                         </dd>
                     </div>
@@ -108,8 +107,8 @@
                         <dd class="text-sm font-bold text-slate-800 col-span-2">{{ $anggotaJemaat->golongan_darah ?? '-' }}</dd>
                     </div>
                     <div class="grid grid-cols-3 gap-4">
-                        <dt class="text-sm font-medium text-slate-500">Status Nikah</dt>
-                        <dd class="text-sm font-bold text-slate-800 col-span-2">{{ $anggotaJemaat->status_pernikahan ?? '-' }}</dd>
+                        <dt class="text-sm font-medium text-slate-500">Disabilitas</dt>
+                        <dd class="text-sm font-bold text-slate-800 col-span-2">{{ $anggotaJemaat->disabilitas ?? 'Tidak Ada' }}</dd>
                     </div>
                 </dl>
 
@@ -119,16 +118,8 @@
                         <dd class="text-sm font-bold text-slate-800 col-span-2">{{ $anggotaJemaat->telepon ?? '-' }}</dd>
                     </div>
                     <div class="grid grid-cols-3 gap-4">
-                        <dt class="text-sm font-medium text-slate-500">Email</dt>
-                        <dd class="text-sm font-bold text-slate-800 col-span-2">{{ $anggotaJemaat->email ?? '-' }}</dd>
-                    </div>
-                    <div class="grid grid-cols-3 gap-4">
-                        <dt class="text-sm font-medium text-slate-500">Pekerjaan</dt>
-                        <dd class="text-sm font-bold text-slate-800 col-span-2">{{ $anggotaJemaat->pekerjaan_utama ?? '-' }}</dd>
-                    </div>
-                    <div class="grid grid-cols-3 gap-4">
-                        <dt class="text-sm font-medium text-slate-500">Alamat Domisili</dt>
-                        <dd class="text-sm font-bold text-slate-800 col-span-2 leading-relaxed bg-slate-50 p-3 rounded border border-slate-100">
+                        <dt class="text-sm font-medium text-slate-500">Alamat</dt>
+                        <dd class="text-sm font-bold text-slate-800 col-span-2 bg-slate-50 p-2 rounded">
                             {{ $anggotaJemaat->alamat_lengkap ?? '-' }}
                         </dd>
                     </div>
@@ -143,70 +134,89 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {{-- BAPTIS --}}
                 <div class="bg-blue-50 rounded-lg p-5 border border-blue-100">
-                    <div class="flex items-center mb-3">
-                        <div class="w-8 h-8 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center mr-3"><i class="fas fa-water"></i></div>
-                        <h5 class="text-sm font-bold text-blue-900 uppercase">Baptisan Kudus</h5>
-                    </div>
-                    @if($anggotaJemaat->tanggal_baptis || $anggotaJemaat->dataBaptis)
+                    <h5 class="text-sm font-bold text-blue-900 uppercase mb-2"><i class="fas fa-water mr-2"></i> Baptisan</h5>
+                    @if($anggotaJemaat->tanggal_baptis)
                         <p class="text-xs text-blue-800 font-bold">SUDAH DIBAPTIS</p>
-                        <p class="text-xs text-blue-600 mt-1">Tanggal: {{ $anggotaJemaat->tanggal_baptis ? \Carbon\Carbon::parse($anggotaJemaat->tanggal_baptis)->isoFormat('D MMM Y') : '-' }}</p>
-                        <p class="text-xs text-blue-600">Tempat: {{ $anggotaJemaat->tempat_baptis ?? '-' }}</p>
+                        <p class="text-xs text-blue-600">{{ \Carbon\Carbon::parse($anggotaJemaat->tanggal_baptis)->isoFormat('D MMM Y') }}</p>
                     @else
-                        <p class="text-xs text-slate-400 italic">Belum tercatat dibaptis.</p>
+                        <p class="text-xs text-slate-400 italic">Belum tercatat.</p>
                     @endif
                 </div>
 
                 {{-- SIDI --}}
                 <div class="bg-purple-50 rounded-lg p-5 border border-purple-100">
-                    <div class="flex items-center mb-3">
-                        <div class="w-8 h-8 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center mr-3"><i class="fas fa-praying-hands"></i></div>
-                        <h5 class="text-sm font-bold text-purple-900 uppercase">Sidi Gereja</h5>
-                    </div>
-                    @if($anggotaJemaat->tanggal_sidi || $anggotaJemaat->dataSidi)
+                    <h5 class="text-sm font-bold text-purple-900 uppercase mb-2"><i class="fas fa-praying-hands mr-2"></i> Sidi</h5>
+                    @if($anggotaJemaat->tanggal_sidi)
                         <p class="text-xs text-purple-800 font-bold">SUDAH SIDI</p>
-                        <p class="text-xs text-purple-600 mt-1">Tanggal: {{ $anggotaJemaat->tanggal_sidi ? \Carbon\Carbon::parse($anggotaJemaat->tanggal_sidi)->isoFormat('D MMM Y') : '-' }}</p>
-                        <p class="text-xs text-purple-600">Tempat: {{ $anggotaJemaat->tempat_sidi ?? '-' }}</p>
+                        <p class="text-xs text-purple-600">{{ \Carbon\Carbon::parse($anggotaJemaat->tanggal_sidi)->isoFormat('D MMM Y') }}</p>
                     @else
-                        <p class="text-xs text-slate-400 italic">Belum sidi / Masih anggota baptis.</p>
+                        <p class="text-xs text-slate-400 italic">Belum sidi.</p>
                     @endif
                 </div>
 
                 {{-- NIKAH --}}
                 <div class="bg-green-50 rounded-lg p-5 border border-green-100">
-                    <div class="flex items-center mb-3">
-                        <div class="w-8 h-8 rounded-full bg-green-200 text-green-700 flex items-center justify-center mr-3"><i class="fas fa-ring"></i></div>
-                        <h5 class="text-sm font-bold text-green-900 uppercase">Pernikahan</h5>
-                    </div>
-                    @if($anggotaJemaat->status_pernikahan == 'Kawin')
-                        <p class="text-xs text-green-800 font-bold">SUDAH MENIKAH</p>
-                        <p class="text-xs text-green-600 mt-1">Status: {{ $anggotaJemaat->status_pernikahan }}</p>
-                        @if($anggotaJemaat->dataPernikahan)
-                            <p class="text-xs text-green-600">Akta: {{ $anggotaJemaat->dataPernikahan->no_akta_nikah }}</p>
-                        @endif
-                    @else
-                        <p class="text-xs text-slate-400 italic">{{ $anggotaJemaat->status_pernikahan ?? 'Belum Menikah' }}</p>
-                    @endif
-                </div>
-            </div>
-
-            <div class="mt-8 pt-6 border-t border-slate-100">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <span class="block text-xs font-bold text-slate-400 uppercase">Unit Pelayanan</span>
-                        <span class="font-bold text-slate-700">{{ $anggotaJemaat->unit_pelayanan ?? '-' }}</span>
-                    </div>
-                    <div>
-                        <span class="block text-xs font-bold text-slate-400 uppercase">Asal Gereja (Mutasi Masuk)</span>
-                        <span class="font-bold text-slate-700">{{ $anggotaJemaat->asal_gereja_sebelumnya ?? '-' }}</span>
-                    </div>
+                    <h5 class="text-sm font-bold text-green-900 uppercase mb-2"><i class="fas fa-ring mr-2"></i> Nikah</h5>
+                    <p class="text-xs text-green-800 font-bold">{{ $anggotaJemaat->status_pernikahan ?? '-' }}</p>
                 </div>
             </div>
         </div>
 
-        {{-- TAB 3: KELUARGA & SILSILAH --}}
+        {{-- TAB 3: ANALISIS RENSTRA (NEW) --}}
+        <div x-show="activeTab === 'renstra'" style="display: none;" x-transition.opacity>
+            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Indikator Kesejahteraan & Digital</h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h5 class="text-sm font-bold text-slate-700 border-b border-slate-100 pb-2 mb-3">Ekonomi & Hunian</h5>
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-xs text-slate-500">Pekerjaan Utama</dt>
+                            <dd class="text-xs font-bold text-slate-800">{{ $anggotaJemaat->pekerjaan_utama ?? '-' }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-xs text-slate-500">Status Rumah</dt>
+                            <dd class="text-xs font-bold text-slate-800">{{ $anggotaJemaat->status_kepemilikan_rumah ?? '-' }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-xs text-slate-500">Kondisi Bangunan</dt>
+                            <dd class="text-xs font-bold text-slate-800">{{ $anggotaJemaat->kondisi_rumah ?? '-' }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-xs text-slate-500">Rentang Pengeluaran</dt>
+                            <dd class="text-xs font-bold text-slate-800">{{ $anggotaJemaat->rentang_pengeluaran ?? '-' }}</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div>
+                    <h5 class="text-sm font-bold text-slate-700 border-b border-slate-100 pb-2 mb-3">Aset & Digitalisasi</h5>
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-xs text-slate-500">Kepemilikan Smartphone</dt>
+                            <dd class="text-xs font-bold {{ $anggotaJemaat->punya_smartphone ? 'text-green-600' : 'text-red-500' }}">
+                                {{ $anggotaJemaat->punya_smartphone ? 'Ya, Memiliki' : 'Tidak Memiliki' }}
+                            </dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-xs text-slate-500">Akses Internet</dt>
+                            <dd class="text-xs font-bold {{ $anggotaJemaat->akses_internet ? 'text-green-600' : 'text-red-500' }}">
+                                {{ $anggotaJemaat->akses_internet ? 'Tersedia' : 'Tidak Tersedia' }}
+                            </dd>
+                        </div>
+                        <div class="mt-4">
+                            <dt class="text-xs text-slate-500 mb-1">Potensi Ekonomi (Aset)</dt>
+                            <dd class="text-xs font-bold text-blue-600 bg-blue-50 p-2 rounded">
+                                {{ $anggotaJemaat->aset_ekonomi ?? 'Tidak ada data aset' }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        {{-- TAB 4: KELUARGA & SILSILAH --}}
         <div x-show="activeTab === 'keluarga'" style="display: none;" x-transition.opacity>
-            
-            {{-- BAGIAN ORANG TUA (POHON KELUARGA) --}}
             <div class="flex flex-col items-center mb-10">
                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Orang Tua Biologis</h4>
                 <div class="flex gap-4 md:gap-10 w-full max-w-lg justify-center">
@@ -229,17 +239,11 @@
                         @endif
                     </div>
                 </div>
-                {{-- Garis Konektor --}}
-                <div class="h-6 w-px bg-slate-300 my-2"></div>
-                <div class="px-6 py-2 bg-slate-800 text-white text-xs font-bold rounded-full uppercase tracking-wider shadow-md">
-                    {{ $anggotaJemaat->nama_lengkap }}
-                </div>
             </div>
 
-            {{-- BAGIAN KARTU KELUARGA --}}
             <div class="border-t border-slate-200 pt-8">
                 <div class="flex justify-between items-center mb-4">
-                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest">Anggota dalam satu Kartu Keluarga (KK)</h4>
+                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest">Kartu Keluarga (KK)</h4>
                     @if($anggotaJemaat->nomor_kk)
                         <span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">No. KK: <strong>{{ $anggotaJemaat->nomor_kk }}</strong></span>
                     @endif
@@ -249,9 +253,8 @@
                     <table class="min-w-full divide-y divide-slate-200">
                         <thead class="bg-slate-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">Nama Anggota</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">Nama</th>
                                 <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase">Hubungan</th>
-                                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase">L/P</th>
                                 <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase">Usia</th>
                             </tr>
                         </thead>
@@ -259,27 +262,18 @@
                             @forelse($anggotaKeluargaLain as $keluarga)
                             <tr class="hover:bg-slate-50 transition {{ $keluarga->id == $anggotaJemaat->id ? 'bg-blue-50/50' : '' }}">
                                 <td class="px-4 py-3 text-sm font-medium text-slate-800">
-                                    <a href="{{ route('admin.anggota-jemaat.show', $keluarga->id) }}" class="hover:text-blue-600">
-                                        {{ $keluarga->nama_lengkap }}
-                                    </a>
-                                    @if($keluarga->id == $anggotaJemaat->id) <span class="text-[10px] text-blue-500 ml-2">(Ini)</span> @endif
+                                    <a href="{{ route('admin.anggota-jemaat.show', $keluarga->id) }}" class="hover:text-blue-600">{{ $keluarga->nama_lengkap }}</a>
                                 </td>
                                 <td class="px-4 py-3 text-center text-xs text-slate-600">{{ $keluarga->status_dalam_keluarga }}</td>
-                                <td class="px-4 py-3 text-center text-xs text-slate-600">{{ $keluarga->jenis_kelamin == 'Laki-laki' ? 'L' : 'P' }}</td>
                                 <td class="px-4 py-3 text-center text-xs text-slate-600">{{ $keluarga->tanggal_lahir ? \Carbon\Carbon::parse($keluarga->tanggal_lahir)->age : '-' }}</td>
                             </tr>
                             @empty
-                            <tr>
-                                <td colspan="4" class="px-4 py-6 text-center text-sm text-slate-400 italic">
-                                    Tidak ada data keluarga lain yang terhubung dengan Nomor KK ini.
-                                </td>
-                            </tr>
+                            <tr><td colspan="3" class="px-4 py-6 text-center text-sm text-slate-400 italic">Tidak ada data keluarga lain.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
-
         </div>
 
     </div>

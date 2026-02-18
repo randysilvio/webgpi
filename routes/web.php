@@ -53,7 +53,7 @@ use App\Http\Controllers\Admin\SakramenSidiController;
 use App\Http\Controllers\Admin\SakramenCetakController;
 
 // Pejabat & Sidang Controllers
-use App\Http\Controllers\Admin\PejabatGerejawiController; // <-- Controller Pejabat
+use App\Http\Controllers\Admin\PejabatGerejawiController; 
 use App\Http\Controllers\Admin\PersidanganController;
 
 // Models
@@ -158,11 +158,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // 5. Pejabat & Persidangan (Bidang 1)
     Route::prefix('tata-gereja')->name('tata-gereja.')->group(function () {
-        // --- PEJABAT GEREJAWI (UPDATED) ---
-        // Route::resource otomatis membuat route: index, create, store, show, edit, update, destroy
         Route::resource('pejabat', PejabatGerejawiController::class);
-        
-        // Sidang
         Route::resource('sidang', PersidanganController::class);
     });
 
@@ -178,6 +174,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('jemaat-import', [JemaatController::class, 'import'])->name('jemaat.import');
 
     // --- ANGGOTA JEMAAT ---
+    // Pastikan route search diletakkan sebelum resource agar tidak tertimpa 'show'
     Route::get('/anggota-jemaat/search', [AnggotaJemaatController::class, 'search'])->name('anggota-jemaat.search');
     Route::get('anggota-jemaat/{id}/cetak-kk', [AnggotaJemaatController::class, 'cetakKartuKeluarga'])->name('anggota-jemaat.cetak-kk');
     Route::resource('anggota-jemaat', AnggotaJemaatController::class);
@@ -203,18 +200,15 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         ->middleware(['auth'])
         ->group(function () {
             
-            // --- MANAJEMEN PEGAWAI ---
             Route::resource('pegawai', PegawaiController::class);
             Route::get('pegawai/{pegawai}/print', [PegawaiController::class, 'print'])->name('pegawai.print');
             
-            // Export & Import
             Route::middleware('role:Super Admin|Admin Bidang 3')->group(function(){
                 Route::get('pegawai-export', [PegawaiController::class, 'export'])->name('pegawai.export');
                 Route::get('pegawai-import', [PegawaiController::class, 'showImportForm'])->name('pegawai.import-form');
                 Route::post('pegawai-import', [PegawaiController::class, 'import'])->name('pegawai.import');
             });
 
-            // --- SUB DATA PEGAWAI ---
             Route::post('keluarga', [KeluargaPegawaiController::class, 'store'])->name('keluarga.store');
             Route::put('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'update'])->name('keluarga.update');
             Route::delete('keluarga/{keluarga}', [KeluargaPegawaiController::class, 'destroy'])->name('keluarga.destroy');
@@ -227,12 +221,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
             Route::put('sk/{sk}', [RiwayatSkController::class, 'update'])->name('sk.update');
             Route::delete('sk/{sk}', [RiwayatSkController::class, 'destroy'])->name('sk.destroy');
 
-            // --- MUTASI (Sub-Route) ---
             Route::get('pegawai/{pegawai}/mutasi/create', [MutasiPendetaController::class, 'create'])->name('pegawai.mutasi.create');
             Route::post('pegawai/{pegawai}/mutasi', [MutasiPendetaController::class, 'store'])->name('pegawai.mutasi.store');
         });
 
-    // Resource Mutasi Independen
     Route::middleware('role:Super Admin|Admin Bidang 3')->group(function () {
         Route::resource('mutasi', MutasiPendetaController::class)
              ->except(['create', 'store'])

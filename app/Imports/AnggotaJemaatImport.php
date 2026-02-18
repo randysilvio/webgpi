@@ -10,7 +10,6 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Shared\Date; 
 
-// HAPUS SkipsOnFailure dan SkipsOnError agar error langsung muncul merah
 class AnggotaJemaatImport implements ToModel, WithHeadingRow, WithValidation
 {
     private $jemaatIdDefault;
@@ -31,70 +30,82 @@ class AnggotaJemaatImport implements ToModel, WithHeadingRow, WithValidation
             $jemaatId = $this->findValue($row, 'jemaat_id');
         }
 
-        // --- CEK PENTING ---
-        // Jika ID Jemaat masih kosong juga, kita hentikan paksa (Error Merah)
+        // --- CEK PENTING --—
         if (!$jemaatId) {
             throw new \Exception("STOP: Anda belum memilih Nama Jemaat di menu Dropdown saat Import. Mohon ulangi dan pilih Jemaatnya.");
         }
 
-        // 2. Mapping Data (Tanpa Try-Catch)
-        $namaLengkap = $this->findValue($row, 'nama') ?? 'Tanpa Nama';
-        $kodeKel     = $this->findValue($row, 'kode_keluarga') ?? Str::random(10);
+        // 2. Parsing Data Tanggal
+        $tglLahir = $this->parseDate($this->findValue($row, 'tanggal_lahir'));
+        $tglBaptis = $this->parseDate($this->findValue($row, 'tanggal_baptis'));
+        $tglSidi = $this->parseDate($this->findValue($row, 'tanggal_sidi'));
+        $tglNikah = $this->parseDate($this->findValue($row, 'tanggal_nikah'));
+
+        // 3. Mapping Data Lama ke Renstra Baru
         
-        // Jenis Kelamin
-        $rawJK = $this->findValue($row, 'jenis_kelamin');
-        $jk = 'Laki-laki'; 
-        if ($rawJK) {
-            $val = strtolower(trim($rawJK));
-            if ($val == '2' || str_contains($val, 'p') || str_contains($val, 'wanita')) { 
-                $jk = 'Perempuan'; 
-            }
+        // a. Kondisi Rumah (Konversi dari deskripsi lama ke kategori baru)
+        $kondisiRumah = 'Permanen';
+        $konstruksi = strtolower($this->findValue($row, 'konstruksibangunan') ?? '');
+        if (str_contains($konstruksi, 'kayu') || str_contains($konstruksi, 'darurat') || str_contains($konstruksi, 'papan')) {
+            $kondisiRumah = 'Darurat/Kayu';
+        } elseif (str_contains($konstruksi, 'semi')) {
+            $kondisiRumah = 'Semi-Permanen';
         }
 
-        // Status Keluarga
-        $rawStatus = $this->findValue($row, 'status_keluarga');
-        $statusKeluarga = 'Anggota Keluarga';
-        if ($rawStatus == 1) $statusKeluarga = 'Kepala Keluarga';
-        elseif ($rawStatus == 2) $statusKeluarga = 'Istri';
-        elseif ($rawStatus == 3) $statusKeluarga = 'Anak';
+        // b. Aset Ekonomi (Gabungkan kolom boolean lama menjadi satu string)
+        $aset = [];
+        if (!empty($this->findValue($row, 'perkebunan'))) $aset[] = 'Perkebunan';
+        if (!empty($this->findValue($row, 'peternakan'))) $aset[] = 'Peternakan';
+        if (!empty($this->findValue($row, 'perikanan'))) $aset[] = 'Perikanan';
+        if (!empty($this->findValue($row, 'usaha'))) $aset[] = 'Usaha Mikro';
 
-        // Tanggal
-        $tglLahir  = $this->parseDate($this->findValue($row, 'tanggal_lahir'));
-        $tglBaptis = $this->parseDate($this->findValue($row, 'tanggal_baptis'));
-        $tglSidi   = $this->parseDate($this->findValue($row, 'tanggal_sidi'));
-        $tglNikah  = $this->parseDate($this->findValue($row, 'tanggal_nikah'));
-
-        // 3. Simpan (Akan error merah jika ID Jemaat salah)
+        // 4. Return Model
         return new AnggotaJemaat([
-            'jemaat_id'             => $jemaatId,
-            'nama_lengkap'          => $namaLengkap,
-            'kode_keluarga_internal'=> $kodeKel,
+            'jemaat_id'         => $jemaatId,
+            'nama_lengkap'      => $this->findValue($row, 'nama_keluarga') ?? $this->findValue($row, 'nama_lengkap'),
+            'nik'               => $this->findValue($row, 'nik'),
+            'nomor_buku_induk'  => $this->findValue($row, 'nomor_buku_induk') ?? $this->findValue($row, 'nij'),
             
-            'tempat_lahir'          => $this->findValue($row, 'tempat_lahir'),
-            'tanggal_lahir'         => $tglLahir,
-            'jenis_kelamin'         => $jk,
-            'golongan_darah'        => '-',
+            // Data Pribadi
+            'tempat_lahir'      => $this->findValue($row, 'tempat_lahir'),
+            'tanggal_lahir'     => $tglLahir,
+            'jenis_kelamin'     => $this->mapGender($this->findValue($row, 'jenis_kelamin')),
+            'golongan_darah'    => $this->findValue($row, 'golongan_darah') ?? '-',
+            'disabilitas'       => $this->findValue($row, 'disabilitas') ?? 'Tidak Ada',
             
-            'status_pernikahan'     => ($tglNikah) ? 'Menikah' : 'Belum Menikah',
-            'status_dalam_keluarga' => $statusKeluarga,
+            // Kontak & Pendidikan
+            'alamat_lengkap'    => $this->findValue($row, 'alamat') ?? 'Alamat Jemaat',
+            'telepon'           => $this->findValue($row, 'telepon') ?? $this->findValue($row, 'hp'),
+            'pendidikan_terakhir' => $this->findValue($row, 'pendidikan'),
+            'pekerjaan_utama'   => $this->findValue($row, 'pekerjaan'),
             
-            'tanggal_baptis'        => $tglBaptis,
-            'tanggal_sidi'          => $tglSidi,
-            'tanggal_nikah'         => $tglNikah,
+            // Keluarga
+            'nomor_kk'          => $this->findValue($row, 'nomor_kk'),
+            'status_dalam_keluarga' => $this->findValue($row, 'status_keluarga') ?? 'Anggota',
+            'status_pernikahan'     => ($tglNikah) ? 'Menikah' : ($this->findValue($row, 'status_kawin') ?? 'Belum Menikah'),
             
-            'status_keanggotaan'    => 'Aktif',
-            'alamat_lengkap'        => 'Alamat Jemaat',
+            // Gerejawi
+            'tanggal_baptis'    => $tglBaptis,
+            'tanggal_sidi'      => $tglSidi,
+            'status_keanggotaan' => 'Aktif',
+            
+            // Renstra Fields (Baru)
+            'kondisi_rumah'     => $kondisiRumah,
+            'aset_ekonomi'      => implode(', ', $aset),
+            'punya_smartphone'  => ($this->findValue($row, 'smartphone') ?? 0) > 0, // Asumsi 1=Ya
+            'akses_internet'    => ($this->findValue($row, 'internet') ?? 0) == 1,
+            'rentang_pengeluaran' => $this->findValue($row, 'pengeluaran') // Jika ada di excel lama
         ]);
     }
 
-    // Bypass validasi
     public function rules(): array
     {
-        return [];
+        return []; // Bypass validasi excel agar fleksibel
     }
 
     private function findValue($row, $keyword)
     {
+        // Cari kolom yang mengandung kata kunci (case-insensitive)
         foreach ($row as $key => $value) {
             if (str_contains(strtolower($key), $keyword)) {
                 return $value;
@@ -103,16 +114,20 @@ class AnggotaJemaatImport implements ToModel, WithHeadingRow, WithValidation
         return null;
     }
 
+    private function mapGender($val)
+    {
+        $val = strtolower($val);
+        if ($val == 'l' || str_contains($val, 'laki')) return 'Laki-laki';
+        if ($val == 'p' || str_contains($val, 'perempuan')) return 'Perempuan';
+        return null;
+    }
+
     private function parseDate($val)
     {
         if (empty($val) || $val == '0000-00-00' || $val == '0' || $val == '-') return null;
         try {
-            if (is_numeric($val)) {
-                return Date::excelToDateTimeObject($val)->format('Y-m-d');
-            }
+            if (is_numeric($val)) return Date::excelToDateTimeObject($val)->format('Y-m-d');
             return Carbon::parse($val)->format('Y-m-d');
-        } catch (\Exception $e) {
-            return null;
-        }
+        } catch (\Exception $e) { return null; }
     }
 }

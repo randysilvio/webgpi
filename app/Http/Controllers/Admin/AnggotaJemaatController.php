@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AnggotaJemaat;
 use App\Models\Jemaat;
 use App\Models\Klasis;
-use App\Models\Setting; // Tambahan untuk Logo
-use App\Models\SakramenNikah; // Tambahan untuk Cek Nikah
+use App\Models\Setting;
+use App\Models\SakramenNikah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -33,7 +33,7 @@ class AnggotaJemaatController extends Controller
          $this->middleware('can:export anggota jemaat')->only(['export']);
     }
 
-    // FASE 12: Fungsi Search untuk Select2 (AJAX)
+    // --- SEARCH SELECT2 ---
     public function search(Request $request)
     {
         $term = $request->get('q');
@@ -53,6 +53,7 @@ class AnggotaJemaatController extends Controller
         }));
     }
 
+    // --- INDEX ---
     public function index(Request $request)
     {
         $query = AnggotaJemaat::with(['jemaat', 'jemaat.klasis']);
@@ -93,7 +94,7 @@ class AnggotaJemaatController extends Controller
              }
         }
 
-        // Filter Request
+        // Filter Logic
         if ($request->filled('klasis_id') && ($klasisFilterId = filter_var($request->klasis_id, FILTER_VALIDATE_INT))) {
             if (($user->hasRole('Admin Klasis') && $user->klasis_id != $klasisFilterId) ||
                 ($user->hasRole('Admin Jemaat') && $jemaatUser && $jemaatUser->klasis_id != $klasisFilterId)) {
@@ -112,15 +113,6 @@ class AnggotaJemaatController extends Controller
             $query->where('status_keanggotaan', $request->status_keanggotaan);
         }
 
-        $statsQuery = clone $query;
-        $stats = $statsQuery->reorder()->selectRaw('
-            count(*) as total,
-            sum(case when status_keanggotaan = "Aktif" then 1 else 0 end) as total_aktif,
-            sum(case when jenis_kelamin = "Laki-laki" then 1 else 0 end) as total_laki,
-            sum(case when jenis_kelamin = "Perempuan" then 1 else 0 end) as total_perempuan,
-            sum(case when status_dalam_keluarga = "Kepala Keluarga" and status_keanggotaan = "Aktif" then 1 else 0 end) as total_kk
-        ')->first();
-
         if ($request->filled('nomor_kk_filter')) {
             $query->where('nomor_kk', 'like', '%' . $request->nomor_kk_filter . '%');
         }
@@ -135,11 +127,22 @@ class AnggotaJemaatController extends Controller
              });
          }
 
+        // Stats
+        $statsQuery = clone $query;
+        $stats = $statsQuery->reorder()->selectRaw('
+            count(*) as total,
+            sum(case when status_keanggotaan = "Aktif" then 1 else 0 end) as total_aktif,
+            sum(case when jenis_kelamin = "Laki-laki" then 1 else 0 end) as total_laki,
+            sum(case when jenis_kelamin = "Perempuan" then 1 else 0 end) as total_perempuan,
+            sum(case when status_dalam_keluarga = "Kepala Keluarga" and status_keanggotaan = "Aktif" then 1 else 0 end) as total_kk
+        ')->first();
+
         $anggotaJemaatData = $query->latest()->paginate(20)->appends($request->query());
         
         return view('admin.anggota_jemaat.index', compact('anggotaJemaatData', 'klasisFilterOptions', 'jemaatFilterOptions', 'request', 'stats'));
     }
 
+    // --- CREATE ---
     public function create(Request $request)
     {
          $jemaatOptionsQuery = Jemaat::orderBy('nama_jemaat');
@@ -171,6 +174,7 @@ class AnggotaJemaatController extends Controller
         return view('admin.anggota_jemaat.create', compact('jemaatOptions', 'prefillData'));
     }
 
+    // --- STORE ---
     public function store(Request $request)
     {
          $validatedData = $request->validate([
@@ -184,6 +188,7 @@ class AnggotaJemaatController extends Controller
             'tanggal_lahir' => 'nullable|date',
             'jenis_kelamin' => 'nullable|in:Laki-laki,Perempuan',
             'golongan_darah' => 'nullable|string|max:10',
+            'disabilitas' => 'nullable|string|max:50',
             'status_pernikahan' => 'nullable|string|max:50',
             'nama_ayah' => 'nullable|string|max:255',
             'nama_ibu' => 'nullable|string|max:255',
@@ -191,6 +196,8 @@ class AnggotaJemaatController extends Controller
             'pekerjaan_utama' => 'nullable|string|max:100',
             'alamat_lengkap' => 'nullable|string',
             'telepon' => 'nullable|string|max:20',
+            'punya_smartphone' => 'nullable|boolean',
+            'akses_internet' => 'nullable|boolean',
             'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('anggota_jemaat', 'email')->whereNull('deleted_at')],
             'sektor_pelayanan' => 'nullable|string|max:50',
             'unit_pelayanan' => 'nullable|string|max:50',
@@ -204,7 +211,10 @@ class AnggotaJemaatController extends Controller
             'nomor_atestasi' => 'nullable|string|max:50',
             'status_pekerjaan_kk' => 'nullable|string|max:100',
             'status_kepemilikan_rumah' => 'nullable|string|max:100',
+            'kondisi_rumah' => 'nullable|string|max:50',
             'perkiraan_pendapatan_keluarga' => 'nullable|string|max:50',
+            'rentang_pengeluaran' => 'nullable|string|max:50',
+            'aset_ekonomi' => 'nullable|array',
             'catatan' => 'nullable|string',
             'jabatan_pelayan_khusus' => 'nullable|string|max:100',
             'wadah_kategorial' => 'nullable|string|max:100',
@@ -232,6 +242,11 @@ class AnggotaJemaatController extends Controller
         }
 
         try {
+            // Konversi Array ke String untuk Aset Ekonomi
+            if($request->has('aset_ekonomi')) {
+                $validatedData['aset_ekonomi'] = implode(', ', $request->aset_ekonomi);
+            }
+
             $anggota = AnggotaJemaat::create($validatedData);
 
             if ($request->has('save_and_add_another')) {
@@ -255,6 +270,7 @@ class AnggotaJemaatController extends Controller
         }
     }
 
+    // --- SHOW ---
     public function show(AnggotaJemaat $anggotaJemaat)
     {
          if (Auth::check()) {
@@ -268,7 +284,6 @@ class AnggotaJemaatController extends Controller
 
         $anggotaJemaat->load(['jemaat.klasis', 'keluarga', 'kepalaKeluarga', 'dataBaptis', 'dataSidi']);
         
-        // --- Cek Nikah (Suami/Istri) ---
         $dataNikah = SakramenNikah::where('suami_id', $anggotaJemaat->id)
                         ->orWhere('istri_id', $anggotaJemaat->id)
                         ->first();
@@ -281,6 +296,7 @@ class AnggotaJemaatController extends Controller
         ]);
     }
 
+    // --- EDIT ---
     public function edit(AnggotaJemaat $anggotaJemaat)
     {
          if (Auth::check()) {
@@ -308,6 +324,7 @@ class AnggotaJemaatController extends Controller
         return view('admin.anggota_jemaat.edit', compact('anggotaJemaat', 'jemaatOptions'));
     }
 
+    // --- UPDATE ---
     public function update(Request $request, AnggotaJemaat $anggotaJemaat)
     {
          if (Auth::check()) {
@@ -330,6 +347,7 @@ class AnggotaJemaatController extends Controller
             'tanggal_lahir' => 'nullable|date',
             'jenis_kelamin' => 'nullable|in:Laki-laki,Perempuan',
             'golongan_darah' => 'nullable|string|max:10',
+            'disabilitas' => 'nullable|string|max:50',
             'status_pernikahan' => 'nullable|string|max:50',
             'nama_ayah' => 'nullable|string|max:255',
             'nama_ibu' => 'nullable|string|max:255',
@@ -337,6 +355,8 @@ class AnggotaJemaatController extends Controller
             'pekerjaan_utama' => 'nullable|string|max:100',
             'alamat_lengkap' => 'nullable|string',
             'telepon' => 'nullable|string|max:20',
+            'punya_smartphone' => 'nullable|boolean',
+            'akses_internet' => 'nullable|boolean',
             'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('anggota_jemaat', 'email')->ignore($anggotaJemaat->id)->whereNull('deleted_at')],
             'sektor_pelayanan' => 'nullable|string|max:50',
             'unit_pelayanan' => 'nullable|string|max:50',
@@ -350,7 +370,10 @@ class AnggotaJemaatController extends Controller
             'nomor_atestasi' => 'nullable|string|max:50',
             'status_pekerjaan_kk' => 'nullable|string|max:100',
             'status_kepemilikan_rumah' => 'nullable|string|max:100',
+            'kondisi_rumah' => 'nullable|string|max:50',
             'perkiraan_pendapatan_keluarga' => 'nullable|string|max:50',
+            'rentang_pengeluaran' => 'nullable|string|max:50',
+            'aset_ekonomi' => 'nullable|array',
             'catatan' => 'nullable|string',
             'jabatan_pelayan_khusus' => 'nullable|string|max:100',
             'wadah_kategorial' => 'nullable|string|max:100',
@@ -379,6 +402,12 @@ class AnggotaJemaatController extends Controller
          }
 
         try {
+            if($request->has('aset_ekonomi')) {
+                $validatedData['aset_ekonomi'] = implode(', ', $request->aset_ekonomi);
+            } else {
+                $validatedData['aset_ekonomi'] = null; 
+            }
+
             $anggotaJemaat->update($validatedData);
              return redirect()->route('admin.anggota-jemaat.show', $anggotaJemaat->id)
                               ->with('success', 'Data Anggota Jemaat berhasil diperbarui.');
@@ -390,6 +419,7 @@ class AnggotaJemaatController extends Controller
         }
     }
 
+    // --- DESTROY ---
     public function destroy(AnggotaJemaat $anggotaJemaat)
     {
          if (Auth::check()) {
@@ -417,6 +447,7 @@ class AnggotaJemaatController extends Controller
         }
     }
 
+    // --- IMPORT FORM (DIPERBAIKI UNTUK SUPER ADMIN & DROPDOWN) ---
     public function showImportForm()
     {
         $user = Auth::user();
@@ -425,18 +456,23 @@ class AnggotaJemaatController extends Controller
 
         if ($user->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3'])) {
             $klasisOptions = Klasis::orderBy('nama_klasis')->get();
+            // PERBAIKAN: Super Admin sekarang bisa melihat SEMUA jemaat di dropdown
+            $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
         } 
         elseif ($user->hasRole('Admin Klasis')) {
             $klasisOptions = Klasis::where('id', $user->klasis_id)->get();
-            $jemaatOptions = Jemaat::where('klasis_id', $user->klasis_id)->orderBy('nama_jemaat')->get();
+            // PERBAIKAN: Gunakan pluck() agar formatnya [id => nama]
+            $jemaatOptions = Jemaat::where('klasis_id', $user->klasis_id)->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
         } 
         elseif ($user->hasRole('Admin Jemaat')) {
-            $jemaatOptions = Jemaat::where('id', $user->jemaat_id)->get();
+            // PERBAIKAN: Gunakan pluck()
+            $jemaatOptions = Jemaat::where('id', $user->jemaat_id)->pluck('nama_jemaat', 'id');
         }
 
         return view('admin.anggota_jemaat.import', compact('klasisOptions', 'jemaatOptions'));
     }
 
+    // --- IMPORT ACTION ---
     public function import(Request $request)
     {
         $request->validate([
@@ -462,6 +498,7 @@ class AnggotaJemaatController extends Controller
         }
     }
 
+    // --- EXPORT ---
     public function export(Request $request)
     {
          if ($request->has('template') && $request->template == 'yes') {
@@ -507,6 +544,7 @@ class AnggotaJemaatController extends Controller
         }
     }
 
+    // --- CETAK KK ---
     public function cetakKartuKeluarga($id)
     {
         $anggota = AnggotaJemaat::with(['jemaat.klasis'])->findOrFail($id);
@@ -535,10 +573,8 @@ class AnggotaJemaatController extends Controller
             $keluarga = collect([$anggota]);
         }
 
-        // --- AMBIL SETTING UTAMA (UNTUK LOGO) ---
         $setting = Setting::first(); 
 
-        // --- PERBAIKAN PATH VIEW (Ganti 'anggota_jemaat' jadi 'anggota-jemaat') ---
         $pdf = Pdf::loadView('admin.anggota_jemaat.cetak-kk', compact('anggota', 'keluarga', 'setting'))
                   ->setPaper('a4', 'landscape'); 
 

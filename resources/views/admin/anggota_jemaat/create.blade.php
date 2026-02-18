@@ -32,6 +32,15 @@
                     <option value="A">A</option><option value="B">B</option><option value="AB">AB</option><option value="O">O</option>
                 </x-form-select>
 
+                {{-- UPDATE RENSTRA: Disabilitas --}}
+                <x-form-select label="Disabilitas" name="disabilitas">
+                    <option value="Tidak Ada">Tidak Ada</option>
+                    <option value="Tuna Netra">Tuna Netra</option>
+                    <option value="Tuna Daksa">Tuna Daksa</option>
+                    <option value="Tuna Rungu/Wicara">Tuna Rungu/Wicara</option>
+                    <option value="Lainnya">Lainnya</option>
+                </x-form-select>
+
                 <x-form-select label="Status Pernikahan" name="status_pernikahan">
                     <option value="Belum Menikah">Belum Menikah</option>
                     <option value="Menikah">Menikah</option>
@@ -103,19 +112,57 @@
             </div>
         </div>
 
-        {{-- SECTION 4: DATA TAMBAHAN --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <x-form-input label="Pekerjaan Utama" name="pekerjaan_utama" />
-            <x-form-select label="Status Rumah" name="status_kepemilikan_rumah">
-                <option value="Milik Sendiri">Milik Sendiri</option>
-                <option value="Sewa">Sewa/Kontrak</option>
-                <option value="Menumpang">Menumpang</option>
-            </x-form-select>
-            <x-form-select label="Pendapatan" name="perkiraan_pendapatan_keluarga">
-                <option value="Di bawah UMR">Di bawah UMR</option>
-                <option value="UMR - 5 Juta">UMR - 5 Juta</option>
-                <option value="Di atas 5 Juta">Di atas 5 Juta</option>
-            </x-form-select>
+        {{-- SECTION 4: ANALISIS RENSTRA (UPDATE MINOR) --}}
+        <div class="bg-slate-50 p-5 rounded border border-slate-200 mb-8">
+            <h3 class="text-xs font-bold text-slate-700 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wide">IV. Analisis Kesejahteraan & Digital (Renstra)</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-4">
+                <x-form-select label="Kondisi Rumah" name="kondisi_rumah">
+                    <option value="Permanen">Permanen</option>
+                    <option value="Semi-Permanen">Semi-Permanen</option>
+                    <option value="Darurat/Kayu">Darurat/Kayu</option>
+                </x-form-select>
+                
+                <x-form-select label="Status Rumah" name="status_kepemilikan_rumah">
+                    <option value="Milik Sendiri">Milik Sendiri</option>
+                    <option value="Sewa">Sewa/Kontrak</option>
+                    <option value="Menumpang">Menumpang</option>
+                    <option value="Dinas">Dinas</option>
+                </x-form-select>
+
+                <x-form-select label="Rentang Pengeluaran" name="rentang_pengeluaran">
+                    <option value="< 1jt">< 1 Juta</option>
+                    <option value="1jt - 3jt">1 - 3 Juta</option>
+                    <option value="> 3jt">> 3 Juta</option>
+                </x-form-select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-4">
+                <x-form-input label="Pekerjaan Utama" name="pekerjaan_utama" />
+                
+                <x-form-select label="Smartphone" name="punya_smartphone">
+                    <option value="0">Tidak Memiliki</option>
+                    <option value="1">Ya, Memiliki</option>
+                </x-form-select>
+
+                <x-form-select label="Akses Internet" name="akses_internet">
+                    <option value="0">Tidak Ada</option>
+                    <option value="1">Ya, Ada (Wifi/Data)</option>
+                </x-form-select>
+            </div>
+
+            {{-- Aset Ekonomi (Checkbox) --}}
+            <div class="mt-4 p-3 bg-white rounded border border-slate-200">
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-3">Potensi Ekonomi & Aset</label>
+                <div class="flex flex-wrap gap-4">
+                    @foreach(['Perkebunan', 'Peternakan', 'Perikanan', 'Kehutanan', 'Usaha Mikro', 'Transportasi'] as $aset)
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="aset_ekonomi[]" value="{{ $aset }}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-slate-600">{{ $aset }}</span>
+                    </label>
+                    @endforeach
+                </div>
+            </div>
         </div>
 
         {{-- Tombol Khusus --}}
