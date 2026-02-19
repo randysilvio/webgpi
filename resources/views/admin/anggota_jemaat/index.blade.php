@@ -77,7 +77,6 @@
                     <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
                 </div>
                 
-                {{-- Tombol Submit Hidden untuk Enter key --}}
                 <button type="submit" class="hidden">Cari</button>
             </form>
         </x-slot>
@@ -157,5 +156,19 @@
             <tr><td colspan="6" class="px-6 py-12 text-center text-slate-400 italic">Data tidak ditemukan.</td></tr>
         @endforelse
 
+        {{-- SLOT PAGINATION (Jika komponen x-admin-index mendukung slot ini) --}}
+        <x-slot name="pagination">
+            <div class="mt-4">
+                {{ $anggotaJemaatData->links() }}
+            </div>
+        </x-slot>
+
     </x-admin-index>
+
+    {{-- FALLBACK MANUAL PAGINATION (Berjaga-jaga jika komponen x-admin-index menolak render slot) --}}
+    @if ($anggotaJemaatData->hasPages())
+        <div class="mt-4 px-6 mb-6">
+            {{ $anggotaJemaatData->links() }}
+        </div>
+    @endif
 @endsection

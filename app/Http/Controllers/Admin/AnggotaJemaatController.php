@@ -259,7 +259,7 @@ class AnggotaJemaatController extends Controller
                 ])->with('success', 'Data berhasil ditambahkan. Lanjut input anggota keluarga berikutnya.');
             } else {
                  return redirect()->route('admin.anggota-jemaat.index')
-                                 ->with('success', 'Anggota Jemaat berhasil ditambahkan.');
+                                  ->with('success', 'Anggota Jemaat berhasil ditambahkan.');
             }
 
         } catch (\Exception $e) {
@@ -447,7 +447,7 @@ class AnggotaJemaatController extends Controller
         }
     }
 
-    // --- IMPORT FORM (DIPERBAIKI UNTUK SUPER ADMIN & DROPDOWN) ---
+    // --- IMPORT FORM ---
     public function showImportForm()
     {
         $user = Auth::user();
@@ -456,16 +456,13 @@ class AnggotaJemaatController extends Controller
 
         if ($user->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3'])) {
             $klasisOptions = Klasis::orderBy('nama_klasis')->get();
-            // PERBAIKAN: Super Admin sekarang bisa melihat SEMUA jemaat di dropdown
             $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
         } 
         elseif ($user->hasRole('Admin Klasis')) {
             $klasisOptions = Klasis::where('id', $user->klasis_id)->get();
-            // PERBAIKAN: Gunakan pluck() agar formatnya [id => nama]
             $jemaatOptions = Jemaat::where('klasis_id', $user->klasis_id)->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
         } 
         elseif ($user->hasRole('Admin Jemaat')) {
-            // PERBAIKAN: Gunakan pluck()
             $jemaatOptions = Jemaat::where('id', $user->jemaat_id)->pluck('nama_jemaat', 'id');
         }
 
@@ -489,7 +486,7 @@ class AnggotaJemaatController extends Controller
             Excel::import($import, $request->file('import_file'));
 
             return redirect()->route('admin.anggota-jemaat.index')
-                             ->with('success', 'Data Anggota Jemaat berhasil diimpor ke Jemaat terpilih.');
+                             ->with('success', 'Data Anggota Jemaat berhasil diimpor & diupdate (jika duplikat) ke Jemaat terpilih.');
 
         } catch (ValidationException $e) {
              return redirect()->back()->with('error', 'Validasi Gagal: ' . $e->getMessage());

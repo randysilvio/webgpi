@@ -22,7 +22,6 @@ class AnggotaJemaatImport implements ToModel, WithHeadingRow, WithValidation
     public function model(array $row)
     {
         // 1. Tentukan ID Jemaat
-        // Prioritas: Pilihan dari Form Website (Dropdown)
         $jemaatId = $this->jemaatIdDefault;
 
         // Jika user LUPA pilih di dropdown, baru kita coba ambil dari CSV
@@ -30,9 +29,16 @@ class AnggotaJemaatImport implements ToModel, WithHeadingRow, WithValidation
             $jemaatId = $this->findValue($row, 'jemaat_id');
         }
 
-        // --- CEK PENTING --—
+        // --- CEK PENTING ---
         if (!$jemaatId) {
             throw new \Exception("STOP: Anda belum memilih Nama Jemaat di menu Dropdown saat Import. Mohon ulangi dan pilih Jemaatnya.");
+        }
+
+        $namaLengkap = $this->findValue($row, 'nama_keluarga') ?? $this->findValue($row, 'nama_lengkap');
+        
+        // Skip jika baris ini tidak memiliki nama (baris kosong/rusak)
+        if (empty(trim($namaLengkap))) {
+            return null;
         }
 
         // 2. Parsing Data Tanggal
@@ -42,8 +48,7 @@ class AnggotaJemaatImport implements ToModel, WithHeadingRow, WithValidation
         $tglNikah = $this->parseDate($this->findValue($row, 'tanggal_nikah'));
 
         // 3. Mapping Data Lama ke Renstra Baru
-        
-        // a. Kondisi Rumah (Konversi dari deskripsi lama ke kategori baru)
+        // a. Kondisi Rumah
         $kondisiRumah = 'Permanen';
         $konstruksi = strtolower($this->findValue($row, 'konstruksibangunan') ?? '');
         if (str_contains($konstruksi, 'kayu') || str_contains($konstruksi, 'darurat') || str_contains($konstruksi, 'papan')) {
@@ -52,50 +57,90 @@ class AnggotaJemaatImport implements ToModel, WithHeadingRow, WithValidation
             $kondisiRumah = 'Semi-Permanen';
         }
 
-        // b. Aset Ekonomi (Gabungkan kolom boolean lama menjadi satu string)
+        // b. Aset Ekonomi
         $aset = [];
         if (!empty($this->findValue($row, 'perkebunan'))) $aset[] = 'Perkebunan';
         if (!empty($this->findValue($row, 'peternakan'))) $aset[] = 'Peternakan';
         if (!empty($this->findValue($row, 'perikanan'))) $aset[] = 'Perikanan';
         if (!empty($this->findValue($row, 'usaha'))) $aset[] = 'Usaha Mikro';
+        $asetString = count($aset) > 0 ? implode(', ', $aset) : null;
 
-        // 4. Return Model
-        return new AnggotaJemaat([
-            'jemaat_id'         => $jemaatId,
-            'nama_lengkap'      => $this->findValue($row, 'nama_keluarga') ?? $this->findValue($row, 'nama_lengkap'),
-            'nik'               => $this->findValue($row, 'nik'),
-            'nomor_buku_induk'  => $this->findValue($row, 'nomor_buku_induk') ?? $this->findValue($row, 'nij'),
-            
-            // Data Pribadi
-            'tempat_lahir'      => $this->findValue($row, 'tempat_lahir'),
-            'tanggal_lahir'     => $tglLahir,
-            'jenis_kelamin'     => $this->mapGender($this->findValue($row, 'jenis_kelamin')),
-            'golongan_darah'    => $this->findValue($row, 'golongan_darah') ?? '-',
-            'disabilitas'       => $this->findValue($row, 'disabilitas') ?? 'Tidak Ada',
-            
-            // Kontak & Pendidikan
-            'alamat_lengkap'    => $this->findValue($row, 'alamat') ?? 'Alamat Jemaat',
-            'telepon'           => $this->findValue($row, 'telepon') ?? $this->findValue($row, 'hp'),
-            'pendidikan_terakhir' => $this->findValue($row, 'pendidikan'),
-            'pekerjaan_utama'   => $this->findValue($row, 'pekerjaan'),
-            
-            // Keluarga
-            'nomor_kk'          => $this->findValue($row, 'nomor_kk'),
-            'status_dalam_keluarga' => $this->findValue($row, 'status_keluarga') ?? 'Anggota',
-            'status_pernikahan'     => ($tglNikah) ? 'Menikah' : ($this->findValue($row, 'status_kawin') ?? 'Belum Menikah'),
-            
-            // Gerejawi
-            'tanggal_baptis'    => $tglBaptis,
-            'tanggal_sidi'      => $tglSidi,
-            'status_keanggotaan' => 'Aktif',
-            
-            // Renstra Fields (Baru)
-            'kondisi_rumah'     => $kondisiRumah,
-            'aset_ekonomi'      => implode(', ', $aset),
-            'punya_smartphone'  => ($this->findValue($row, 'smartphone') ?? 0) > 0, // Asumsi 1=Ya
-            'akses_internet'    => ($this->findValue($row, 'internet') ?? 0) == 1,
-            'rentang_pengeluaran' => $this->findValue($row, 'pengeluaran') // Jika ada di excel lama
+        // 4. LOGIKA UPSERT (Cari data lama, jika tidak ada buat instansi baru)
+        // Kita menggunakan parameter NAMA LENGKAP dan JEMAAT ID sebagai identitas unik pencocokan
+        $anggota = AnggotaJemaat::firstOrNew([
+            'nama_lengkap' => trim($namaLengkap),
+            'jemaat_id'    => $jemaatId,
         ]);
+
+        // 5. ISI / UPDATE DATA
+        // Hanya update kolom jika data dari Excel ada isinya. Jika kosong, biarkan data lama utuh.
+        
+        $nik = $this->findValue($row, 'nik');
+        if (!empty($nik)) $anggota->nik = $nik;
+
+        $nbi = $this->findValue($row, 'nomor_buku_induk') ?? $this->findValue($row, 'nij');
+        if (!empty($nbi)) $anggota->nomor_buku_induk = $nbi;
+
+        $tempatLahir = $this->findValue($row, 'tempat_lahir');
+        if (!empty($tempatLahir)) $anggota->tempat_lahir = $tempatLahir;
+
+        if ($tglLahir) $anggota->tanggal_lahir = $tglLahir;
+        
+        $jk = $this->mapGender($this->findValue($row, 'jenis_kelamin'));
+        if ($jk) $anggota->jenis_kelamin = $jk;
+
+        $golDarah = $this->findValue($row, 'golongan_darah');
+        if (!empty($golDarah)) $anggota->golongan_darah = $golDarah;
+
+        $disabilitas = $this->findValue($row, 'disabilitas');
+        if (!empty($disabilitas)) $anggota->disabilitas = $disabilitas;
+
+        $alamat = $this->findValue($row, 'alamat');
+        if (!empty($alamat)) $anggota->alamat_lengkap = $alamat;
+        elseif (!$anggota->exists) $anggota->alamat_lengkap = 'Alamat Jemaat'; // Default jika data baru
+
+        $telepon = $this->findValue($row, 'telepon') ?? $this->findValue($row, 'hp');
+        if (!empty($telepon)) $anggota->telepon = $telepon;
+
+        $pendidikan = $this->findValue($row, 'pendidikan');
+        if (!empty($pendidikan)) $anggota->pendidikan_terakhir = $pendidikan;
+
+        $pekerjaan = $this->findValue($row, 'pekerjaan');
+        if (!empty($pekerjaan)) $anggota->pekerjaan_utama = $pekerjaan;
+
+        $nomorKk = $this->findValue($row, 'nomor_kk');
+        if (!empty($nomorKk)) $anggota->nomor_kk = $nomorKk;
+
+        $statusKeluarga = $this->findValue($row, 'status_keluarga');
+        if (!empty($statusKeluarga)) $anggota->status_dalam_keluarga = $statusKeluarga;
+        elseif (!$anggota->exists) $anggota->status_dalam_keluarga = 'Anggota';
+
+        $statusNikah = ($tglNikah) ? 'Menikah' : $this->findValue($row, 'status_kawin');
+        if (!empty($statusNikah)) $anggota->status_pernikahan = $statusNikah;
+        elseif (!$anggota->exists) $anggota->status_pernikahan = 'Belum Menikah';
+
+        if ($tglBaptis) $anggota->tanggal_baptis = $tglBaptis;
+        if ($tglSidi) $anggota->tanggal_sidi = $tglSidi;
+
+        // Default Data Baru
+        if (!$anggota->exists) {
+            $anggota->status_keanggotaan = 'Aktif';
+            $anggota->kondisi_rumah = $kondisiRumah;
+        }
+
+        if ($asetString) $anggota->aset_ekonomi = $asetString;
+
+        $smartphone = $this->findValue($row, 'smartphone');
+        if ($smartphone !== null) $anggota->punya_smartphone = (int)$smartphone > 0;
+
+        $internet = $this->findValue($row, 'internet');
+        if ($internet !== null) $anggota->akses_internet = (int)$internet == 1;
+
+        $pengeluaran = $this->findValue($row, 'pengeluaran');
+        if (!empty($pengeluaran)) $anggota->rentang_pengeluaran = $pengeluaran;
+
+        // Simpan Model (Insert jika baru, Update jika sudah ada)
+        return $anggota;
     }
 
     public function rules(): array
@@ -116,7 +161,7 @@ class AnggotaJemaatImport implements ToModel, WithHeadingRow, WithValidation
 
     private function mapGender($val)
     {
-        $val = strtolower($val);
+        $val = strtolower($val ?? '');
         if ($val == 'l' || str_contains($val, 'laki')) return 'Laki-laki';
         if ($val == 'p' || str_contains($val, 'perempuan')) return 'Perempuan';
         return null;
