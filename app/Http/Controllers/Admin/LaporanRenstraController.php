@@ -154,7 +154,7 @@ class LaporanRenstraController extends Controller
         $query = $this->getFilteredQuery($request)->with(['jemaat.klasis']);
         
         // Ambil Data untuk Tabel
-        $data = $query->orderBy('jemaat_id')->orderBy('nama_lengkap')->limit(1000)->get();
+        $data = $query->orderBy('jemaat_id')->orderBy('nama_lengkap')->limit(100000)->get();
         $setting = Setting::first();
 
         // Judul Laporan Dinamis (Context Aware)
