@@ -19,11 +19,36 @@
         /* Marker Style */
         .custom-div-icon i { text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
         .marker-pin {
-            width: 24px; height: 24px; border-radius: 50%; 
+            width: 28px; height: 28px; border-radius: 50%; 
             border: 2px solid white; display: flex; 
             align-items: center; justify-content: center; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            font-size: 10px; color: white; font-weight: bold;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+            font-size: 12px; color: white; font-weight: bold;
+            position: relative;
+        }
+        
+        /* Label Klasis (Tooltip Kustom) */
+        .klasis-label {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            color: #1e293b;
+            font-weight: 700;
+            font-size: 11px;
+            font-family: sans-serif;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            /* Reset Leaflet defaults */
+            box-shadow: none;
+            margin-top: 5px; /* Jarak dari Pin ke Label */
+        }
+        /* Segitiga kecil di atas tooltip bawaan leaflet dihilangkan agar lebih clean */
+        .leaflet-tooltip-top:before, 
+        .leaflet-tooltip-bottom:before, 
+        .leaflet-tooltip-left:before, 
+        .leaflet-tooltip-right:before {
+            display: none !important;
         }
 
         /* Tombol Cetak (Hanya di Layar) */
@@ -81,6 +106,13 @@
                 border: 2px solid #333; /* Bingkai agar rapi */
                 border-radius: 4px;
             }
+            
+            /* Cetak Label dengan warna jelas */
+            .klasis-label {
+                background: white !important;
+                color: black !important;
+                border: 1px solid black !important;
+            }
         }
     </style>
 </head>
@@ -111,7 +143,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // --- 1. KOORDINAT TENGAH (FIXED) ---
-        // Kita gunakan koordinat tengah Papua yang optimal untuk Landscape
         var papuaCenter = [-4.2, 137.5]; 
         
         var map = L.map('map', {
@@ -122,6 +153,7 @@
             attributionControl: false
         });
 
+        // Layer Peta (Basemap)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
 
         var klasisData = @json($petaKlasis);
@@ -150,40 +182,47 @@
                             fillOpacity: klasis ? 0.6 : 0.15 
                         };
                     },
+                    // Label nama Kabupaten kita nonaktifkan/transparankan agar tidak bentrok dengan label Klasis
                     onEachFeature: function(feature, layer) {
                         if (feature.properties && feature.properties.NAME_2) {
                             layer.bindTooltip(feature.properties.NAME_2, {
                                 permanent: {{ $isPrint ? 'true' : 'false' }}, 
                                 direction: "center", 
-                                className: "bg-transparent border-0 shadow-none text-[8px] font-bold text-gray-700 uppercase"
+                                className: "bg-transparent border-0 shadow-none text-[8px] font-bold text-gray-500 uppercase opacity-50"
                             });
                         }
                     }
                 }).addTo(map);
             });
 
-        // --- 3. RENDER PIN GEREJA ---
+        // --- 3. RENDER PIN GEREJA & NAMA KLASIS PERMANEN ---
         klasisData.forEach(function(klasis) {
             if(klasis.latitude && klasis.longitude) {
+                // Buat icon PIN
                 var iconHtml = `<div class='marker-pin' style='background-color:${klasis.warna_peta};'><i class='fas fa-church'></i></div>`;
-                var icon = L.divIcon({ className: 'custom-div-icon', html: iconHtml, iconSize: [24, 24], iconAnchor: [12, 12] });
-                L.marker([klasis.latitude, klasis.longitude], {icon: icon}).addTo(map)
-                 .bindPopup(`<b>${klasis.nama_klasis}</b><br>${klasis.kabupaten_kota}`);
+                var icon = L.divIcon({ className: 'custom-div-icon', html: iconHtml, iconSize: [28, 28], iconAnchor: [14, 14] });
+                
+                // Tambahkan Marker ke peta
+                var marker = L.marker([klasis.latitude, klasis.longitude], {icon: icon}).addTo(map);
+                
+                // Tambahkan TOOLTIP PERMANEN di bawah PIN
+                marker.bindTooltip(klasis.nama_klasis, {
+                    permanent: true,           // Selalu muncul
+                    direction: 'bottom',       // Posisi di bawah pin
+                    className: 'klasis-label', // Style CSS kustom kita
+                    offset: [0, 10]            // Jarak dari titik pusat (x, y)
+                });
+                
+                // Popup tambahan saat di-klik (Detail info)
+                marker.bindPopup(`<div style="text-align:center;"><b>${klasis.nama_klasis}</b><br><span style="font-size:11px; color:#666;">Pusat: ${klasis.kabupaten_kota}</span></div>`);
             }
         });
 
         // --- 4. AUTO PRINT LOGIC (LANDSCAPE FIX) ---
         @if($isPrint)
             setTimeout(function() { 
-                // 1. Beritahu Leaflet ukuran container berubah (karena CSS @media print aktif)
                 map.invalidateSize();
-                
-                // 2. Set View Fokus Landscape
-                // Geser sedikit ke latitude -3.5 (lebih ke atas) agar pulau terlihat center 
-                // karena ada Kop Surat di atasnya.
                 map.setView([-3.8, 138.0], 6); 
-                
-                // 3. Eksekusi Print
                 window.print(); 
             }, 2000); 
         @endif
