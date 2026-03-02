@@ -16,7 +16,7 @@
         
         #map { height: 100%; width: 100%; background: #eef2f6; }
         
-        /* Marker Style */
+        /* Marker Pin Style */
         .custom-div-icon i { text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
         .marker-pin {
             width: 28px; height: 28px; border-radius: 50%; 
@@ -26,31 +26,31 @@
             font-size: 12px; color: white; font-weight: bold;
             position: relative;
         }
-        
-        /* Label Klasis (Tooltip Kustom) */
-        .klasis-label {
+
+        /* --- STYLE LABEL MENGAMBANG --- */
+        .custom-floating-label {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: visible;
+        }
+        .floating-label {
             background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            border: 1px solid #475569;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             color: #1e293b;
-            font-weight: 700;
-            font-size: 11px;
+            font-weight: bold;
+            font-size: 10px;
             font-family: sans-serif;
-            padding: 2px 6px;
+            padding: 3px 6px;
             border-radius: 4px;
             white-space: nowrap;
-            /* Reset Leaflet defaults */
-            box-shadow: none;
-            margin-top: 5px; /* Jarak dari Pin ke Label */
+            transform: translate(-50%, -50%); /* Agar tepat berada di tengah ujung garis */
+            pointer-events: none; /* Supaya tidak mengganggu klik ke peta/pin */
         }
-        /* Segitiga kecil di atas tooltip bawaan leaflet dihilangkan agar lebih clean */
-        .leaflet-tooltip-top:before, 
-        .leaflet-tooltip-bottom:before, 
-        .leaflet-tooltip-left:before, 
-        .leaflet-tooltip-right:before {
-            display: none !important;
-        }
-
+        
         /* Tombol Cetak (Hanya di Layar) */
         .action-bar {
             position: absolute; top: 10px; right: 10px; z-index: 1000;
@@ -69,19 +69,17 @@
 
         /* --- SETTING HALAMAN CETAK (LANDSCAPE) --- */
         @page {
-            size: landscape; /* Memaksa printer ke mode Landscape */
-            margin: 10mm;    /* Margin kertas */
+            size: landscape; 
+            margin: 10mm;    
         }
 
         @media print {
             body, html { height: auto; overflow: visible; background: white; }
             
-            /* Sembunyikan elemen interface */
             .action-bar, .leaflet-control-zoom, .leaflet-control-attribution { 
                 display: none !important; 
             }
 
-            /* Tampilkan KOP */
             .kop-header {
                 display: flex;
                 align-items: center;
@@ -92,26 +90,23 @@
                 width: 100%;
                 text-align: center;
             }
-            .kop-logo {
-                width: 70px; height: auto; margin-right: 20px;
-            }
+            .kop-logo { width: 70px; height: auto; margin-right: 20px; }
             .kop-text h1 { margin: 0; font-size: 16pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
             .kop-text h2 { margin: 3px 0; font-size: 12pt; font-weight: bold; text-transform: uppercase; }
             .kop-text p { margin: 0; font-size: 9pt; font-style: italic; }
 
-            /* Atur Ukuran Peta agar pas di Landscape & Tidak Full Satu Halaman */
             #map {
-                height: 150mm; /* Tinggi fix sekitar 60-70% halaman A4 Landscape */
+                height: 150mm; 
                 width: 100%;
-                border: 2px solid #333; /* Bingkai agar rapi */
+                border: 2px solid #333; 
                 border-radius: 4px;
             }
             
-            /* Cetak Label dengan warna jelas */
-            .klasis-label {
+            .floating-label {
                 background: white !important;
-                color: black !important;
                 border: 1px solid black !important;
+                color: black !important;
+                box-shadow: none !important;
             }
         }
     </style>
@@ -142,7 +137,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- 1. KOORDINAT TENGAH (FIXED) ---
         var papuaCenter = [-4.2, 137.5]; 
         
         var map = L.map('map', {
@@ -153,12 +147,12 @@
             attributionControl: false
         });
 
-        // Layer Peta (Basemap)
+        // Basemap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
 
         var klasisData = @json($petaKlasis);
 
-        // --- 2. RENDER WILAYAH (GEOJSON) ---
+        // --- 1. RENDER BATAS WILAYAH (GEOJSON) ---
         fetch("https://raw.githubusercontent.com/ansbmn/indonesia-geojson/master/indonesia-kab.geojson")
             .then(res => res.json())
             .then(data => {
@@ -182,49 +176,105 @@
                             fillOpacity: klasis ? 0.6 : 0.15 
                         };
                     },
-                    // Label nama Kabupaten kita nonaktifkan/transparankan agar tidak bentrok dengan label Klasis
                     onEachFeature: function(feature, layer) {
                         if (feature.properties && feature.properties.NAME_2) {
+                            // Label kabupaten bawaan diredupkan agar fokus ke label Gereja
                             layer.bindTooltip(feature.properties.NAME_2, {
                                 permanent: {{ $isPrint ? 'true' : 'false' }}, 
                                 direction: "center", 
-                                className: "bg-transparent border-0 shadow-none text-[8px] font-bold text-gray-500 uppercase opacity-50"
+                                className: "bg-transparent border-0 shadow-none text-[8px] font-bold text-gray-500 uppercase opacity-30"
                             });
                         }
                     }
                 }).addTo(map);
             });
 
-        // --- 3. RENDER PIN GEREJA & NAMA KLASIS PERMANEN ---
+        // --- 2. RENDER PIN GEREJA (TANPA LABEL BAWAAN) ---
         klasisData.forEach(function(klasis) {
             if(klasis.latitude && klasis.longitude) {
-                // Buat icon PIN
-                var iconHtml = `<div class='marker-pin' style='background-color:${klasis.warna_peta};'><i class='fas fa-church'></i></div>`;
+                var iconHtml = `<div class='marker-pin' style='background-color:${klasis.warna_peta || '#1e40af'};'><i class='fas fa-church'></i></div>`;
                 var icon = L.divIcon({ className: 'custom-div-icon', html: iconHtml, iconSize: [28, 28], iconAnchor: [14, 14] });
                 
-                // Tambahkan Marker ke peta
-                var marker = L.marker([klasis.latitude, klasis.longitude], {icon: icon}).addTo(map);
-                
-                // Tambahkan TOOLTIP PERMANEN di bawah PIN
-                marker.bindTooltip(klasis.nama_klasis, {
-                    permanent: true,           // Selalu muncul
-                    direction: 'bottom',       // Posisi di bawah pin
-                    className: 'klasis-label', // Style CSS kustom kita
-                    offset: [0, 10]            // Jarak dari titik pusat (x, y)
-                });
-                
-                // Popup tambahan saat di-klik (Detail info)
-                marker.bindPopup(`<div style="text-align:center;"><b>${klasis.nama_klasis}</b><br><span style="font-size:11px; color:#666;">Pusat: ${klasis.kabupaten_kota}</span></div>`);
+                L.marker([klasis.latitude, klasis.longitude], {icon: icon, zIndexOffset: 1000})
+                 .bindPopup(`<div style="text-align:center;"><b>${klasis.nama_klasis}</b><br><span style="font-size:11px; color:#666;">Pusat: ${klasis.kabupaten_kota}</span></div>`)
+                 .addTo(map);
             }
         });
 
-        // --- 4. AUTO PRINT LOGIC (LANDSCAPE FIX) ---
+        // --- 3. ALGORITMA LABEL MENGAMBANG & GARIS PENUNJUK ---
+        var labelLayers = L.layerGroup().addTo(map); // Simpan label di group khusus
+
+        function drawSmartLabels() {
+            labelLayers.clearLayers(); // Bersihkan garis/label lama tiap kali layar digeser/zoom
+            
+            // Ubah koordinat peta menjadi koordinat layar (Pixel)
+            let nodes = klasisData.filter(k => k.latitude && k.longitude).map((k, i) => {
+                let pt = map.latLngToLayerPoint([k.latitude, k.longitude]);
+                return { x: pt.x, y: pt.y, origX: pt.x, origY: pt.y, klasis: k };
+            });
+
+            // Physics Algorithm (Menghindari Tumpang Tindih)
+            let nodeW = 100; // Standar area lebar teks agar tidak nabrak
+            let nodeH = 30;  // Standar area tinggi teks
+            
+            for(let iter = 0; iter < 100; iter++) {
+                for(let i = 0; i < nodes.length; i++) {
+                    for(let j = 0; j < nodes.length; j++) {
+                        if(i === j) continue;
+                        let a = nodes[i], b = nodes[j];
+                        let dx = a.x - b.x, dy = a.y - b.y;
+                        
+                        // Jika posisi mereka terlalu dekat (berpotensi tumpang tindih)
+                        if (Math.abs(dx) < nodeW && Math.abs(dy) < nodeH) {
+                            let dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                            let force = 4; // Kekuatan dorongan menjauh
+                            a.x += (dx/dist) * force; a.y += (dy/dist) * force;
+                        }
+                    }
+                    // Tarik kembali ke titik asal sedikit demi sedikit agar tidak melayang terlalu jauh
+                    nodes[i].x -= (nodes[i].x - nodes[i].origX) * 0.04;
+                    nodes[i].y -= (nodes[i].y - nodes[i].origY) * 0.04;
+                }
+            }
+
+            // Mulai Menggambar Garis & Labelnya
+            nodes.forEach(node => {
+                let latlng = map.layerPointToLatLng([node.x, node.y]);
+                let origLatlng = map.layerPointToLatLng([node.origX, node.origY]);
+                
+                // Hitung seberapa jauh label digeser dari titik gerejanya
+                let distMoved = Math.sqrt(Math.pow(node.x - node.origX, 2) + Math.pow(node.y - node.origY, 2));
+
+                // Jika tergeser karena padat, gambar garis putus-putus
+                if(distMoved > 20) {
+                    L.polyline([origLatlng, latlng], {
+                        color: '#475569', weight: 1.5, dashArray: '4, 4'
+                    }).addTo(labelLayers);
+                } else {
+                    // Jika tempatnya lega, angkat label sedikit ke atas pin agar tidak nutupin pin
+                    latlng = map.layerPointToLatLng([node.origX, node.origY - 25]);
+                }
+
+                // Render Teks Label di atas layer garis
+                let iconHtml = `<div class='floating-label'>${node.klasis.nama_klasis}</div>`;
+                let lblIcon = L.divIcon({ className: 'custom-floating-label', html: iconHtml, iconSize: [0, 0] });
+                L.marker(latlng, {icon: lblIcon, zIndexOffset: 2000}).addTo(labelLayers);
+            });
+        }
+
+        // Panggil fungsi saat render awal dan setiap selesai zoom (agar ukurannya selalu proporsional)
+        map.on('zoomend', drawSmartLabels);
+        drawSmartLabels();
+
+        // --- 4. AUTO PRINT LOGIC DENGAN RE-CALCULATION ---
         @if($isPrint)
             setTimeout(function() { 
                 map.invalidateSize();
                 map.setView([-3.8, 138.0], 6); 
-                window.print(); 
-            }, 2000); 
+                drawSmartLabels(); // Hitung ulang posisi label setelah ukuran kertas disesuaikan
+                
+                setTimeout(function() { window.print(); }, 800); 
+            }, 1000); 
         @endif
     </script>
 </body>
