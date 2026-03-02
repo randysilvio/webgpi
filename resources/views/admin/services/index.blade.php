@@ -1,60 +1,79 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('title', 'Manajemen Layanan')
-@section('header-title', 'Manajemen Layanan Holistik')
 
 @section('content')
+    <x-admin-index 
+        title="Manajemen Layanan" 
+        subtitle="Kelola daftar layanan holistik yang ditampilkan di halaman depan."
+        create-route="{{ route('admin.services.create') }}"
+        create-label="Tambah Layanan"
+        :pagination="$services"
+    >
+        {{-- SLOT TABLE HEAD --}}
+        <x-slot name="tableHead">
+            <th class="px-6 py-4 w-16 text-center">Urutan</th>
+            <th class="px-6 py-4">Judul Layanan</th>
+            <th class="px-6 py-4">Tema Warna</th>
+            <th class="px-6 py-4">Ikon</th>
+            <th class="px-6 py-4 text-center">Aksi</th>
+        </x-slot>
 
-     {{-- Flash Messages --}}
-     @if (session('success')) <div class="flash-message mb-6 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md shadow-sm" role="alert"><p>{{ session('success') }}</p></div> @endif
-     @if (session('error')) <div class="flash-message mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm" role="alert"><p>{{ session('error') }}</p></div> @endif
+        {{-- LOOP DATA --}}
+        @forelse ($services as $service)
+            <tr class="hover:bg-slate-50 transition">
+                <x-td class="text-center">
+                    <span class="bg-slate-100 text-slate-600 font-bold px-2 py-1 rounded text-xs">
+                        {{ $service->order }}
+                    </span>
+                </x-td>
+                <x-td class="font-bold text-slate-800">
+                    {{ $service->title }}
+                </x-td>
+                <x-td>
+                    {{-- Badge Warna --}}
+                    @php
+                        $colorClass = match($service->color_theme) {
+                            'green' => 'bg-green-100 text-green-700',
+                            'orange' => 'bg-orange-100 text-orange-700',
+                            'purple' => 'bg-purple-100 text-purple-700',
+                            'red' => 'bg-red-100 text-red-700',
+                            'indigo' => 'bg-indigo-100 text-indigo-700',
+                            default => 'bg-blue-100 text-blue-700',
+                        };
+                    @endphp
+                    <span class="{{ $colorClass }} px-2 py-1 rounded text-xs font-bold capitalize">
+                        {{ $service->color_theme }}
+                    </span>
+                </x-td>
+                <x-td class="text-slate-500 capitalize">
+                    @if($service->icon)
+                        <i class="fas fa-{{ $service->icon == 'hands-helping' ? 'hand-holding-heart' : $service->icon }} mr-2"></i> 
+                        {{ $service->icon }}
+                    @else
+                        -
+                    @endif
+                </x-td>
+                <x-td class="text-center">
+                    <div class="flex justify-center gap-2">
+                        <a href="{{ route('admin.services.edit', $service) }}" class="text-slate-400 hover:text-yellow-600 transition">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form action="{{ route('admin.services.destroy', $service) }}" method="POST" class="inline" onsubmit="return confirm('Yakin ingin menghapus layanan ini?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="text-slate-400 hover:text-red-600 transition">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </x-td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-slate-400 italic">Belum ada data layanan.</td>
+            </tr>
+        @endforelse
 
-    {{-- Tombol Tambah --}}
-    <div class="mb-6 flex justify-end">
-        <a href="{{ route('admin.services.create') }}" class="inline-flex items-center px-4 py-2 bg-primary border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150 shadow hover:shadow-md">
-            <svg class="w-4 h-4 mr-2 -ml-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            Tambah Layanan
-        </a>
-    </div>
-
-     {{-- Tabel Daftar Layanan --}}
-     <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-         <div class="overflow-x-auto">
-             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Urutan</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul Layanan</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tema Warna</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ikon</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse ($services as $service)
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $service->order }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $service->title }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm capitalize">
-                            {{-- Tampilkan warna tema --}}
-                            <span class_="{{ 'text-' . $service->color_theme . '-700 bg-' . $service->color_theme . '-100' }} px-2 py-0.5 rounded text-xs font-medium">{{ $service->color_theme }}</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{{ $service->icon ?? '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                            <a href="{{ route('admin.services.edit', $service) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
-                            <form action="{{ route('admin.services.destroy', $service) }}" method="POST" class="inline" onsubmit="return confirm('Yakin ingin menghapus layanan ini?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
-                            </form>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada data layanan.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-         </div>
-         <div class="px-6 py-4 border-t">{{ $services->links('vendor.pagination.tailwind') }}</div>
-    </div>
+    </x-admin-index>
 @endsection

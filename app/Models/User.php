@@ -7,31 +7,31 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles; // <-- Pastikan ini ada
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
-    // Tambahkan HasRoles agar bisa pakai $user->assignRole() / $user->hasRole()
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
      */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'pendeta_id', // <-- Tambahkan ini untuk relasi ke Pendeta
-        'klasis_id',  // <-- Tambahkan ini jika Admin Klasis dikaitkan via user
-        'jemaat_id',  // <-- Tambahkan ini jika Admin Jemaat dikaitkan via user
+        'pegawai_id', // <-- GANTI: Dulu pendeta_id, sekarang pegawai_id
+        
+        // Klasis & Jemaat ID di user tetap berguna untuk Admin Klasis/Jemaat
+        // yang mungkin bukan pegawai, tapi operator.
+        'klasis_id', 
+        'jemaat_id',
+        'jenis_wadah_id',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -40,8 +40,6 @@ class User extends Authenticatable
 
     /**
      * The attributes that should be cast.
-     *
-     * @var array<string, string>
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -49,17 +47,25 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the pendeta record associated with the user.
+     * Relasi ke Data Personil (Bisa Pendeta atau Staff).
      */
-    public function pendeta()
+    public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(Pendeta::class);
+        return $this->belongsTo(Pegawai::class, 'pegawai_id');
+    }
+
+    /**
+     * Helper: Cek apakah user ini adalah Pendeta
+     */
+    public function isPendeta(): bool
+    {
+        return $this->pegawai && $this->pegawai->jenis_pegawai === 'Pendeta';
     }
 
     /**
       * Get the klasis record associated with the user (if Admin Klasis).
       */
-     public function klasisTugas()
+     public function klasisTugas(): BelongsTo
      {
          return $this->belongsTo(Klasis::class, 'klasis_id');
      }
@@ -67,8 +73,16 @@ class User extends Authenticatable
       /**
        * Get the jemaat record associated with the user (if Admin Jemaat).
        */
-      public function jemaatTugas()
+      public function jemaatTugas(): BelongsTo
       {
           return $this->belongsTo(Jemaat::class, 'jemaat_id');
       }
+
+    /**
+     * Relasi ke Jenis Wadah (Jika akun pengurus wadah).
+     */
+    public function jenisWadah(): BelongsTo
+    {
+        return $this->belongsTo(JenisWadahKategorial::class, 'jenis_wadah_id');
+    }
 }

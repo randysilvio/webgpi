@@ -1,87 +1,99 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Detail Klasis: ' . $klasis->nama_klasis)
-@section('header-title', 'Detail Data Klasis')
+@section('title', 'Detail Klasis')
+@section('header-title', 'Detail Data Wilayah')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6 md:p-8">
-    {{-- Header Detail --}}
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
-        <div class="flex items-center space-x-4">
-             @if ($klasis->foto_kantor_path && Storage::disk('public')->exists($klasis->foto_kantor_path))
-                <img src="{{ Storage::url($klasis->foto_kantor_path) }}" alt="Foto {{ $klasis->nama_klasis }}" class="w-20 h-20 rounded-lg object-cover border border-gray-200 shadow-sm">
+<div class="max-w-5xl mx-auto">
+    {{-- Header --}}
+    <div class="bg-white rounded-t-lg shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row items-center md:items-start gap-6">
+        <div class="h-24 w-24 rounded bg-slate-100 flex items-center justify-center border border-slate-200 overflow-hidden">
+            @if($klasis->foto_kantor_path)
+                <img src="{{ Storage::url($klasis->foto_kantor_path) }}" class="h-full w-full object-cover">
             @else
-                 <div class="w-20 h-20 rounded-lg bg-gray-200 flex items-center justify-center text-gray-400 border">
-                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h6M9 11.25h6m-6 4.5h6M6.75 21v-2.25a2.25 2.25 0 0 1 2.25-2.25h6a2.25 2.25 0 0 1 2.25 2.25V21"></path></svg>
-                </div>
+                <i class="fas fa-church text-4xl text-slate-300"></i>
             @endif
-            <div>
-                <h2 class="text-2xl font-semibold text-gray-800">{{ $klasis->nama_klasis }}</h2>
-                <p class="text-sm text-gray-500">
-                    Pusat: {{ $klasis->pusat_klasis ?? '-' }} |
-                    Kode: <span class="font-medium">{{ $klasis->kode_klasis ?? '-' }}</span>
-                </p>
-                 <p class="text-sm text-gray-500">
-                    Ketua MPK: {{ $klasis->ketuaMp->nama_lengkap ?? '-' }}
-                </p>
+        </div>
+        <div class="flex-1 text-center md:text-left">
+            <div class="flex items-center justify-center md:justify-start gap-2 mb-1">
+                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded border border-blue-200">{{ $klasis->kode_klasis }}</span>
+                <h1 class="text-2xl font-bold text-slate-800">{{ $klasis->nama_klasis }}</h1>
+            </div>
+            <p class="text-slate-500 text-sm"><i class="fas fa-map-marker-alt mr-1"></i> {{ $klasis->pusat_klasis ?? 'Lokasi belum diset' }}</p>
+            
+            <div class="mt-4 flex flex-wrap justify-center md:justify-start gap-3">
+                <div class="px-3 py-1 bg-slate-50 rounded border border-slate-200 text-xs font-medium text-slate-600">
+                    <span class="block text-[10px] uppercase text-slate-400">Total Jemaat</span>
+                    <span class="text-lg font-bold text-slate-800">{{ $klasis->jemaat->count() }}</span>
+                </div>
+                <div class="px-3 py-1 bg-slate-50 rounded border border-slate-200 text-xs font-medium text-slate-600">
+                    <span class="block text-[10px] uppercase text-slate-400">Est.</span>
+                    <span class="text-lg font-bold text-slate-800">{{ $klasis->tanggal_pembentukan ? $klasis->tanggal_pembentukan->format('Y') : '-' }}</span>
+                </div>
             </div>
         </div>
-        <div class="mt-3 sm:mt-0 flex space-x-2">
-            {{-- Tombol Edit (Sesuaikan hak akses nanti) --}}
-            {{-- @hasanyrole('Super Admin|Admin Bidang 3') --}}
-            <a href="{{ route('admin.klasis.edit', $klasis->id) }}" class="bg-indigo-500 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md shadow text-sm transition duration-150 ease-in-out whitespace-nowrap">
-                Edit Data
-            </a>
-            {{-- @endhasanyrole --}}
-            <a href="{{ route('admin.klasis.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md shadow text-sm transition duration-150 ease-in-out whitespace-nowrap">
-                &larr; Kembali
-            </a>
+        <div class="flex gap-2">
+            <a href="{{ route('admin.klasis.index') }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold uppercase rounded hover:bg-slate-50">Kembali</a>
+            @hasanyrole('Super Admin|Admin Bidang 3')
+            <a href="{{ route('admin.klasis.edit', $klasis->id) }}" class="px-4 py-2 bg-yellow-500 text-white text-xs font-bold uppercase rounded hover:bg-yellow-600">Edit Data</a>
+            @endhasanyrole
         </div>
     </div>
 
-    {{-- Grid Detail Data --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6 text-sm mt-6">
-
-        {{-- Kolom 1: Info Dasar & Kontak --}}
-        <div class="space-y-3 bg-white shadow rounded-lg p-6 border">
-            <h3 class="text-base font-semibold text-gray-700 mb-2 border-b pb-1">Info Dasar & Kontak</h3>
-            <p><strong class="font-medium text-gray-600 w-32 inline-block">Tanggal Bentuk:</strong> {{ optional($klasis->tanggal_pembentukan)->isoFormat('DD MMMM YYYY') ?: '-' }}</p>
-            <p><strong class="font-medium text-gray-600 w-32 inline-block">Nomor SK:</strong> {{ $klasis->nomor_sk_pembentukan ?: '-' }}</p>
-            <p><strong class="font-medium text-gray-600 w-32 inline-block">Klasis Induk:</strong> {{ $klasis->klasis_induk ?: '-' }}</p>
-            <hr class="my-2">
-            <p><strong class="font-medium text-gray-600 w-32 inline-block">Telepon:</strong> {{ $klasis->telepon_kantor ?: '-' }}</p>
-            <p><strong class="font-medium text-gray-600 w-32 inline-block">Email:</strong> {{ $klasis->email_klasis ?: '-' }}</p>
-            <p><strong class="font-medium text-gray-600 w-32 inline-block">Website:</strong> {{ $klasis->website_klasis ?: '-' }}</p>
-            <p><strong class="font-medium text-gray-600 w-32 inline-block">Alamat Kantor:</strong></p>
-            <p class="pl-4 whitespace-pre-line">{{ $klasis->alamat_kantor ?: '-' }}</p>
+    {{-- Detail Grid --}}
+    <div class="bg-white rounded-b-lg shadow-sm border-x border-b border-slate-200 p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        {{-- Kolom 1 --}}
+        <div class="space-y-4">
+            <h3 class="text-xs font-bold text-slate-400 uppercase border-b border-slate-100 pb-2">Informasi Umum</h3>
+            <div class="text-sm">
+                <span class="block text-slate-500 text-xs">Nomor SK Pembentukan</span>
+                <span class="font-medium text-slate-800">{{ $klasis->nomor_sk_pembentukan ?? '-' }}</span>
+            </div>
+            <div class="text-sm">
+                <span class="block text-slate-500 text-xs">Tanggal Pembentukan</span>
+                <span class="font-medium text-slate-800">{{ $klasis->tanggal_pembentukan ? $klasis->tanggal_pembentukan->translatedFormat('d F Y') : '-' }}</span>
+            </div>
+            <div class="text-sm">
+                <span class="block text-slate-500 text-xs">Klasis Induk</span>
+                <span class="font-medium text-slate-800">{{ $klasis->klasis_induk ?? '-' }}</span>
+            </div>
         </div>
 
-        {{-- Kolom 2: Deskripsi & Sejarah --}}
-        <div class="space-y-3 bg-white shadow rounded-lg p-6 border">
-             <h3 class="text-base font-semibold text-gray-700 mb-2 border-b pb-1">Deskripsi & Sejarah</h3>
-             <p><strong class="font-medium text-gray-600 block mb-1">Wilayah Pelayanan:</strong></p>
-             <p class="whitespace-pre-line">{{ $klasis->wilayah_pelayanan ?: '-' }}</p>
-             <hr class="my-2">
-             <p><strong class="font-medium text-gray-600 block mb-1">Sejarah Singkat:</strong></p>
-             <p class="whitespace-pre-line">{{ $klasis->sejarah_singkat ?: '-' }}</p>
+        {{-- Kolom 2 --}}
+        <div class="space-y-4">
+            <h3 class="text-xs font-bold text-slate-400 uppercase border-b border-slate-100 pb-2">Kontak & Lokasi</h3>
+            <div class="text-sm">
+                <span class="block text-slate-500 text-xs">Alamat Kantor</span>
+                <span class="font-medium text-slate-800">{{ $klasis->alamat_kantor ?? '-' }}</span>
+            </div>
+            <div class="text-sm">
+                <span class="block text-slate-500 text-xs">Email / Telepon</span>
+                <span class="font-medium text-slate-800">
+                    {{ $klasis->email_klasis ?? '-' }} <br> 
+                    {{ $klasis->telepon_kantor ?? '-' }}
+                </span>
+            </div>
+            <div class="text-sm">
+                <span class="block text-slate-500 text-xs">Koordinat</span>
+                <span class="font-mono text-xs bg-slate-100 px-1 rounded">{{ $klasis->latitude ?? '0' }}, {{ $klasis->longitude ?? '0' }}</span>
+            </div>
         </div>
 
-        {{-- Kolom 3: Daftar Jemaat --}}
-        <div class="space-y-3 bg-white shadow rounded-lg p-6 border">
-            <h3 class="text-base font-semibold text-gray-700 mb-2 border-b pb-1">Jemaat di Bawah Klasis ({{ $klasis->jemaat->count() }})</h3>
-            @if($klasis->jemaat->isNotEmpty())
-            <ul class="list-disc list-inside space-y-1 max-h-60 overflow-y-auto">
-                @foreach ($klasis->jemaat as $jemaat)
-                     <li>
-                         <a href="{{ route('admin.jemaat.show', $jemaat->id) }}" class="text-primary hover:underline" title="Lihat Detail Jemaat">
-                             {{ $jemaat->nama_jemaat }}
-                         </a>
-                         <span class="text-xs text-gray-500">({{ $jemaat->status_jemaat }})</span>
-                     </li>
-                @endforeach
-            </ul>
+        {{-- Kolom 3 (List Jemaat) --}}
+        <div class="bg-slate-50 p-4 rounded border border-slate-100 h-64 overflow-y-auto">
+            <h3 class="text-xs font-bold text-slate-500 uppercase mb-3">Daftar Jemaat</h3>
+            @if($klasis->jemaat->count() > 0)
+                <ul class="space-y-2">
+                    @foreach($klasis->jemaat as $j)
+                    <li class="bg-white p-2 rounded shadow-sm border border-slate-200 flex justify-between items-center">
+                        <a href="{{ route('admin.jemaat.show', $j->id) }}" class="text-xs font-bold text-slate-700 hover:text-blue-600 truncate w-32">{{ $j->nama_jemaat }}</a>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded {{ $j->status_jemaat == 'Mandiri' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">{{ $j->status_jemaat }}</span>
+                    </li>
+                    @endforeach
+                </ul>
             @else
-             <p class="text-gray-500 italic">Belum ada data jemaat di klasis ini.</p>
+                <p class="text-xs text-slate-400 italic text-center mt-10">Belum ada jemaat.</p>
             @endif
         </div>
     </div>

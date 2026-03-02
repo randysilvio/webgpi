@@ -4,35 +4,29 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Klasis; // Untuk dropdown relasi
-use App\Models\Jemaat; // Untuk dropdown relasi
-use App\Models\Pendeta; // Untuk dropdown relasi
+use App\Models\Klasis; 
+use App\Models\Jemaat; 
+use App\Models\Pegawai; 
+use App\Models\JenisWadahKategorial;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Models\Role; // <-- Import model Role
-use Illuminate\Validation\Rules; // <-- Untuk validasi password
-use Illuminate\Validation\Rule; // <-- Untuk validasi unique
+use Spatie\Permission\Models\Role; 
+use Illuminate\Validation\Rules; 
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    // Middleware (AKTIFKAN SETELAH LOGIN & ROLE DISET)
     public function __construct()
     {
-        // AKTIFKAN KEMBALI
         $this->middleware(['auth']);
-        $this->middleware('role:Super Admin'); // Hanya Super Admin yang boleh kelola user
+        $this->middleware('role:Super Admin');
     }
 
-    // ... (sisa method index, create, store, show, edit, update, destroy tetap sama) ...
-
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
-        $query = User::with(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta'])->latest(); // Eager load relasi
+        $query = User::with(['roles', 'klasisTugas', 'jemaatTugas', 'pegawai', 'jenisWadah'])->latest();
 
         if ($request->filled('search')) {
              $searchTerm = '%' . $request->search . '%';
@@ -43,32 +37,21 @@ class UserController extends Controller
          }
 
         $users = $query->paginate(15)->appends($request->query());
-
-        return view('admin.user.index', compact('users')); // Gunakan folder 'user' (singular)
+        return view('admin.user.index', compact('users'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        // Ambil semua nama role
-        $roles = Role::pluck('name', 'name');
-        // Jika user bukan ID 1 (Super Admin), jangan tampilkan opsi Super Admin
-        if (Auth::check() && Auth::id() != 1) {
-            $roles = Role::where('name', '!=', 'Super Admin')->pluck('name', 'name');
-        }
+        // KONSISTENSI: Gunakan nama variabel yang sama dengan method edit()
+        $roles = Role::all(); // Object
+        $pegawais = Pegawai::orderBy('nama_lengkap', 'asc')->get();
+        $klasisList = Klasis::orderBy('nama_klasis', 'asc')->get();
+        $jemaatList = Jemaat::orderBy('nama_jemaat', 'asc')->get(); // Load semua untuk create
+        $jenisWadahs = JenisWadahKategorial::orderBy('nama_wadah', 'asc')->get();
 
-        $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
-        $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id'); // TODO: Filter by klasis via JS
-        $pendetaOptions = Pendeta::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
-
-        return view('admin.user.create', compact('roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions')); // Gunakan folder 'user'
+        return view('admin.user.create', compact('roles', 'pegawais', 'klasisList', 'jemaatList', 'jenisWadahs'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -77,9 +60,10 @@ class UserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'roles' => ['required', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
+            'pegawai_id' => ['nullable', 'exists:pegawai,id', 'unique:'.User::class.',pegawai_id'],
             'klasis_id' => ['nullable', 'exists:klasis,id'],
             'jemaat_id' => ['nullable', 'exists:jemaat,id'],
-            'pendeta_id' => ['nullable', 'exists:pendeta,id', 'unique:'.User::class.',pendeta_id'],
+            'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'],
         ]);
 
         try {
@@ -87,132 +71,99 @@ class UserController extends Controller
                 'name' => $validatedData['name'],
                 'email' => $validatedData['email'],
                 'password' => Hash::make($validatedData['password']),
+                'pegawai_id' => $validatedData['pegawai_id'] ?? null,
                 'klasis_id' => $validatedData['klasis_id'] ?? null,
                 'jemaat_id' => $validatedData['jemaat_id'] ?? null,
-                'pendeta_id' => $validatedData['pendeta_id'] ?? null,
+                'jenis_wadah_id' => $validatedData['jenis_wadah_id'] ?? null,
             ]);
 
-            // Jangan izinkan assign Super Admin jika bukan Super Admin
             $rolesToSync = $validatedData['roles'];
-            if (Auth::check() && !Auth::user()->hasRole('Super Admin')) {
-                $rolesToSync = array_filter($rolesToSync, fn($role) => $role !== 'Super Admin');
+            // Proteksi Super Admin (Opsional jika user login bukan ID 1)
+            if (Auth::check() && Auth::id() != 1) {
+                $rolesToSync = array_filter($rolesToSync, fn($r) => $r !== 'Super Admin');
             }
-
-            $user->syncRoles($rolesToSync);
+            $user->assignRole($rolesToSync);
 
             return redirect()->route('admin.users.index')->with('success', 'User baru berhasil dibuat.');
 
         } catch (\Exception $e) {
-             Log::error('Gagal membuat user baru: ' . $e->getMessage());
-             return redirect()->route('admin.users.create')
-                              ->with('error', 'Gagal membuat user baru. Error: ' . $e->getMessage())
-                              ->withInput();
+             Log::error('Gagal buat user: ' . $e->getMessage());
+             return back()->with('error', 'Gagal: ' . $e->getMessage())->withInput();
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(User $user)
+    public function show($id)
     {
-        $user->load(['roles', 'klasisTugas', 'jemaatTugas', 'pendeta']);
-        return view('admin.user.show', compact('user')); // Gunakan folder 'user'
+        $user = User::with(['roles', 'klasisTugas', 'jemaatTugas', 'pegawai', 'jenisWadah'])->findOrFail($id);
+        return view('admin.user.show', compact('user'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(User $user)
+    public function edit($id)
     {
-        $roles = Role::pluck('name', 'name'); 
-        // Jika user bukan ID 1, jangan tampilkan opsi Super Admin
-        if (Auth::check() && Auth::id() != 1) {
-            $roles = Role::where('name', '!=', 'Super Admin')->pluck('name', 'name');
+        $user = User::findOrFail($id);
+
+        // KONSISTENSI: Variabel sama persis dengan create()
+        $roles = Role::all();
+        $pegawais = Pegawai::orderBy('nama_lengkap', 'asc')->get();
+        $klasisList = Klasis::orderBy('nama_klasis', 'asc')->get();
+        $jenisWadahs = JenisWadahKategorial::orderBy('nama_wadah', 'asc')->get();
+        
+        // Jemaat khusus (jika user sudah punya klasis)
+        $jemaatList = collect();
+        if ($user->klasis_id) {
+            $jemaatList = Jemaat::where('klasis_id', $user->klasis_id)->orderBy('nama_jemaat')->get();
         }
 
-        $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
-        $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
-        $pendetaOptions = Pendeta::orderBy('nama_lengkap')->pluck('nama_lengkap', 'id');
         $userRoles = $user->roles->pluck('name')->toArray();
 
-        return view('admin.user.edit', compact('user', 'roles', 'klasisOptions', 'jemaatOptions', 'pendetaOptions', 'userRoles')); // Gunakan folder 'user'
+        return view('admin.user.edit', compact(
+            'user', 'roles', 'pegawais', 'klasisList', 'jenisWadahs', 'jemaatList', 'userRoles'
+        ));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, User $user)
+    public function update(Request $request, $id)
     {
-         $validatedData = $request->validate([
+        $user = User::findOrFail($id);
+
+        $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$id],
             'roles' => ['required', 'array'],
-            'roles.*' => ['string', Rule::exists('roles', 'name')],
+            'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
+            'pegawai_id' => ['nullable', 'exists:pegawai,id'], // Hapus unique check self jika perlu
             'klasis_id' => ['nullable', 'exists:klasis,id'],
             'jemaat_id' => ['nullable', 'exists:jemaat,id'],
-            'pendeta_id' => ['nullable', 'exists:pendeta,id', Rule::unique('users', 'pendeta_id')->ignore($user->id)],
+            'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'],
         ]);
 
-         try {
-            $updateData = [
-                'name' => $validatedData['name'],
-                'email' => $validatedData['email'],
-                'klasis_id' => $validatedData['klasis_id'] ?? null,
-                'jemaat_id' => $validatedData['jemaat_id'] ?? null,
-                'pendeta_id' => $validatedData['pendeta_id'] ?? null,
+        try {
+            $data = [
+                'name' => $request->name,
+                'email' => $request->email,
+                'pegawai_id' => $request->pegawai_id,
+                'klasis_id' => $request->klasis_id,
+                'jemaat_id' => $request->jemaat_id,
+                'jenis_wadah_id' => $request->jenis_wadah_id,
             ];
 
-            if (!empty($validatedData['password'])) {
-                $updateData['password'] = Hash::make($validatedData['password']);
+            if ($request->filled('password')) {
+                $data['password'] = Hash::make($request->password);
             }
 
-            $user->update($updateData);
-
-            $rolesToSync = $validatedData['roles'];
-            // Proteksi agar Super Admin ID 1 tidak kehilangan rolenya
-            if ($user->id == 1 && !in_array('Super Admin', $rolesToSync)) {
-                $rolesToSync[] = 'Super Admin'; // Paksa tetap jadi Super Admin
-            }
-            // Proteksi agar user lain tidak bisa assign Super Admin
-            if (Auth::check() && !Auth::user()->hasRole('Super Admin')) {
-                 $rolesToSync = array_filter($rolesToSync, fn($role) => $role !== 'Super Admin');
-            }
-
-            $user->syncRoles($rolesToSync);
-
-            return redirect()->route('admin.users.index')->with('success', 'Data user berhasil diperbarui.');
+            $user->update($data);
+            $user->syncRoles($request->roles);
+            
+            return redirect()->route('admin.users.index')->with('success', 'User berhasil diperbarui.');
 
         } catch (\Exception $e) {
-             Log::error('Gagal update user ID: ' . $user->id . '. Error: '. $e->getMessage());
-             return redirect()->route('admin.users.edit', $user->id)
-                              ->with('error', 'Gagal memperbarui data user. Error: ' . $e->getMessage())
-                              ->withInput();
+             return back()->with('error', 'Gagal update: ' . $e->getMessage())->withInput();
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(User $user)
+    public function destroy($id)
     {
-        if ($user->id == 1) { 
-             return redirect()->route('admin.users.index')->with('error', 'User Super Admin utama (ID 1) tidak dapat dihapus.');
-        }
-
-        if ($user->pendeta_id) {
-             return redirect()->route('admin.users.index')->with('error', 'User ini terhubung ke Data Pendeta. Hapus Data Pendeta terkait untuk menghapus user ini.');
-        }
-
-        try {
-            $userName = $user->name;
-            $user->delete();
-            return redirect()->route('admin.users.index')->with('success', 'User (' . $userName . ') berhasil dihapus.');
-
-        } catch (\Exception $e) {
-             Log::error('Gagal hapus user ID: ' . $user->id . '. Error: ' . $e->getMessage());
-             return redirect()->route('admin.users.index')
-                              ->with('error', 'Gagal menghapus user. Error: ' . $e->getMessage());
-        }
+        if ($id == 1) return back()->with('error', 'Super Admin Utama tidak bisa dihapus.');
+        User::destroy($id);
+        return redirect()->route('admin.users.index')->with('success', 'User dihapus.');
     }
 }

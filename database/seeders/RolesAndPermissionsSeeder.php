@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use Illuminate\Support\Facades\Log; // Untuk logging
+use Illuminate\Support\Facades\Log;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -19,31 +19,37 @@ class RolesAndPermissionsSeeder extends Seeder
 
         Log::info('Memulai RolesAndPermissionsSeeder...');
 
-        // --- DEVINISI PERMISSIONS ---
-        // (Nama permission sebaiknya deskriptif, misal: 'view users', 'create users', 'edit users', 'delete users')
+        // --- DEFINISI PERMISSIONS ---
 
-        // Manajemen Konten Publik (Bidang 4 / Super Admin)
-        Permission::firstOrCreate(['name' => 'manage settings']); // Kelola Pengaturan Situs
-        Permission::firstOrCreate(['name' => 'manage posts']);    // Kelola Berita/Posts
-        Permission::firstOrCreate(['name' => 'manage services']); // Kelola Layanan
-        Permission::firstOrCreate(['name' => 'manage messages']); // Kelola Pesan Masuk
+        // 1. Manajemen Konten & Website (Bidang 4)
+        Permission::firstOrCreate(['name' => 'manage settings']); 
+        Permission::firstOrCreate(['name' => 'manage posts']);    
+        Permission::firstOrCreate(['name' => 'manage services']); 
+        Permission::firstOrCreate(['name' => 'manage messages']); 
 
-        // Manajemen Struktur & Kepegawaian (Bidang 3 / Super Admin)
-        Permission::firstOrCreate(['name' => 'manage users']);    // Kelola User & Roles
-        Permission::firstOrCreate(['name' => 'view users']);      // Lihat Daftar User
-        Permission::firstOrCreate(['name' => 'manage pendeta']);   // Kelola Data Pendeta (CRUD)
-        Permission::firstOrCreate(['name' => 'manage klasis']);    // Kelola Data Klasis (CRUD)
-        Permission::firstOrCreate(['name' => 'manage jemaat']);    // Kelola Data Jemaat (CRUD Penuh)
+        // 2. Manajemen Kepegawaian (HRIS - Bidang 3)
+        Permission::firstOrCreate(['name' => 'manage pegawai']);   // Permission Baru untuk HRIS Unified
+        Permission::firstOrCreate(['name' => 'manage pendeta']);   // Legacy / Khusus Pendeta
+        Permission::firstOrCreate(['name' => 'manage mutasi']);    // Kelola Mutasi
+        Permission::firstOrCreate(['name' => 'import pegawai']);
+        Permission::firstOrCreate(['name' => 'export pegawai']);
 
-        // Manajemen Data Jemaat (Level Klasis & Jemaat)
-        Permission::firstOrCreate(['name' => 'view pendeta']);     // Lihat Daftar Pendeta
-        Permission::firstOrCreate(['name' => 'view klasis']);     // Lihat Daftar Klasis
-        Permission::firstOrCreate(['name' => 'edit own klasis']);  // Edit info kontak Klasis sendiri
+        // 3. Manajemen Struktur Organisasi (Bidang 3/Admin Sinode)
+        Permission::firstOrCreate(['name' => 'manage users']);    
+        Permission::firstOrCreate(['name' => 'view users']);      
+        Permission::firstOrCreate(['name' => 'manage klasis']);    
+        Permission::firstOrCreate(['name' => 'manage jemaat']);    
 
-        Permission::firstOrCreate(['name' => 'view jemaat']);      // Lihat Daftar Jemaat
-        Permission::firstOrCreate(['name' => 'create jemaat']);    // Buat Jemaat baru (Admin Klasis)
-        Permission::firstOrCreate(['name' => 'edit jemaat']);      // Edit Jemaat (Admin Klasis/Jemaat)
-        Permission::firstOrCreate(['name' => 'delete jemaat']);    // Hapus Jemaat (Admin Klasis)
+        // 4. Akses Data Wilayah (Read Only untuk dropdown/referensi)
+        Permission::firstOrCreate(['name' => 'view pendeta']);     
+        Permission::firstOrCreate(['name' => 'view klasis']);     
+        Permission::firstOrCreate(['name' => 'edit own klasis']);  
+        Permission::firstOrCreate(['name' => 'view jemaat']);      
+        
+        // 5. Manajemen Data Jemaat (Level Klasis & Jemaat)
+        Permission::firstOrCreate(['name' => 'create jemaat']);    
+        Permission::firstOrCreate(['name' => 'edit jemaat']);      
+        Permission::firstOrCreate(['name' => 'delete jemaat']);    
 
         Permission::firstOrCreate(['name' => 'view anggota jemaat']);
         Permission::firstOrCreate(['name' => 'create anggota jemaat']);
@@ -52,7 +58,7 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'import anggota jemaat']);
         Permission::firstOrCreate(['name' => 'export anggota jemaat']);
 
-        // Import/Export
+        // 6. Import/Export Umum
         Permission::firstOrCreate(['name' => 'import pendeta']);
         Permission::firstOrCreate(['name' => 'export pendeta']);
         Permission::firstOrCreate(['name' => 'import klasis']);
@@ -60,97 +66,89 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'import jemaat']);
         Permission::firstOrCreate(['name' => 'export jemaat']);
 
-
-        // ... (Tambahkan permissions untuk Bidang 1 & 2 nanti jika perlu) ...
-        // Permission::firstOrCreate(['name' => 'view assets']); // Contoh Bidang 2
-        // Permission::firstOrCreate(['name' => 'view education data']); // Contoh Bidang 1
-
         Log::info('Permissions dibuat/diperbarui.');
 
         // --- DEFINISI ROLES & PENETAPAN PERMISSIONS ---
 
-        // 1. Role: Pendeta (Akses lihat data penempatan & profil sendiri)
+        // 1. Role: Pendeta
         $rolePendeta = Role::firstOrCreate(['name' => 'Pendeta']);
         $rolePendeta->syncPermissions([
-            'view pendeta', // Bisa lihat data pendeta (terbatas profil sendiri nanti)
+            'view pendeta', 
             'view klasis',
             'view jemaat',
             'view anggota jemaat',
-            // 'edit own profile' // (Perlu controller profile terpisah)
         ]);
-        Log::info('Role Pendeta disinkronkan.');
 
-        // 2. Role: Admin Jemaat (CRUD Anggota Jemaat di Jemaatnya)
+        // 2. Role: Admin Jemaat
         $roleAdminJemaat = Role::firstOrCreate(['name' => 'Admin Jemaat']);
         $roleAdminJemaat->syncPermissions([
-            'view jemaat',           // Lihat Jemaat (terbatas di controller)
-            'edit jemaat',           // Edit Jemaat (terbatas di controller)
-            'view anggota jemaat',   // CRUD Anggota (terbatas di controller)
+            'view jemaat',           
+            'edit jemaat',           
+            'view anggota jemaat',   
             'create anggota jemaat',
             'edit anggota jemaat',
             'delete anggota jemaat',
-            'import anggota jemaat', // Impor/Ekspor (terbatas di controller)
+            'import anggota jemaat', 
             'export anggota jemaat',
         ]);
-        Log::info('Role Admin Jemaat disinkronkan.');
 
-        // 3. Role: Admin Klasis (CRUD Jemaat di Klasisnya, View Anggota)
+        // 3. Role: Admin Klasis
         $roleAdminKlasis = Role::firstOrCreate(['name' => 'Admin Klasis']);
         $roleAdminKlasis->syncPermissions([
-            'view klasis',           // Lihat Klasis (terbatas)
-            'edit own klasis',       // Edit Klasis (terbatas)
-            'view jemaat',           // CRUD Jemaat (terbatas)
+            'view klasis',           
+            'edit own klasis',       
+            'view jemaat',           
             'create jemaat',
             'edit jemaat',
             'delete jemaat',
-            'import jemaat',         // Impor/Ekspor Jemaat (terbatas)
+            'import jemaat',         
             'export jemaat',
-            'view anggota jemaat',   // CRUD Anggota (terbatas)
+            'view anggota jemaat',   
             'create anggota jemaat',
             'edit anggota jemaat',
             'delete anggota jemaat',
-            'import anggota jemaat', // Impor/Ekspor Anggota (terbatas)
+            'import anggota jemaat', 
             'export anggota jemaat',
         ]);
-        Log::info('Role Admin Klasis disinkronkan.');
 
-        // 4. Role: Admin Bidang 1 (Pelayanan & Pendidikan) - Read Only Data
+        // 4. Role: Admin Bidang 1 (Pelayanan)
         $roleBidang1 = Role::firstOrCreate(['name' => 'Admin Bidang 1']);
         $roleBidang1->syncPermissions([
             'view pendeta',
             'view klasis',
             'view jemaat',
             'view anggota jemaat',
-            // 'manage education data' // (Nanti)
         ]);
-        Log::info('Role Admin Bidang 1 disinkronkan.');
 
-        // 5. Role: Admin Bidang 2 (Keuangan & Pembangunan) - Read Only Data
+        // 5. Role: Admin Bidang 2 (Keuangan & Pembangunan)
         $roleBidang2 = Role::firstOrCreate(['name' => 'Admin Bidang 2']);
         $roleBidang2->syncPermissions([
             'view klasis',
             'view jemaat',
-            // 'manage assets' // (Nanti)
         ]);
-        Log::info('Role Admin Bidang 2 disinkronkan.');
 
-        // 6. Role: Admin Bidang 3 (Organisasi & Kepegawaian)
+        // 6. Role: Admin Bidang 3 (KHUSUS KEPEGAWAIAN)
+        // Update: Menghapus akses kelola Klasis/Jemaat, Fokus ke HRIS
         $roleBidang3 = Role::firstOrCreate(['name' => 'Admin Bidang 3']);
         $roleBidang3->syncPermissions([
-            'manage pendeta',   // CRUD Penuh Pendeta
-            'manage klasis',    // CRUD Penuh Klasis
-            'manage jemaat',    // CRUD Penuh Jemaat
-            'view anggota jemaat',
-            'export anggota jemaat',
-            'view users',       // Bisa lihat user, tapi tidak kelola
-            'import pendeta',   // Impor/Ekspor Penuh
+            // HRIS / Kepegawaian Core
+            'manage pegawai',   // Permission utama PegawaiController
+            'manage pendeta',   // Backward compatibility
+            'manage mutasi',    // Akses Mutasi
+            'import pegawai',
+            'export pegawai',
+            'import pendeta',
             'export pendeta',
-            'import klasis',
-            'export klasis',
-            'import jemaat',
-            'export jemaat',
+            
+            // Read Only Data Wilayah (Diperlukan untuk assign lokasi tugas pegawai)
+            'view klasis',      
+            'view jemaat',
+            'view users',       // Lihat user untuk mapping pegawai
+            
+            // Anggota Jemaat (Read Only - Opsional untuk referensi rekrutmen)
+            'view anggota jemaat',
         ]);
-        Log::info('Role Admin Bidang 3 disinkronkan.');
+        Log::info('Role Admin Bidang 3 disinkronkan (Fokus Kepegawaian).');
 
         // 7. Role: Admin Bidang 4 (Kominfo)
         $roleBidang4 = Role::firstOrCreate(['name' => 'Admin Bidang 4']);
@@ -159,21 +157,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage posts',
             'manage services',
             'manage messages',
-            // Akses lihat data (opsional)
             'view klasis',
             'view jemaat',
         ]);
-        Log::info('Role Admin Bidang 4 disinkronkan.');
 
-        // 8. Role: Super Admin (Akses Penuh)
+        // 8. Super Admin
         $roleSuperAdmin = Role::firstOrCreate(['name' => 'Super Admin']);
-        // 👇👇👇 Perbaikan: Memberikan semua permission secara eksplisit ke Super Admin 👇👇👇
-        $allPermissions = Permission::pluck('name')->all(); // Ambil semua nama permission
-        $roleSuperAdmin->syncPermissions($allPermissions); // Assign semua permission
+        $allPermissions = Permission::pluck('name')->all(); 
+        $roleSuperAdmin->syncPermissions($allPermissions); 
+        
         Log::info('Semua permissions disinkronkan ke Super Admin.');
-        // Catatan: Gate::before() di AuthServiceProvider juga bisa digunakan untuk Super Admin,
-        // tapi assign eksplisit seperti ini lebih jelas jika Gate::before() tidak di-setup.
-
         Log::info('RolesAndPermissionsSeeder selesai.');
     }
 }
