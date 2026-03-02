@@ -27,7 +27,7 @@
             position: relative;
         }
 
-        /* --- STYLE LABEL MENGAMBANG --- */
+        /* --- STYLE LABEL MENGAMBANG (DIPERKECIL) --- */
         .custom-floating-label {
             display: flex;
             justify-content: center;
@@ -42,10 +42,10 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             color: #1e293b;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 9px; /* Huruf diperkecil */
             font-family: sans-serif;
-            padding: 3px 6px;
-            border-radius: 4px;
+            padding: 2px 5px; /* Kotak diperkecil */
+            border-radius: 3px;
             white-space: nowrap;
             transform: translate(-50%, -50%); /* Agar tepat berada di tengah ujung garis */
             pointer-events: none; /* Supaya tidak mengganggu klik ke peta/pin */
@@ -178,7 +178,7 @@
                     },
                     onEachFeature: function(feature, layer) {
                         if (feature.properties && feature.properties.NAME_2) {
-                            // Label kabupaten bawaan diredupkan agar fokus ke label Gereja
+                            // Label kabupaten bawaan sangat diredupkan agar fokus ke label Gereja
                             layer.bindTooltip(feature.properties.NAME_2, {
                                 permanent: {{ $isPrint ? 'true' : 'false' }}, 
                                 direction: "center", 
@@ -189,7 +189,7 @@
                 }).addTo(map);
             });
 
-        // --- 2. RENDER PIN GEREJA (TANPA LABEL BAWAAN) ---
+        // --- 2. RENDER PIN GEREJA (TANPA LABEL BAWAAN LEAFLET) ---
         klasisData.forEach(function(klasis) {
             if(klasis.latitude && klasis.longitude) {
                 var iconHtml = `<div class='marker-pin' style='background-color:${klasis.warna_peta || '#1e40af'};'><i class='fas fa-church'></i></div>`;
@@ -201,39 +201,52 @@
             }
         });
 
-        // --- 3. ALGORITMA LABEL MENGAMBANG & GARIS PENUNJUK ---
+        // --- 3. ALGORITMA LABEL MENGAMBANG & GARIS PENUNJUK PERMANEN ---
         var labelLayers = L.layerGroup().addTo(map); // Simpan label di group khusus
 
         function drawSmartLabels() {
             labelLayers.clearLayers(); // Bersihkan garis/label lama tiap kali layar digeser/zoom
             
-            // Ubah koordinat peta menjadi koordinat layar (Pixel)
+            // Siapkan target awal: Jauhkan dari titik pusat (pin)
             let nodes = klasisData.filter(k => k.latitude && k.longitude).map((k, i) => {
                 let pt = map.latLngToLayerPoint([k.latitude, k.longitude]);
-                return { x: pt.x, y: pt.y, origX: pt.x, origY: pt.y, klasis: k };
+                
+                // Selang-seling lempar ke kiri atas atau kanan atas agar berjarak jauh
+                let dirX = i % 2 === 0 ? 50 : -50; 
+                let dirY = -40 - (i % 3 * 15); // Ketinggian berbeda-beda (40, 55, 70)
+                
+                let targetX = pt.x + dirX;
+                let targetY = pt.y + dirY;
+
+                return { 
+                    x: targetX, y: targetY, 
+                    targetX: targetX, targetY: targetY, 
+                    origX: pt.x, origY: pt.y, 
+                    klasis: k 
+                };
             });
 
-            // Physics Algorithm (Menghindari Tumpang Tindih)
-            let nodeW = 100; // Standar area lebar teks agar tidak nabrak
-            let nodeH = 30;  // Standar area tinggi teks
+            // Physics Algorithm (Tolak-Menolak antar Label agar tidak tumpang tindih)
+            let nodeW = 85; // Area lebar pelindung per teks
+            let nodeH = 22; // Area tinggi pelindung per teks
             
-            for(let iter = 0; iter < 100; iter++) {
+            for(let iter = 0; iter < 150; iter++) {
                 for(let i = 0; i < nodes.length; i++) {
                     for(let j = 0; j < nodes.length; j++) {
                         if(i === j) continue;
                         let a = nodes[i], b = nodes[j];
                         let dx = a.x - b.x, dy = a.y - b.y;
                         
-                        // Jika posisi mereka terlalu dekat (berpotensi tumpang tindih)
+                        // Jika posisi mereka terlalu dekat
                         if (Math.abs(dx) < nodeW && Math.abs(dy) < nodeH) {
                             let dist = Math.sqrt(dx*dx + dy*dy) || 1;
                             let force = 4; // Kekuatan dorongan menjauh
                             a.x += (dx/dist) * force; a.y += (dy/dist) * force;
                         }
                     }
-                    // Tarik kembali ke titik asal sedikit demi sedikit agar tidak melayang terlalu jauh
-                    nodes[i].x -= (nodes[i].x - nodes[i].origX) * 0.04;
-                    nodes[i].y -= (nodes[i].y - nodes[i].origY) * 0.04;
+                    // Tarik kembali ke titik target sasaran secara perlahan
+                    nodes[i].x -= (nodes[i].x - nodes[i].targetX) * 0.03;
+                    nodes[i].y -= (nodes[i].y - nodes[i].targetY) * 0.03;
                 }
             }
 
@@ -242,20 +255,12 @@
                 let latlng = map.layerPointToLatLng([node.x, node.y]);
                 let origLatlng = map.layerPointToLatLng([node.origX, node.origY]);
                 
-                // Hitung seberapa jauh label digeser dari titik gerejanya
-                let distMoved = Math.sqrt(Math.pow(node.x - node.origX, 2) + Math.pow(node.y - node.origY, 2));
+                // SELALU gambar garis putus-putus untuk semua titik
+                L.polyline([origLatlng, latlng], {
+                    color: '#475569', weight: 1.5, dashArray: '4, 4'
+                }).addTo(labelLayers);
 
-                // Jika tergeser karena padat, gambar garis putus-putus
-                if(distMoved > 20) {
-                    L.polyline([origLatlng, latlng], {
-                        color: '#475569', weight: 1.5, dashArray: '4, 4'
-                    }).addTo(labelLayers);
-                } else {
-                    // Jika tempatnya lega, angkat label sedikit ke atas pin agar tidak nutupin pin
-                    latlng = map.layerPointToLatLng([node.origX, node.origY - 25]);
-                }
-
-                // Render Teks Label di atas layer garis
+                // Render Teks Label di ujung garis
                 let iconHtml = `<div class='floating-label'>${node.klasis.nama_klasis}</div>`;
                 let lblIcon = L.divIcon({ className: 'custom-floating-label', html: iconHtml, iconSize: [0, 0] });
                 L.marker(latlng, {icon: lblIcon, zIndexOffset: 2000}).addTo(labelLayers);
