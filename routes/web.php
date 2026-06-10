@@ -243,7 +243,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('laporan/gabungan', [LaporanController::class, 'gabungan'])->name('laporan.gabungan');
     });
 
-    // 10. Manajemen User
+    // 10. Manajemen User & Impersonation
+    Route::get('users/stop-impersonate', [UserController::class, 'stopImpersonate'])->name('users.stop_impersonate');
+    Route::get('users/{id}/impersonate', [UserController::class, 'impersonate'])->name('users.impersonate')->middleware('role:Super Admin');
     Route::resource('users', UserController::class)->middleware('role:Super Admin');
 
     // 11. Laporan Renstra (BARU)

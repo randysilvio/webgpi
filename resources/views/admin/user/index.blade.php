@@ -85,9 +85,18 @@
                     </td>
                     <td class="px-6 py-4 text-center">
                         <div class="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            
+                            {{-- TOMBOL MENYAMAR --}}
+                            @if($user->id !== 1 && $user->id !== Auth::id() && !$user->hasRole('Super Admin'))
+                                <a href="{{ route('admin.users.impersonate', $user->id) }}" class="text-slate-400 hover:text-emerald-600" title="Masuk / Menyamar sebagai User ini">
+                                    <i class="fas fa-user-secret"></i>
+                                </a>
+                            @endif
+
                             <a href="{{ route('admin.users.edit', $user->id) }}" class="text-slate-400 hover:text-yellow-600" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </a>
+                            
                             @if($user->id !== 1 && $user->id !== Auth::id())
                                 <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Hapus user ini?');">
                                     @csrf @method('DELETE')

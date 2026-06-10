@@ -21,7 +21,8 @@ class UserController extends Controller
     public function __construct()
     {
         $this->middleware(['auth']);
-        $this->middleware('role:Super Admin');
+        // Terapkan perlindungan Super Admin ke semua fungsi, KECUALI fungsi berhenti menyamar
+        $this->middleware('role:Super Admin')->except(['stopImpersonate']);
     }
 
     public function index(Request $request)
@@ -42,7 +43,6 @@ class UserController extends Controller
 
     public function create()
     {
-        // KONSISTENSI: Gunakan nama variabel yang sama dengan method edit()
         $roles = Role::all(); // Object
         $pegawais = Pegawai::orderBy('nama_lengkap', 'asc')->get();
         $klasisList = Klasis::orderBy('nama_klasis', 'asc')->get();
@@ -102,13 +102,11 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // KONSISTENSI: Variabel sama persis dengan create()
         $roles = Role::all();
         $pegawais = Pegawai::orderBy('nama_lengkap', 'asc')->get();
         $klasisList = Klasis::orderBy('nama_klasis', 'asc')->get();
         $jenisWadahs = JenisWadahKategorial::orderBy('nama_wadah', 'asc')->get();
         
-        // Jemaat khusus (jika user sudah punya klasis)
         $jemaatList = collect();
         if ($user->klasis_id) {
             $jemaatList = Jemaat::where('klasis_id', $user->klasis_id)->orderBy('nama_jemaat')->get();
@@ -130,7 +128,7 @@ class UserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$id],
             'roles' => ['required', 'array'],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
-            'pegawai_id' => ['nullable', 'exists:pegawai,id'], // Hapus unique check self jika perlu
+            'pegawai_id' => ['nullable', 'exists:pegawai,id'], 
             'klasis_id' => ['nullable', 'exists:klasis,id'],
             'jemaat_id' => ['nullable', 'exists:jemaat,id'],
             'jenis_wadah_id' => ['nullable', 'exists:jenis_wadah_kategorial,id'],
@@ -165,5 +163,44 @@ class UserController extends Controller
         if ($id == 1) return back()->with('error', 'Super Admin Utama tidak bisa dihapus.');
         User::destroy($id);
         return redirect()->route('admin.users.index')->with('success', 'User dihapus.');
+    }
+
+    /**
+     * Memulai Mode Menyamar
+     */
+    public function impersonate($id)
+    {
+        $targetUser = User::findOrFail($id);
+
+        // Keamanan: Tidak bisa menyamar jadi diri sendiri atau sesama Super Admin
+        if ($id == Auth::id() || $targetUser->hasRole('Super Admin')) {
+            return back()->with('error', 'Tidak bisa menyamar sebagai Super Admin lain atau diri sendiri.');
+        }
+
+        // Simpan ID asli (Super Admin) ke dalam session
+        session()->put('impersonate_by', Auth::id());
+
+        // Login paksa sebagai target
+        Auth::loginUsingId($id);
+
+        return redirect()->route('admin.dashboard')->with('success', 'Mode Menyamar Aktif: Anda sekarang beroperasi sebagai ' . $targetUser->name);
+    }
+
+    /**
+     * Menghentikan Mode Menyamar dan kembali ke Super Admin
+     */
+    public function stopImpersonate()
+    {
+        // Cek apakah user sedang dalam mode menyamar
+        if (session()->has('impersonate_by')) {
+            $originalUserId = session()->pull('impersonate_by');
+            
+            // Login kembali sebagai Super Admin
+            Auth::loginUsingId($originalUserId);
+            
+            return redirect()->route('admin.users.index')->with('success', 'Penyamaran dihentikan. Anda telah kembali sebagai admin.');
+        }
+
+        return redirect()->route('admin.dashboard');
     }
 }
