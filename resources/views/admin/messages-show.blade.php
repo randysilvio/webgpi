@@ -1,50 +1,82 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Lihat Pesan Masuk')
-@section('header-title', 'Lihat Pesan Masuk')
+@section('title', 'Detail Pesan Masuk')
 
 @section('content')
-
-    <div class="mb-6">
-        <a href="{{ route('admin.messages') }}" class="inline-flex items-center text-sm font-medium text-primary hover:text-blue-700">
-            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            Kembali ke Daftar Pesan
+<div class="max-w-4xl mx-auto space-y-6">
+    
+    {{-- Header Navigation --}}
+    <div class="flex items-center justify-between">
+        <a href="{{ route('admin.messages') }}" class="text-slate-500 hover:text-slate-800 text-xs font-bold uppercase tracking-wide flex items-center transition">
+            <i class="fas fa-arrow-left mr-2"></i> Kembali ke Kotak Masuk
         </a>
+        
+        {{-- Delete Action --}}
+        <form action="{{ route('admin.messages.destroy', $message) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pesan ini?');">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition shadow-sm flex items-center">
+                <i class="fas fa-trash-alt mr-2"></i> Hapus Pesan
+            </button>
+        </form>
     </div>
 
-    <div class="bg-white shadow rounded-lg p-6 border border-gray-200">
-        {{-- Header Pesan --}}
-        <div class="border-b pb-4 mb-4">
-            <h3 class="text-xl font-semibold text-gray-900">{{ $message->subject }}</h3>
-            <div class="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div class="text-sm text-gray-700">
-                    <span class="font-medium">Dari:</span> {{ $message->name }} ({{ $message->email }})
+    {{-- Message Content Card --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        
+        {{-- Card Header: Subjek & Pengirim --}}
+        <div class="bg-slate-50 p-6 border-b border-slate-100">
+            <h1 class="text-xl md:text-2xl font-bold text-slate-800 mb-4 leading-tight">{{ $message->subject }}</h1>
+            
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm">
+                <div class="flex items-start gap-3">
+                    {{-- Avatar Inisial --}}
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg uppercase shadow-sm border border-blue-200">
+                        {{ substr($message->name, 0, 1) }}
+                    </div>
+                    
+                    {{-- Detail Pengirim --}}
+                    <div>
+                        <span class="block font-bold text-slate-800 text-base">{{ $message->name }}</span>
+                        <div class="flex flex-wrap gap-x-2 text-slate-500 text-xs">
+                            <a href="mailto:{{ $message->email }}" class="hover:text-blue-600 hover:underline flex items-center">
+                                <i class="far fa-envelope mr-1"></i> {{ $message->email }}
+                            </a>
+                            @if($message->phone)
+                                <span class="text-slate-300">|</span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-phone-alt mr-1"></i> {{ $message->phone }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-500 mt-1 sm:mt-0">
-                    <span class="font-medium">Telepon:</span> {{ $message->phone ?? '-' }}
-                </div>
-                <div class="text-sm text-gray-500 mt-1 sm:mt-0">
-                    {{ $message->created_at->isoFormat('dddd, D MMMM YYYY - H:mm') }} WIT
+
+                {{-- Waktu --}}
+                <div class="text-slate-500 md:text-right bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm">
+                    <div class="font-bold text-xs uppercase tracking-wide text-slate-400 mb-0.5">Diterima Pada</div>
+                    <div class="font-medium text-slate-700">
+                        {{ $message->created_at->isoFormat('dddd, D MMMM YYYY') }}
+                        <span class="mx-1 text-slate-300">•</span>
+                        {{ $message->created_at->format('H:i') }} WIT
+                    </div>
                 </div>
             </div>
         </div>
 
-        {{-- Isi Pesan --}}
-        <div class="prose max-w-none text-gray-800 leading-relaxed whitespace-pre-line">
-            {{ $message->message }}
+        {{-- Message Body --}}
+        <div class="p-8">
+            <div class="prose max-w-none text-slate-700 leading-relaxed whitespace-pre-line text-sm md:text-base">
+                {{ $message->message }}
+            </div>
         </div>
 
-         {{-- Aksi Hapus --}}
-         <div class="mt-6 pt-6 border-t flex justify-end">
-            <form action="{{ route('admin.messages.destroy', $message) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pesan ini?');">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 active:bg-red-900 focus:outline-none focus:border-red-900 focus:ring ring-red-300 disabled:opacity-25 transition ease-in-out duration-150">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    Hapus Pesan
-                </button>
-            </form>
-         </div>
-
+        {{-- Footer / Reply Action --}}
+        <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end">
+            <a href="mailto:{{ $message->email }}?subject=Re: {{ $message->subject }}" class="bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-900 transition shadow-lg flex items-center">
+                <i class="fas fa-reply mr-2"></i> Balas Email
+            </a>
+        </div>
     </div>
+</div>
 @endsection

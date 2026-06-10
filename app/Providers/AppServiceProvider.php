@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\WadahKategorialTransaksi; // <-- Import Model Transaksi
+use App\Observers\WadahTransaksiObserver; // <-- Import Observer
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Mendaftarkan Observer agar realisasi anggaran terupdate otomatis saat ada transaksi
+        WadahKategorialTransaksi::observe(WadahTransaksiObserver::class);
     }
 }
