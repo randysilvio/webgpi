@@ -11,7 +11,7 @@
     <input type="{{ $type }}" name="{{ $name }}" value="{{ old($name, $value) }}"
         {{ $required ? 'required' : '' }}
         placeholder="{{ $placeholder }}"
-        {{ $attributes->merge(['class' => 'w-full border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500 placeholder-slate-400 text-slate-700 transition shadow-sm']) }}>
+        {{ $attributes->merge(['class' => 'w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500 placeholder-slate-400 text-slate-700 transition shadow-sm']) }}>
 
     @error($name) <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
 </div>
