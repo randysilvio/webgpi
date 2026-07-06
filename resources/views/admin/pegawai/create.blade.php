@@ -23,8 +23,9 @@
                         <input type="text" name="gelar_depan" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" value="{{ old('gelar_depan') }}">
                     </div>
                     <div>
+                        {{-- PERBAIKAN: name="nama_lengkap" --}}
                         <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
-                        <input type="text" name="nama" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" value="{{ old('nama') }}" required>
+                        <input type="text" name="nama_lengkap" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" value="{{ old('nama_lengkap') }}" required>
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Gelar Belakang</label>
@@ -32,36 +33,44 @@
                     </div>
                 </div>
 
-                {{-- NIK & NIP --}}
+                {{-- NIK & NIPG --}}
                 <div>
                     <label class="block text-xs font-bold uppercase text-slate-500 mb-1">NIK (KTP)</label>
                     <input type="text" name="nik" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" value="{{ old('nik') }}">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">NIP / NIPG</label>
-                    <input type="text" name="nip" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" value="{{ old('nip') }}">
+                    {{-- PERBAIKAN: name="nipg" --}}
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">NIP / NIPG <span class="text-red-500">*</span></label>
+                    <input type="text" name="nipg" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" value="{{ old('nipg') }}" required>
                 </div>
 
                 {{-- TTL & Gender --}}
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Tempat, Tanggal Lahir</label>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Tempat, Tanggal Lahir <span class="text-red-500">*</span></label>
                     <div class="flex gap-2">
-                        <input type="text" name="tempat_lahir" class="w-1/2 border border-slate-300 rounded text-sm" placeholder="Kota" value="{{ old('tempat_lahir') }}">
-                        <input type="date" name="tanggal_lahir" class="w-1/2 border border-slate-300 rounded text-sm" value="{{ old('tanggal_lahir') }}">
+                        <input type="text" name="tempat_lahir" class="w-1/2 border border-slate-300 rounded text-sm" placeholder="Kota" value="{{ old('tempat_lahir') }}" required>
+                        <input type="date" name="tanggal_lahir" class="w-1/2 border border-slate-300 rounded text-sm" value="{{ old('tanggal_lahir') }}" required>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Jenis Kelamin</label>
-                    <select name="jenis_kelamin" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Jenis Kelamin <span class="text-red-500">*</span></label>
+                    <select name="jenis_kelamin" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" required>
                         <option value="L">Laki-laki</option>
                         <option value="P">Perempuan</option>
                     </select>
                 </div>
+                
+                {{-- Email Login --}}
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Email / Akun Login (Opsional)</label>
+                    <input type="email" name="email" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" value="{{ old('email') }}" placeholder="Dikosongkan akan dibuat otomatis oleh sistem">
+                </div>
 
                 {{-- Foto --}}
                 <div class="md:col-span-2">
+                    {{-- PERBAIKAN: name="foto_diri" --}}
                     <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Foto Profil (Opsional)</label>
-                    <input type="file" name="foto_profil" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border border-slate-300 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
+                    <input type="file" name="foto_diri" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border border-slate-300 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
                 </div>
             </div>
         </div>
@@ -73,10 +82,10 @@
             </div>
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {{-- Jenis & Status --}}
+                {{-- Jenis & Status Kepegawaian --}}
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Jenis Kepegawaian <span class="text-red-500">*</span></label>
-                    <select name="jenis_pegawai" id="jenis_pegawai" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" onchange="togglePendetaFields()">
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Jenis Pegawai <span class="text-red-500">*</span></label>
+                    <select name="jenis_pegawai" id="jenis_pegawai" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" onchange="togglePendetaFields()" required>
                         <option value="Pendeta">Pendeta Organik</option>
                         <option value="Pegawai Kantor">Pegawai Kantor</option>
                         <option value="Pengajar">Tenaga Pengajar</option>
@@ -84,11 +93,12 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Status Aktif</label>
-                    <select name="status_aktif" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
-                        <option value="Aktif">Aktif</option>
-                        <option value="Cuti">Cuti / Non-Aktif</option>
-                        <option value="Pensiun">Pensiun</option>
+                    {{-- PERBAIKAN: Tambahan input status_kepegawaian yang wajib ada di Controller --}}
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Status Kepegawaian <span class="text-red-500">*</span></label>
+                    <select name="status_kepegawaian" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" required>
+                        <option value="Organik">Organik / Tetap</option>
+                        <option value="Honorer">Honorer</option>
+                        <option value="Kontrak">Kontrak</option>
                     </select>
                 </div>
 
@@ -112,7 +122,7 @@
                     <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Klasis (Opsional)</label>
                     <select name="klasis_id" id="klasis_id" class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500" onchange="loadJemaat(this.value)">
                         <option value="">-- Pilih Klasis --</option>
-                        @foreach(App\Models\Klasis::all() as $k)
+                        @foreach($klasisList as $k)
                             <option value="{{ $k->id }}">{{ $k->nama_klasis }}</option>
                         @endforeach
                     </select>

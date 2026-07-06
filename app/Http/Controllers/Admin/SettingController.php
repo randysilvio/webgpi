@@ -2,48 +2,35 @@
 
 namespace App\Http\Controllers\Admin;
 
-// app/Http/Controllers/Admin/SettingController.php
-
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Setting; // Import model Setting
-use Illuminate\Support\Facades\Storage; // Import Storage facade untuk file
-use Illuminate\Support\Facades\Log; // Import Log facade untuk debug
+use App\Models\Setting; 
+use Spatie\Permission\Models\Role; // Tambahkan import Role
+use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\Log; 
 
 class SettingController extends Controller
 {
-    /**
-     * Tampilkan form untuk mengedit pengaturan aplikasi.
-     *
-     * @return \Illuminate\View\View
-     */
     public function edit()
     {
-        // Ambil record pengaturan pertama, atau buat baru jika belum ada
-        // Kita asumsikan hanya ada 1 baris data di tabel settings
-        $setting = Setting::firstOrCreate(['id' => 1]); // Gunakan ID 1
+        $setting = Setting::firstOrCreate(['id' => 1]); 
+        
+        // Ambil semua role KECUALI Super Admin (karena Super Admin selalu centang penuh di sistem)
+        $roles = Role::where('name', '!=', 'Super Admin')->orderBy('name')->get();
 
-        // Kirim data setting ke view
-        return view('admin.settings', compact('setting'));
+        return view('admin.settings', compact('setting', 'roles'));
     }
 
-    /**
-     * Perbarui pengaturan aplikasi di database.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function update(Request $request)
     {
-        // Validasi data yang masuk (tambahkan aturan spesifik jika perlu)
         $validatedData = $request->validate([
             'site_name' => 'nullable|string|max:255',
             'site_tagline' => 'nullable|string|max:255',
-            'site_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Validasi gambar
+            'site_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', 
             'hero_text' => 'nullable|string',
             'about_us' => 'nullable|string',
             'vision' => 'nullable|string',
-            'about_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Validasi gambar
+            'about_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', 
             'contact_address' => 'nullable|string',
             'contact_phone' => 'nullable|string|max:255',
             'contact_email' => 'nullable|email|max:255',
@@ -54,46 +41,38 @@ class SettingController extends Controller
             'social_instagram' => 'nullable|url|max:255',
             'social_twitter' => 'nullable|url|max:255',
             'footer_description' => 'nullable|string',
+            'module_access' => 'nullable|array', // Validasi array matriks
         ]);
 
-        // Cari record setting (atau buat baru jika belum ada, seharusnya sudah ada dari edit)
-        $setting = Setting::firstOrCreate(['id' => 1]); // Gunakan ID 1
-
-        // Siapkan data untuk update (kecualikan file dulu)
+        $setting = Setting::firstOrCreate(['id' => 1]); 
         $updateData = $request->except(['_token', '_method', 'site_logo', 'about_image']);
 
-        // Proses Upload Logo
+        // Pastikan array tersimpan dengan aman (meskipun kosong)
+        $updateData['module_access'] = $request->input('module_access', []);
+
         if ($request->hasFile('site_logo')) {
-            // Hapus logo lama jika ada
             if ($setting->logo_path && Storage::disk('public')->exists($setting->logo_path)) {
                 Storage::disk('public')->delete($setting->logo_path);
             }
-            // Simpan logo baru dan dapatkan path
             $logoPath = $request->file('site_logo')->store('logos', 'public');
-            $updateData['logo_path'] = $logoPath; // Tambahkan path ke data update
+            $updateData['logo_path'] = $logoPath; 
         }
 
-        // Proses Upload Gambar Ilustrasi
         if ($request->hasFile('about_image')) {
-             // Hapus gambar lama jika ada
             if ($setting->about_image_path && Storage::disk('public')->exists($setting->about_image_path)) {
                 Storage::disk('public')->delete($setting->about_image_path);
             }
-            // Simpan gambar baru dan dapatkan path
             $aboutImagePath = $request->file('about_image')->store('illustrations', 'public');
-            $updateData['about_image_path'] = $aboutImagePath; // Tambahkan path ke data update
+            $updateData['about_image_path'] = $aboutImagePath; 
         }
 
-        // Update record setting di database
         try {
              $setting->update($updateData);
         } catch (\Exception $e) {
              Log::error('Error updating settings: ' . $e->getMessage());
-             // Opsional: kembali dengan pesan error
              return back()->with('error', 'Gagal menyimpan pengaturan. Silakan coba lagi.');
         }
 
-        // Redirect kembali ke halaman pengaturan dengan pesan sukses
         return back()->with('success', 'Pengaturan berhasil disimpan!');
     }
 }

@@ -23,7 +23,6 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
-                        {{-- PERBAIKAN: Tambahkan class 'border' --}}
                         <input type="text" name="name" value="{{ old('name') }}" required class="w-full border border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500">
                         @error('name') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
@@ -52,7 +51,7 @@
                 <div id="roles-container" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                     @foreach($roles as $role)
                         <label class="flex items-center p-3 border border-slate-200 rounded cursor-pointer hover:bg-slate-50 transition">
-                            <input type="checkbox" name="roles[]" value="{{ $role->name }}" data-role="{{ $role->name }}" class="role-checkbox rounded border-gray-300 text-slate-800 focus:ring-slate-500 mr-3">
+                            <input type="checkbox" name="roles[]" value="{{ $role->name }}" data-role="{{ $role->name }}" class="role-checkbox rounded border border-slate-300 text-slate-800 focus:ring-slate-500 mr-3">
                             <span class="text-sm font-bold text-slate-700">{{ $role->name }}</span>
                         </label>
                     @endforeach
@@ -70,7 +69,7 @@
                             <option value="">-- Pilih Pegawai --</option>
                             @foreach ($pegawais as $pegawai)
                                 <option value="{{ $pegawai->id }}" {{ old('pegawai_id') == $pegawai->id ? 'selected' : '' }}>
-                                    {{ $pegawai->nama_lengkap }}
+                                    {{ $pegawai->nama_lengkap }} ({{ $pegawai->nipg }})
                                 </option>
                             @endforeach
                         </select>
@@ -150,12 +149,13 @@
             let hasAnyContext = false;
 
             rolesContainer.querySelectorAll('.role-checkbox:checked').forEach(checkbox => {
-                const role = checkbox.dataset.role;
+                // PERBAIKAN: Gunakan toLowerCase() agar pencarian kata menjadi kebal huruf besar/kecil
+                const role = checkbox.dataset.role ? checkbox.dataset.role.toLowerCase() : '';
 
-                if (role === 'Pendeta' || role === 'Pegawai') showPegawai = true;
-                if (role === 'Admin Klasis') showKlasis = true;
-                if (role === 'Admin Jemaat') { showJemaat = true; showKlasis = true; }
-                if (role && role.includes('Wadah')) { showWadah = true; showKlasis = true; showJemaat = true; }
+                if (role.includes('pendeta') || role.includes('pegawai')) showPegawai = true;
+                if (role.includes('admin klasis') || role.includes('klasis')) showKlasis = true;
+                if (role.includes('admin jemaat') || role.includes('jemaat')) { showJemaat = true; showKlasis = true; }
+                if (role.includes('wadah')) { showWadah = true; showKlasis = true; showJemaat = true; }
             });
 
             if (showPegawai || showWadah || showKlasis || showJemaat) hasAnyContext = true;
@@ -167,8 +167,9 @@
             jemaatDiv.classList.toggle('hidden', !showJemaat);
         }
 
-        rolesContainer.addEventListener('change', function (e) {
-            if (e.target.classList.contains('role-checkbox')) checkRoles();
+        // PERBAIKAN: Pastikan listener dipicu setiap kali checkbox berubah
+        rolesContainer.querySelectorAll('.role-checkbox').forEach(box => {
+            box.addEventListener('change', checkRoles);
         });
         
         checkRoles();
