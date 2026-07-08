@@ -1,106 +1,97 @@
 @extends('layouts.app')
 
-@section('title', 'Berita & Kegiatan')
+@section('title', 'Arsip Dokumen Publikasi')
 
 @section('content')
     <x-admin-index 
-        title="Manajemen Konten" 
-        subtitle="Kelola artikel berita, pengumuman, dan publikasi kegiatan gereja."
+        title="Buku Induk Publikasi" 
+        subtitle="Sistem registrasi, verifikasi, dan manajemen rekam jejak berita resmi."
         create-route="{{ route('admin.posts.create') }}"
-        create-label="Tambah Berita"
+        create-label="Registrasi Dokumen Baru"
         :pagination="$posts"
     >
-        {{-- SLOT STATS --}}
+        {{-- SLOT STATS (Dinamic Badge) --}}
         <x-slot name="stats">
-            <div class="bg-white p-5 rounded border border-slate-200 shadow-sm flex items-center justify-between">
+            @hasanyrole('Super Admin|Admin Bidang 4')
+            <a href="{{ route('admin.posts.index', ['status' => 'pending']) }}" class="bg-white p-5 rounded border {{ request('status') == 'pending' ? 'border-blue-800 ring-1 ring-blue-800' : 'border-gray-200' }} shadow-sm flex items-center justify-between hover:bg-gray-50 transition">
                 <div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Post</p>
-                    <p class="text-2xl font-bold text-slate-800 mt-1">{{ number_format($posts->total()) }}</p>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Antrean Verifikasi</p>
+                    <p class="text-2xl font-bold text-blue-900 mt-1">{{ $pendingCount ?? 0 }} <span class="text-xs text-gray-400 font-normal">Dokumen</span></p>
                 </div>
-                <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fas fa-newspaper text-lg"></i></div>
-            </div>
+                <div class="p-3 bg-gray-100 text-gray-600 rounded border border-gray-200"><i class="fas fa-inbox text-lg"></i></div>
+            </a>
+            @endhasanyrole
 
-            <div class="bg-white p-5 rounded border border-slate-200 shadow-sm flex items-center justify-between">
+            <a href="{{ route('admin.posts.index') }}" class="bg-white p-5 rounded border {{ !request('status') ? 'border-blue-800 ring-1 ring-blue-800' : 'border-gray-200' }} shadow-sm flex items-center justify-between hover:bg-gray-50 transition">
                 <div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Published</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1">{{ $posts->where('published_at', '<=', now())->count() }}</p>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Registrasi (Pribadi)</p>
+                    <p class="text-2xl font-bold text-blue-900 mt-1">{{ number_format($posts->total()) }} <span class="text-xs text-gray-400 font-normal">Dokumen</span></p>
                 </div>
-                <div class="p-2 bg-green-50 text-green-600 rounded-lg"><i class="fas fa-check-double text-lg"></i></div>
-            </div>
-
-            <div class="bg-white p-5 rounded border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terjadwal</p>
-                    <p class="text-2xl font-bold text-yellow-600 mt-1">{{ $posts->where('published_at', '>', now())->count() }}</p>
-                </div>
-                <div class="p-2 bg-yellow-50 text-yellow-600 rounded-lg"><i class="fas fa-clock text-lg"></i></div>
-            </div>
+                <div class="p-3 bg-gray-100 text-gray-600 rounded border border-gray-200"><i class="fas fa-archive text-lg"></i></div>
+            </a>
         </x-slot>
 
         {{-- SLOT TABLE HEAD --}}
         <x-slot name="tableHead">
-            <th class="px-6 py-4">Informasi Berita</th>
-            <th class="px-6 py-4 text-center">Status</th>
-            <th class="px-6 py-4">Tanggal Publish</th>
-            <th class="px-6 py-4 text-center">Aksi</th>
+            <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100">Uraian Dokumen</th>
+            <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100 text-center w-40">Status Otorisasi</th>
+            <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100 w-48">Jadwal Tayang</th>
+            <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100 text-center w-24">Tindakan</th>
         </x-slot>
 
         {{-- LOOP DATA --}}
         @forelse ($posts as $post)
-            <tr class="hover:bg-slate-50 transition group">
-                <x-td>
-                    <div class="flex items-center gap-4">
-                        {{-- Thumbnail --}}
-                        <div class="h-12 w-12 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 flex-shrink-0">
+            <tr class="hover:bg-gray-50 transition border-b border-gray-200 group">
+                <td class="px-6 py-4">
+                    <div class="flex items-start gap-4">
+                        <div class="h-12 w-16 bg-gray-200 border border-gray-300 flex-shrink-0">
                             @if($post->image_path)
                                 <img src="{{ Storage::url($post->image_path) }}" class="h-full w-full object-cover">
                             @else
-                                <div class="h-full w-full flex items-center justify-center text-slate-300">
-                                    <i class="fas fa-image text-xl"></i>
-                                </div>
+                                <div class="h-full w-full flex items-center justify-center text-gray-400"><i class="fas fa-file-image"></i></div>
                             @endif
                         </div>
                         <div>
-                            <div class="font-bold text-slate-800 text-sm leading-snug line-clamp-1">{{ $post->title }}</div>
-                            <div class="text-[10px] text-slate-400 mt-1 uppercase tracking-tight font-medium">
-                                <i class="fas fa-user-edit mr-1"></i> Admin Sinode
+                            <div class="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{{ $post->title }}</div>
+                            <div class="text-[10px] text-gray-500 mt-1 font-medium flex items-center uppercase tracking-wide">
+                                <i class="fas fa-user-tie mr-2"></i> Perekam: {{ $post->author->name ?? 'Sistem' }}
                             </div>
                         </div>
                     </div>
-                </x-td>
-                <x-td class="text-center">
-                    @if($post->published_at && $post->published_at <= now())
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-green-100 text-green-700 border border-green-200">Published</span>
-                    @elseif($post->published_at && $post->published_at > now())
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-yellow-100 text-yellow-700 border border-yellow-200">Scheduled</span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    @if($post->status == 'published')
+                        <span class="inline-block px-3 py-1 text-[10px] font-bold uppercase bg-green-100 text-green-800 border border-green-300 w-full text-center">Terpublikasi</span>
+                    @elseif($post->status == 'pending')
+                        <span class="inline-block px-3 py-1 text-[10px] font-bold uppercase bg-yellow-100 text-yellow-800 border border-yellow-300 w-full text-center">Tinjauan</span>
                     @else
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-500 border border-slate-200">Draft</span>
+                        <span class="inline-block px-3 py-1 text-[10px] font-bold uppercase bg-gray-200 text-gray-600 border border-gray-300 w-full text-center">Draf</span>
                     @endif
-                </x-td>
-                <x-td>
-                    <div class="text-xs font-medium text-slate-600">
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-xs font-bold text-gray-800">
                         {{ $post->published_at ? $post->published_at->isoFormat('D MMM YYYY') : '-' }}
                     </div>
-                    <div class="text-[10px] text-slate-400 font-mono">
-                        {{ $post->published_at ? $post->published_at->format('H:i') . ' WIT' : '' }}
+                    <div class="text-[10px] text-gray-500 mt-0.5">
+                        {{ $post->published_at ? $post->published_at->format('H:i') . ' WIT' : 'Tidak Dijadwalkan' }}
                     </div>
-                </x-td>
-                <x-td class="text-center">
-                    <div class="flex justify-center gap-2">
-                        <a href="{{ route('admin.posts.edit', $post) }}" class="text-slate-400 hover:text-yellow-600 transition" title="Edit Konten">
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <div class="flex justify-center gap-4">
+                        <a href="{{ route('admin.posts.edit', $post) }}" class="text-gray-400 hover:text-blue-800 transition" title="Verifikasi / Koreksi">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <form action="{{ route('admin.posts.destroy', $post) }}" method="POST" class="inline" onsubmit="return confirm('Hapus berita ini secara permanen?')">
+                        <form action="{{ route('admin.posts.destroy', $post) }}" method="POST" class="inline" onsubmit="return confirm('Prosedur ini akan memusnahkan dokumen secara permanen dari pangkalan data. Anda yakin?')">
                             @csrf @method('DELETE')
-                            <button type="submit" class="text-slate-400 hover:text-red-600 transition" title="Hapus">
-                                <i class="fas fa-trash-alt"></i>
+                            <button type="submit" class="text-gray-400 hover:text-red-700 transition" title="Musnahkan Rekord">
+                                <i class="fas fa-trash"></i>
                             </button>
                         </form>
                     </div>
-                </x-td>
+                </td>
             </tr>
         @empty
-            <tr><td colspan="4" class="px-6 py-12 text-center text-slate-400 italic">Belum ada konten yang diterbitkan.</td></tr>
+            <tr><td colspan="4" class="px-6 py-12 text-center text-gray-500 text-sm"><i class="fas fa-inbox text-2xl mb-3 block text-gray-300"></i>Arsip dokumen publikasi masih kosong.</td></tr>
         @endforelse
     </x-admin-index>
 @endsection

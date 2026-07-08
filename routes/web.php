@@ -22,6 +22,9 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MutasiPendetaController;
 use App\Http\Controllers\Admin\PopupAdController; 
 use App\Http\Controllers\Admin\LaporanRenstraController;
+use App\Http\Controllers\Admin\JurnalPelayananController; 
+use App\Http\Controllers\Admin\MateriKhotbahController;
+use App\Http\Controllers\Admin\TransaksiMateriController;
 
 // Wadah Kategorial Controllers
 use App\Http\Controllers\Admin\WadahKategorialPengurusController;
@@ -76,6 +79,7 @@ Route::get('/', function () {
         $setting = Setting::firstOrCreate(['id' => 1]);
         $posts = Post::whereNotNull('published_at')
                      ->where('published_at', '<=', now())
+                     ->where('status', 'published') // Pengamanan CMS
                      ->latest('published_at')
                      ->take(3)
                      ->get();
@@ -248,11 +252,22 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('users/{id}/impersonate', [UserController::class, 'impersonate'])->name('users.impersonate')->middleware('role:Super Admin');
     Route::resource('users', UserController::class)->middleware('role:Super Admin');
 
-    // 11. Laporan Renstra (BARU)
+    // 11. Laporan Renstra 
     Route::prefix('laporan')->name('laporan.')->group(function () {
         Route::get('renstra', [LaporanRenstraController::class, 'index'])->name('renstra.index');
         Route::get('renstra/cetak', [LaporanRenstraController::class, 'cetakPdf'])->name('renstra.print');
     });
+
+    // 12. Modul Jurnal Pelayanan Pastoral
+    Route::resource('jurnal', JurnalPelayananController::class);
+
+    // 13. Modul Bursa Materi Khotbah & Transaksi
+    Route::get('bursa/{bursa}/download', [MateriKhotbahController::class, 'download'])->name('bursa.download');
+    Route::resource('bursa', MateriKhotbahController::class); // <-- DIPERBAIKI: Tanpa ->names() agar tidak double prefix
+    
+    Route::get('bursa-transaksi', [TransaksiMateriController::class, 'index'])->name('bursa.transaksi.index'); // <-- DIPERBAIKI: Hapus 'admin.'
+    Route::post('bursa-transaksi', [TransaksiMateriController::class, 'store'])->name('bursa.transaksi.store'); // <-- DIPERBAIKI: Hapus 'admin.'
+    Route::put('bursa-transaksi/{transaksi}', [TransaksiMateriController::class, 'update'])->name('bursa.transaksi.update'); // <-- DIPERBAIKI: Hapus 'admin.'
 
 });
 
