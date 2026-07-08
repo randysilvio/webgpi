@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
-    {{-- PWA META TAGS (BARU) --}}
+    {{-- PWA META TAGS --}}
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
     
     <title>@yield('title', 'Admin Dashboard') - {{ config('app.name', 'Sinode GPI Papua') }}</title>
     
-    {{-- Ambil Favicon dari Setting --}}
+    {{-- Favicon --}}
     @php
         $appSetting = \App\Models\Setting::first();
         $faviconUrl = ($appSetting && $appSetting->logo_path) ? \Illuminate\Support\Facades\Storage::url($appSetting->logo_path) : asset('gpi_logo.png');
@@ -46,7 +46,7 @@
         .menu-btn.active { color: white; background-color: #1e293b; }
         .sub-link:hover { color: #e0f2fe; transform: translateX(4px); transition: transform 0.2s; }
         .sub-link.active-page { color: #38bdf8; font-weight: 600; }
-        input, select, textare { border-width: 1px !important; }
+        input, select, textarea { border-width: 1px !important; }
     </style>
     @stack('styles')
 </head>
@@ -170,7 +170,7 @@
                 </div>
                 @endif
 
-                {{-- BIDANG 3: KEPEGAWAIAN --}}
+                {{-- BIDANG 3: KEPEGAWAIAN (DIPERBAIKI) --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('bidang3_hris'))
                 <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Bidang 3: Kepegawaian</div>
                 
@@ -180,8 +180,8 @@
                         <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                     </button>
                     <div class="submenu pl-10 space-y-1 mt-1" id="submenu-hris">
-                        <a href="{{ route('admin.kepegawaian.pegawai.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.kepegawaian.pegawai.index') && !request('jenis')) active-page @endif">Direktori Pegawai</a>
-                        <a href="{{ route('admin.kepegawaian.pegawai.index', ['jenis' => 'Pendeta']) }}" class="sub-link block py-1.5 @if(request('jenis') == 'Pendeta') active-page @endif">Data Pendeta</a>
+                        {{-- Menu Pegawai dijadikan satu pintu --}}
+                        <a href="{{ route('admin.kepegawaian.pegawai.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.kepegawaian.pegawai.*')) active-page @endif">Direktori Pegawai</a>
                         <a href="{{ route('admin.mutasi.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.mutasi.*')) active-page @endif">Riwayat Mutasi</a>
                     </div>
                 </div>
@@ -336,7 +336,7 @@
             </header>
 
             <main class="flex-1 p-6 lg:p-8">
-                {{-- STATUS INDIKATOR OFFLINE (BARU) --}}
+                {{-- STATUS INDIKATOR OFFLINE --}}
                 <div id="offline-indicator" class="hidden mb-6 bg-red-600 text-white p-3 rounded shadow-md flex items-center justify-center animate-pulse">
                     <i class="fas fa-wifi-slash mr-2"></i>
                     <span class="font-bold text-xs uppercase tracking-wider">Anda Sedang Offline. Beberapa fitur dinonaktifkan.</span>
@@ -360,6 +360,15 @@
                         <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-sm"></i></button>
                     </div>
                 @endif
+                @if (session('warning'))
+                     <div class="mb-6 bg-white border-l-4 border-yellow-500 p-4 rounded shadow-sm flex items-center justify-between"> 
+                        <div class="flex items-center">
+                            <i class="fas fa-info-circle text-yellow-500 mr-3 text-lg"></i>
+                            <div><p class="font-bold text-sm text-slate-800 uppercase tracking-wide">Informasi Penting</p><p class="text-xs text-slate-500">{{ session('warning') }}</p></div>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-sm"></i></button>
+                    </div>
+                @endif
                 
                 @yield('content')
             </main>
@@ -371,13 +380,13 @@
         </div>
     </div>
 
-    {{-- REGISTRASI SERVICE WORKER (BARU) --}}
+    {{-- REGISTRASI SERVICE WORKER & NAVIGATION SCRIPTS --}}
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then((registration) => {
-                        console.log('ServiceWorker terdaftar dengan sukses. Scope:', registration.scope);
+                        console.log('ServiceWorker terdaftar dengan sukses.');
                     })
                     .catch((error) => {
                         console.log('Pendaftaran ServiceWorker gagal:', error);
@@ -385,7 +394,6 @@
             });
         }
 
-        // Deteksi status online/offline secara real-time
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
 
@@ -397,10 +405,8 @@
                 indicator.classList.remove('hidden');
             }
         }
-        // Cek status awal saat load
         updateOnlineStatus();
 
-        // Script Navigasi Sidebar
         function toggleMenu(id) {
             const submenu = document.getElementById(`submenu-${id}`);
             const btn = document.getElementById(`btn-${id}`);
