@@ -1,204 +1,266 @@
 @extends('layouts.app')
 
-@section('title', 'Tambah Anggota')
+@section('title', 'Pendaftaran Umat Baru')
 
 @section('content')
-    {{-- SELECT2 CSS --}}
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-    <x-admin-form 
-        title="Registrasi Anggota Baru" 
-        action="{{ route('admin.anggota-jemaat.store') }}" 
-        back-route="{{ route('admin.anggota-jemaat.index') }}"
-    >
+<div class="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between border-b-2 border-gray-800 pb-4">
+    <div>
+        <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest">Formulir Registrasi Umat Baru</h2>
+        <p class="text-xs text-gray-600 mt-1">Sistem Pendaftaran Buku Induk Anggota Jemaat & Kartu Keluarga (KK).</p>
+    </div>
+    <a href="{{ route('admin.anggota-jemaat.index') }}" class="text-gray-500 hover:text-blue-800 font-bold text-xs uppercase transition flex items-center mt-3 md:mt-0">
+        <i class="fas fa-arrow-left mr-2"></i> Kembali ke Indeks
+    </a>
+</div>
+
+<form action="{{ route('admin.anggota-jemaat.store') }}" method="POST" enctype="multipart/form-data">
+    @csrf
+    <div class="space-y-6 max-w-6xl mx-auto">
+        
         {{-- SECTION 1: DATA PRIBADI --}}
-        <div class="space-y-4 mb-8">
-            <h3 class="text-xs font-bold text-slate-700 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wide">I. Data Pribadi & Kontak</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <x-form-input label="Nama Lengkap" name="nama_lengkap" required />
-                <x-form-input label="NIK (KTP)" name="nik" />
-                <x-form-input label="No. Buku Induk" name="nomor_buku_induk" />
+        <div class="bg-white border border-gray-300 p-5 rounded shadow-sm">
+            <h4 class="font-bold text-gray-800 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4"><i class="fas fa-id-badge mr-2 text-blue-800"></i> I. Identitas Diri & Demografi</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Nama Lengkap (Sesuai KTP) <span class="text-red-600">*</span></label>
+                    <input type="text" name="nama_lengkap" value="{{ old('nama_lengkap') }}" required class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50 uppercase">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Nomor Induk Kependudukan (NIK)</label>
+                    <input type="text" name="nik" value="{{ old('nik') }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white font-mono">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Nomor Register Buku Induk Jemaat</label>
+                    <input type="text" name="nomor_buku_induk" value="{{ old('nomor_buku_induk') }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white font-mono">
+                </div>
                 
-                <x-form-input label="Tempat Lahir" name="tempat_lahir" />
-                <x-form-input type="date" label="Tanggal Lahir" name="tanggal_lahir" />
+                <x-form-input label="Tempat Kelahiran" name="tempat_lahir" />
+                <x-form-input type="date" label="Tanggal Kelahiran" name="tanggal_lahir" />
                 
-                <x-form-select label="Jenis Kelamin" name="jenis_kelamin">
-                    <option value="Laki-laki">Laki-laki</option>
-                    <option value="Perempuan">Perempuan</option>
-                </x-form-select>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Jenis Kelamin Sipil <span class="text-red-600">*</span></label>
+                    <select name="jenis_kelamin" required class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                        <option value="Laki-laki" {{ old('jenis_kelamin') == 'Laki-laki' ? 'selected' : '' }}>Laki-Laki</option>
+                        <option value="Perempuan" {{ old('jenis_kelamin') == 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
+                    </select>
+                </div>
 
-                <x-form-select label="Gol. Darah" name="golongan_darah">
-                    <option value="-">-</option>
-                    <option value="A">A</option><option value="B">B</option><option value="AB">AB</option><option value="O">O</option>
-                </x-form-select>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Golongan Darah</label>
+                    <select name="golongan_darah" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                        <option value="-">- Kosong / Bebas -</option>
+                        @foreach(['A','B','AB','O'] as $g)
+                            <option value="{{ $g }}" {{ old('golongan_darah') == $g ? 'selected' : '' }}>Tipe {{ $g }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-                {{-- UPDATE RENSTRA: Disabilitas --}}
-                <x-form-select label="Disabilitas" name="disabilitas">
-                    <option value="Tidak Ada">Tidak Ada</option>
-                    <option value="Tuna Netra">Tuna Netra</option>
-                    <option value="Tuna Daksa">Tuna Daksa</option>
-                    <option value="Tuna Rungu/Wicara">Tuna Rungu/Wicara</option>
-                    <option value="Lainnya">Lainnya</option>
-                </x-form-select>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Status Disabilitas Fisik/Mental</label>
+                    <select name="disabilitas" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                        @foreach(['Tidak Ada','Tuna Netra','Tuna Daksa','Tuna Rungu/Wicara','Lainnya'] as $d)
+                            <option value="{{ $d }}" {{ old('disabilitas') == $d ? 'selected' : '' }}>{{ $d }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-                <x-form-select label="Status Pernikahan" name="status_pernikahan">
-                    <option value="Belum Menikah">Belum Menikah</option>
-                    <option value="Menikah">Menikah</option>
-                    <option value="Cerai Hidup">Cerai Hidup</option>
-                    <option value="Cerai Mati">Cerai Mati</option>
-                </x-form-select>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Status Perkawinan Sipil/Gereja</label>
+                    <select name="status_pernikahan" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                        @foreach(['Belum Menikah','Menikah','Cerai Hidup','Cerai Mati'] as $s)
+                            <option value="{{ $s }}" {{ old('status_pernikahan') == $s ? 'selected' : '' }}>{{ $s }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-                <x-form-input label="No. HP / WA" name="telepon" />
+                <x-form-input label="No. Telepon / Ponsel Aktif" name="telepon" />
                 
-                <div class="md:col-span-3">
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Alamat Lengkap</label>
-                    <textarea name="alamat_lengkap" rows="2" class="w-full border-slate-300 rounded text-sm">{{ $prefillData['alamat_lengkap'] ?? '' }}</textarea>
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Alamat Lengkap / Domisili Domestik</label>
+                    <textarea name="alamat_lengkap" rows="2" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50">{{ $prefillData['alamat_lengkap'] ?? old('alamat_lengkap') }}</textarea>
                 </div>
             </div>
         </div>
 
         {{-- SECTION 2: KEANGGOTAAN GEREJA --}}
-        <div class="space-y-4 mb-8">
-            <h3 class="text-xs font-bold text-slate-700 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wide">II. Keanggotaan Gereja</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <x-form-select label="Jemaat" name="jemaat_id" required>
-                    <option value="">-- Pilih Jemaat --</option>
-                    @foreach ($jemaatOptions as $id => $nama)
-                        <option value="{{ $id }}" {{ ($prefillData['jemaat_id'] ?? '') == $id ? 'selected' : '' }}>{{ $nama }}</option>
-                    @endforeach
-                </x-form-select>
+        <div class="bg-white border border-gray-300 p-5 rounded shadow-sm border-t-4 border-t-blue-800">
+            <h4 class="font-bold text-gray-800 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4"><i class="fas fa-church mr-2 text-blue-800"></i> II. Administrasi Organisasi Jemaat</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Instansi Jemaat <span class="text-red-600">*</span></label>
+                    <select name="jemaat_id" required class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50">
+                        <option value="">-- Validasi Pilihan Jemaat --</option>
+                        @foreach ($jemaatOptions as $id => $nama)
+                            <option value="{{ $id }}" {{ (old('jemaat_id', $prefillData['jemaat_id'] ?? '')) == $id ? 'selected' : '' }}>{{ $nama }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-                <x-form-select label="Status Keanggotaan" name="status_keanggotaan" required>
-                    <option value="Aktif">Aktif</option>
-                    <option value="Tidak Aktif">Tidak Aktif</option>
-                    <option value="Pindah">Pindah</option>
-                    <option value="Meninggal">Meninggal</option>
-                </x-form-select>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Status Keanggotaan Aktif <span class="text-red-600">*</span></label>
+                    <select name="status_keanggotaan" required class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                        <option value="Aktif">Aktif Mengikuti</option>
+                        <option value="Tidak Aktif">Pasif / Tidak Aktif</option>
+                        <option value="Pindah">Pindah Wilayah</option>
+                        <option value="Meninggal">Meninggal Dunia</option>
+                    </select>
+                </div>
 
-                <x-form-input label="Nomor KK" name="nomor_kk" value="{{ $prefillData['nomor_kk'] ?? '' }}" />
-                <x-form-input label="Sektor Pelayanan" name="sektor_pelayanan" value="{{ $prefillData['sektor_pelayanan'] ?? '' }}" />
-                <x-form-input label="Unit Pelayanan" name="unit_pelayanan" value="{{ $prefillData['unit_pelayanan'] ?? '' }}" />
+                <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded">
+                    <label class="block text-[10px] font-bold text-blue-900 uppercase mb-1">Nomor Registrasi Kartu Keluarga (KK)</label>
+                    <input type="text" name="nomor_kk" value="{{ old('nomor_kk', $prefillData['nomor_kk'] ?? '') }}" class="w-full border border-blue-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 font-mono shadow-sm bg-white">
+                </div>
 
-                <x-form-input type="date" label="Tanggal Baptis" name="tanggal_baptis" />
-                <x-form-input label="Tempat Baptis" name="tempat_baptis" />
-                
-                <x-form-input type="date" label="Tanggal Sidi" name="tanggal_sidi" />
-                <x-form-input label="Tempat Sidi" name="tempat_sidi" />
+                <x-form-input label="Sektor Wilayah Pelayanan" name="sektor_pelayanan" value="{{ $prefillData['sektor_pelayanan'] ?? '' }}" />
+                <x-form-input label="Unit Pembinaan Khusus" name="unit_pelayanan" value="{{ $prefillData['unit_pelayanan'] ?? '' }}" />
+
+                <div class="lg:col-span-3 border-t border-gray-200 pt-4 mt-2">
+                    <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Administrasi Sakramen (Opsional)</h5>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <x-form-input type="date" label="Tanggal Baptisan Air" name="tanggal_baptis" />
+                        <x-form-input label="Lokasi/Gereja Baptis" name="tempat_baptis" />
+                        <x-form-input type="date" label="Tanggal Peneguhan Sidi" name="tanggal_sidi" />
+                        <x-form-input label="Lokasi/Gereja Sidi" name="tempat_sidi" />
+                    </div>
+                </div>
             </div>
         </div>
 
         {{-- SECTION 3: HUBUNGAN KELUARGA --}}
-        <div class="bg-blue-50 p-5 rounded border border-blue-100 mb-8">
-            <h3 class="text-xs font-bold text-blue-800 border-b border-blue-200 pb-2 mb-4 uppercase tracking-wide">III. Pohon Keluarga</h3>
+        <div class="bg-white border border-gray-300 p-5 rounded shadow-sm border-t-4 border-t-green-700">
+            <h4 class="font-bold text-gray-800 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4"><i class="fas fa-sitemap mr-2 text-green-700"></i> III. Struktur Silsilah & Kartu Keluarga</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ayah (Database)</label>
+                <div class="bg-gray-50 p-4 border border-gray-200 rounded">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Tautan Data Biologis Ayah</label>
                     <select name="ayah_id" id="select-ayah" class="w-full"></select>
-                    <input type="text" name="nama_ayah" class="w-full mt-2 border-slate-300 rounded text-xs" placeholder="Atau ketik nama manual...">
+                    <input type="text" name="nama_ayah" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm" placeholder="Atau ketik nama ayah secara manual jika tidak terdata...">
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ibu (Database)</label>
+                <div class="bg-gray-50 p-4 border border-gray-200 rounded">
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Tautan Data Biologis Ibu</label>
                     <select name="ibu_id" id="select-ibu" class="w-full"></select>
-                    <input type="text" name="nama_ibu" class="w-full mt-2 border-slate-300 rounded text-xs" placeholder="Atau ketik nama manual...">
+                    <input type="text" name="nama_ibu" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm" placeholder="Atau ketik nama ibu secara manual jika tidak terdata...">
                 </div>
                 <div class="md:col-span-2">
-                    <x-form-select label="Status dalam Keluarga" name="status_dalam_keluarga">
-                        <option value="Kepala Keluarga">Kepala Keluarga</option>
-                        <option value="Istri">Istri</option>
-                        <option value="Anak">Anak</option>
-                        <option value="Famili Lain">Famili Lain</option>
-                    </x-form-select>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Kedudukan & Status Dalam Kartu Keluarga (KK) <span class="text-red-600">*</span></label>
+                    <select name="status_dalam_keluarga" required class="w-full border border-gray-300 rounded text-sm focus:ring-green-700 focus:border-green-700 shadow-sm bg-white font-bold">
+                        @foreach(['Kepala Keluarga','Istri','Anak','Famili Lain'] as $s)
+                            <option value="{{ $s }}" {{ old('status_dalam_keluarga') == $s ? 'selected' : '' }}>{{ strtoupper($s) }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
         </div>
 
-        {{-- SECTION 4: ANALISIS RENSTRA (UPDATE MINOR) --}}
-        <div class="bg-slate-50 p-5 rounded border border-slate-200 mb-8">
-            <h3 class="text-xs font-bold text-slate-700 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wide">IV. Analisis Kesejahteraan & Digital (Renstra)</h3>
+        {{-- SECTION 4: ANALISIS RENSTRA --}}
+        <div class="bg-gray-100 border border-gray-300 p-5 rounded shadow-sm">
+            <h4 class="font-bold text-gray-800 text-sm uppercase tracking-wide border-b border-gray-300 pb-2 mb-4"><i class="fas fa-chart-pie mr-2 text-gray-600"></i> IV. Analisis Kesejahteraan & Kapabilitas Digital (Renstra)</h4>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-4">
-                <x-form-select label="Kondisi Rumah" name="kondisi_rumah">
-                    <option value="Permanen">Permanen</option>
-                    <option value="Semi-Permanen">Semi-Permanen</option>
-                    <option value="Darurat/Kayu">Darurat/Kayu</option>
-                </x-form-select>
-                
-                <x-form-select label="Status Rumah" name="status_kepemilikan_rumah">
-                    <option value="Milik Sendiri">Milik Sendiri</option>
-                    <option value="Sewa">Sewa/Kontrak</option>
-                    <option value="Menumpang">Menumpang</option>
-                    <option value="Dinas">Dinas</option>
-                </x-form-select>
-
-                <x-form-select label="Rentang Pengeluaran" name="rentang_pengeluaran">
-                    <option value="< 1jt">< 1 Juta</option>
-                    <option value="1jt - 3jt">1 - 3 Juta</option>
-                    <option value="> 3jt">> 3 Juta</option>
-                </x-form-select>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Status Konstruksi Rumah</label>
+                    <select name="kondisi_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                        <option value="Permanen">Bangunan Permanen</option>
+                        <option value="Semi-Permanen">Semi-Permanen (Papan/Beton)</option>
+                        <option value="Darurat/Kayu">Darurat / Non-Permanen</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Legalitas Kepemilikan Rumah</label>
+                    <select name="status_kepemilikan_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                        <option value="Milik Sendiri">Aset Hak Milik Sendiri</option>
+                        <option value="Sewa">Sewa / Kontrak Berkala</option>
+                        <option value="Menumpang">Menumpang Pada Kerabat</option>
+                        <option value="Dinas">Fasilitas Dinas / Negara</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Estimasi Pengeluaran Rutin</label>
+                    <select name="rentang_pengeluaran" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                        <option value="< 1jt">Dibawah Rp 1.000.000</option>
+                        <option value="1jt - 3jt">Rp 1.000.000 - Rp 3.000.000</option>
+                        <option value="> 3jt">Diatas Rp 3.000.000</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-4">
-                <x-form-input label="Pekerjaan Utama" name="pekerjaan_utama" />
-                
-                <x-form-select label="Smartphone" name="punya_smartphone">
-                    <option value="0">Tidak Memiliki</option>
-                    <option value="1">Ya, Memiliki</option>
-                </x-form-select>
-
-                <x-form-select label="Akses Internet" name="akses_internet">
-                    <option value="0">Tidak Ada</option>
-                    <option value="1">Ya, Ada (Wifi/Data)</option>
-                </x-form-select>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Pekerjaan / Mata Pencaharian</label>
+                    <input type="text" name="pekerjaan_utama" value="{{ old('pekerjaan_utama') }}" placeholder="Cth: PNS, Petani, Nelayan..." class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Kepemilikan Perangkat Cerdas (Smartphone)</label>
+                    <select name="punya_smartphone" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                        <option value="0">Tidak Memiliki Perangkat</option>
+                        <option value="1">Ya, Memiliki Perangkat</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Akses Jaringan Internet Domestik</label>
+                    <select name="akses_internet" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                        <option value="0">Tidak Terjangkau Sinyal / Akses</option>
+                        <option value="1">Ya, Tersedia Akses Konstan</option>
+                    </select>
+                </div>
             </div>
 
-            {{-- Aset Ekonomi (Checkbox) --}}
-            <div class="mt-4 p-3 bg-white rounded border border-slate-200">
-                <label class="block text-xs font-bold uppercase text-slate-500 mb-3">Potensi Ekonomi & Aset</label>
+            {{-- Aset Ekonomi --}}
+            <div class="mt-4 p-4 bg-white border border-gray-300 rounded">
+                <label class="block text-[10px] font-bold text-gray-600 uppercase mb-3 border-b border-gray-100 pb-2">Potensi Ekonomi Produktif & Aset Alam</label>
                 <div class="flex flex-wrap gap-4">
                     @foreach(['Perkebunan', 'Peternakan', 'Perikanan', 'Kehutanan', 'Usaha Mikro', 'Transportasi'] as $aset)
-                    <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="aset_ekonomi[]" value="{{ $aset }}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                        <span class="ml-2 text-sm text-slate-600">{{ $aset }}</span>
+                    <label class="inline-flex items-center cursor-pointer p-2 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 transition">
+                        <input type="checkbox" name="aset_ekonomi[]" value="{{ $aset }}" class="rounded border-gray-400 text-gray-800 focus:ring-gray-800 h-4 w-4">
+                        <span class="ml-2 text-xs font-bold text-gray-700 uppercase tracking-widest">{{ $aset }}</span>
                     </label>
                     @endforeach
                 </div>
             </div>
         </div>
 
-        {{-- Tombol Khusus --}}
-        <div class="flex justify-end pt-6">
-            <button type="submit" name="save_and_add_another" value="1" class="mr-3 px-4 py-2 bg-green-600 text-white text-xs font-bold uppercase rounded hover:bg-green-700">
+        {{-- Tombol Eksekusi Multi-Form --}}
+        <div class="flex justify-end pt-4 pb-10 gap-3">
+            <button type="submit" name="save_and_add_another" value="1" class="px-6 py-3 bg-white border border-gray-800 text-gray-800 text-xs font-bold uppercase tracking-widest rounded shadow-sm hover:bg-gray-50 transition">
                 Simpan & Tambah Keluarga
+            </button>
+            <button type="submit" class="px-8 py-3 bg-gray-800 text-white text-xs font-bold uppercase tracking-widest rounded shadow-sm hover:bg-gray-900 transition flex items-center">
+                <i class="fas fa-save mr-2"></i> Daftarkan Ke Pangkalan Data
             </button>
         </div>
 
-    </x-admin-form>
+    </div>
+</form>
 
-    {{-- SCRIPTS SELECT2 --}}
-    @push('scripts')
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            function initSelect2(id) {
-                $(id).select2({
-                    placeholder: 'Cari Nama...',
-                    ajax: {
-                        url: "{{ route('admin.anggota-jemaat.search') }}",
-                        dataType: 'json',
-                        delay: 250,
-                        data: function (params) { return { q: params.term }; },
-                        processResults: function (data) { return { results: data }; },
-                        cache: true
-                    }
-                });
-            }
-            initSelect2('#select-ayah');
-            initSelect2('#select-ibu');
-        });
-    </script>
-    @endpush
-    @push('styles')
-    <style>.select2-container .select2-selection--single { height: 38px; border-color: #cbd5e1; }</style>
-    @endpush
+{{-- SCRIPTS SELECT2 --}}
+@push('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        function initSelect2(id) {
+            $(id).select2({
+                placeholder: '-- Pencarian Biodata Pangkalan Data --',
+                ajax: {
+                    url: "{{ route('admin.anggota-jemaat.search') }}",
+                    dataType: 'json',
+                    delay: 350, // Perlambat sedikit request untuk server
+                    data: function (params) { return { q: params.term }; },
+                    processResults: function (data) { return { results: data }; },
+                    cache: true
+                }
+            });
+        }
+        initSelect2('#select-ayah');
+        initSelect2('#select-ibu');
+    });
+</script>
+@endpush
+@push('styles')
+<style>
+    .select2-container .select2-selection--single { height: 42px !important; border-color: #d1d5db !important; border-radius: 0.25rem !important; display: flex; align-items: center; background-color: #f9fafb;}
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 40px !important; }
+</style>
+@endpush
 @endsection
