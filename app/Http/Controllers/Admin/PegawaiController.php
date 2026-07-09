@@ -193,4 +193,27 @@ class PegawaiController extends Controller
         $pegawai->delete();
         return redirect()->route('admin.kepegawaian.pegawai.index')->with('success', 'Data dihapus.');
     }
+
+/**
+     * Mencetak Dokumen Biodata Pegawai / Pendeta ke format PDF
+     */
+    public function print($id)
+    {
+        // 1. Ambil data pegawai beserta relasinya
+        $pegawai = Pegawai::with(['klasis', 'jemaat', 'riwayatSk'])->findOrFail($id);
+        
+        // 2. Ambil data pengaturan untuk Kop Surat (Logo, Alamat, dll)
+        $setting = \App\Models\Setting::firstOrCreate(['id' => 1]);
+
+        // 3. Render ke dalam PDF menggunakan DomPDF
+        $pdf = Pdf::loadView('admin.pegawai.pdf_biodata', compact('pegawai', 'setting'));
+
+        // 4. Konfigurasi Kertas (A4 Portrait)
+        $pdf->setPaper('a4', 'portrait');
+
+        // 5. Tampilkan PDF di tab baru (stream) dengan nama file dinamis
+        $namaFile = 'Kutipan_Buku_Induk_' . str_replace(' ', '_', $pegawai->nama_lengkap) . '.pdf';
+        
+        return $pdf->stream($namaFile);
+    }    
 }
