@@ -23,7 +23,7 @@
         <div class="bg-white p-5 rounded border border-gray-300 shadow-sm flex items-center justify-between border-t-4 border-t-gray-400">
             <div>
                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Anggaran Dirancang</p>
-                <p class="text-2xl font-black text-gray-900 mt-1">{{ number_format($anggarans->total() ?? 0) }} <span class="text-xs text-gray-500">POS</span></p>
+                <p class="text-2xl font-black text-gray-900 mt-1">{{ number_format($anggarans->total() ?? 0) }} <span class="text-xs text-gray-500 font-bold uppercase">POS</span></p>
             </div>
             <div class="p-2 bg-gray-100 text-gray-400 rounded"><i class="fas fa-file-invoice-dollar text-2xl"></i></div>
         </div>
@@ -58,7 +58,7 @@
                 <option value="">- Wadah Kategorial -</option>
                 @foreach($jenisWadahs as $w)
                     <option value="{{ $w->id }}" {{ request('wadah') == $w->id ? 'selected' : '' }}>
-                        {{ $w->nama_wadah }}
+                        {{ strtoupper($w->nama_wadah) }}
                     </option>
                 @endforeach
             </select>
@@ -88,11 +88,11 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-gray-100 border-b-2 border-gray-800 text-[10px] text-gray-700 uppercase tracking-wider font-bold">
-                        <th class="px-5 py-3 w-1/3">Pos Anggaran & Program Terkait</th>
-                        <th class="px-5 py-3">Organisasi Pelaksana</th>
+                        <th class="px-5 py-3 w-1/3">Pos Anggaran & Tautan Program</th>
+                        <th class="px-5 py-3">Organisasi Teritori</th>
                         <th class="px-5 py-3 text-center">Arus Kas</th>
-                        <th class="px-5 py-3 text-right">Target RAPB (Rp)</th>
-                        <th class="px-5 py-3 text-center w-28">Status Realisasi</th>
+                        <th class="px-5 py-3 text-right">Target & Realisasi (Rp)</th>
+                        <th class="px-5 py-3 w-32">Serapan Capaian</th>
                         <th class="px-5 py-3 text-center w-24">Tindakan</th>
                     </tr>
                 </thead>
@@ -100,46 +100,52 @@
                     @forelse($anggarans as $a)
                         @php
                             $persen = $a->jumlah_target > 0 ? ($a->jumlah_realisasi / $a->jumlah_target) * 100 : 0;
-                            $barColor = $a->jenis_anggaran == 'penerimaan' ? 'bg-green-600' : 'bg-red-600';
-                            $bgColor = $a->jenis_anggaran == 'penerimaan' ? 'bg-green-100' : 'bg-red-100';
+                            // Logika Pewarnaan (Corporate Muted Colors)
+                            $barColor = $a->jenis_anggaran == 'penerimaan' ? 'bg-green-700' : 'bg-blue-700';
+                            $bgColor = $a->jenis_anggaran == 'penerimaan' ? 'bg-green-50' : 'bg-red-50';
                             $textColor = $a->jenis_anggaran == 'penerimaan' ? 'text-green-800' : 'text-red-800';
+                            
+                            // Logika Bahaya (Jika Over Budget pada Pengeluaran)
+                            if($a->jenis_anggaran == 'pengeluaran' && $persen > 100) {
+                                $barColor = 'bg-red-700';
+                            }
                         @endphp
                         <tr class="hover:bg-gray-50 transition group">
-                            <td class="px-5 py-4">
-                                <div class="font-bold text-gray-900 uppercase text-xs leading-snug mb-1">{{ $a->nama_pos_anggaran }}</div>
+                            <td class="px-5 py-4 align-top">
+                                <div class="font-bold text-gray-900 uppercase text-xs leading-snug mb-2">{{ $a->nama_pos_anggaran }}</div>
                                 @if($a->program_kerja_id)
                                     <div class="text-[9px] text-blue-800 font-bold tracking-widest bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-block uppercase">
-                                        <i class="fas fa-link mr-1 text-blue-400"></i> PROG: {{ Str::limit($a->programKerja->nama_program, 30) }}
+                                        <i class="fas fa-link mr-1 text-blue-400"></i> PROG: {{ Str::limit($a->programKerja->nama_program, 40) }}
                                     </div>
                                 @else
                                     <div class="text-[8px] text-gray-400 font-bold uppercase tracking-widest italic border border-gray-200 px-1.5 py-0.5 rounded inline-block">Kas Rutin Non-Program</div>
                                 @endif
                             </td>
-                            <td class="px-5 py-4">
-                                <span class="block font-mono font-black text-gray-800 mb-1">T.A. {{ $a->tahun_anggaran }}</span>
+                            <td class="px-5 py-4 align-top">
+                                <span class="block font-mono font-black text-gray-800 mb-1 text-xs">T.A. {{ $a->tahun_anggaran }}</span>
                                 <span class="text-[9px] text-gray-700 font-bold uppercase tracking-widest bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300 inline-block">
                                     {{ $a->jenisWadah->nama_wadah }} ({{ strtoupper($a->tingkat) }})
                                 </span>
                             </td>
-                            <td class="px-5 py-4 text-center">
+                            <td class="px-5 py-4 text-center align-top">
                                 <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border border-{{ $a->jenis_anggaran == 'penerimaan' ? 'green-300' : 'red-300' }} {{ $bgColor }} {{ $textColor }}">
                                     {{ $a->jenis_anggaran == 'penerimaan' ? 'Pemasukan' : 'Belanja' }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4 text-right">
-                                <div class="font-mono text-xs font-black text-gray-800">Rp {{ number_format($a->jumlah_target, 0, ',', '.') }}</div>
-                                <div class="text-[9px] font-bold {{ $textColor }} mt-1">Real: Rp {{ number_format($a->jumlah_realisasi, 0, ',', '.') }}</div>
+                            <td class="px-5 py-4 text-right align-top">
+                                <div class="font-mono text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1">Target: {{ number_format($a->jumlah_target, 0, ',', '.') }}</div>
+                                <div class="font-mono font-black {{ $textColor }} text-sm">Real: Rp {{ number_format($a->jumlah_realisasi, 0, ',', '.') }}</div>
                             </td>
-                            <td class="px-5 py-4">
-                                <div class="flex items-center justify-between text-[9px] font-bold text-gray-600 mb-1">
+                            <td class="px-5 py-4 align-top">
+                                <div class="flex items-center justify-between text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-widest">
                                     <span>Terserap</span>
                                     <span>{{ number_format($persen, 1) }}%</span>
                                 </div>
-                                <div class="w-full bg-gray-200 rounded h-1.5 overflow-hidden border border-gray-300">
-                                    <div class="{{ $barColor }} h-1.5" style="width: {{ min($persen, 100) }}%"></div>
+                                <div class="w-full bg-gray-200 rounded h-2 overflow-hidden border border-gray-300">
+                                    <div class="{{ $barColor }} h-2" style="width: {{ min($persen, 100) }}%"></div>
                                 </div>
                             </td>
-                            <td class="px-5 py-4 text-center">
+                            <td class="px-5 py-4 text-center align-top">
                                 <div class="flex justify-center gap-3">
                                     <a href="{{ route('admin.wadah.anggaran.show', $a->id) }}" class="text-gray-400 hover:text-blue-800 transition" title="Rincian & Transaksi">
                                         <i class="fas fa-list-alt text-sm"></i>
@@ -160,7 +166,7 @@
                         <tr>
                             <td colspan="6" class="px-5 py-12 text-center text-gray-500 text-sm">
                                 <i class="fas fa-wallet text-3xl mb-3 block text-gray-300"></i>
-                                Pangkalan data anggaran wadah kategorial belum tersedia.
+                                Pangkalan data pos anggaran wadah kategorial belum tersedia.
                             </td>
                         </tr>
                     @endforelse

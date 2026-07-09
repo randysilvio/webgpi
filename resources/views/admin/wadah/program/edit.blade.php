@@ -42,11 +42,10 @@
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tahun Anggaran Berjalan <span class="text-red-600">*</span></label>
                     <input type="number" name="tahun_program" value="{{ old('tahun_program', $program->tahun_program) }}" required 
                         class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50 font-mono font-bold">
-                    @error('tahun_program') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Indikator Eksekusi (Status) <span class="text-red-600">*</span></label>
-                    <select name="status_pelaksanaan" required class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white font-bold">
+                    <select name="status_pelaksanaan" required class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white font-bold text-gray-900">
                         <option value="0" {{ $program->status_pelaksanaan == 0 ? 'selected' : '' }}>Fase Perencanaan</option>
                         <option value="1" {{ $program->status_pelaksanaan == 1 ? 'selected' : '' }}>Eksekusi Sedang Berjalan</option>
                         <option value="2" {{ $program->status_pelaksanaan == 2 ? 'selected' : '' }}>Selesai / Purna</option>
@@ -60,17 +59,16 @@
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Nomenklatur Program / Kegiatan <span class="text-red-600">*</span></label>
                     <input type="text" name="nama_program" value="{{ old('nama_program', $program->nama_program) }}" required 
-                        class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm uppercase bg-gray-50">
-                    @error('nama_program') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
+                        class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm uppercase bg-gray-50 font-bold">
                 </div>
 
                 <div class="bg-blue-50 border border-blue-200 p-4 rounded">
-                    <label class="block text-[10px] font-bold text-blue-900 uppercase mb-1">Modifikasi Tautan Program Induk (Opsional)</label>
-                    <select name="parent_program_id" class="w-full border border-blue-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                    <label class="block text-[10px] font-bold text-blue-900 uppercase mb-1">Modifikasi Tautan Program Induk Berjenjang</label>
+                    <select name="parent_program_id" class="w-full border border-blue-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 bg-white shadow-sm text-gray-700 font-bold">
                         <option value="">-- Bukan Program Turunan (Mandiri) --</option>
                         @foreach($potentialParents as $parent)
                             <option value="{{ $parent->id }}" {{ $program->parent_program_id == $parent->id ? 'selected' : '' }}>
-                                [{{ strtoupper($parent->tingkat) }}] {{ $parent->nama_program }}
+                                [INDUK {{ strtoupper($parent->tingkat) }}] {{ $parent->nama_program }}
                             </option>
                         @endforeach
                     </select>

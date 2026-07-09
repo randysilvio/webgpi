@@ -9,7 +9,7 @@
     <div class="bg-white rounded border border-gray-300 p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-l-4 border-l-blue-800">
         <div>
             <h2 class="text-lg font-black text-gray-900 uppercase tracking-widest">Matriks Program Kategorial</h2>
-            <p class="text-xs text-gray-600 mt-1">Sistem Perencanaan, Realisasi, dan Pemantauan Program Kerja Wadah Pelayanan.</p>
+            <p class="text-xs text-gray-600 mt-1">Sistem Perencanaan, Realisasi, dan Pemantauan Hierarki Program Kerja Wadah.</p>
         </div>
         <div class="flex gap-2">
             <a href="{{ route('admin.wadah.program.create') }}" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest shadow-sm transition flex items-center justify-center">
@@ -43,14 +43,14 @@
         <form action="{{ route('admin.wadah.program.index') }}" method="GET" class="w-full grid grid-cols-1 md:grid-cols-5 gap-4">
             
             <select name="tahun" onchange="this.form.submit()" class="w-full border border-gray-300 rounded text-xs font-bold uppercase focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
-                <option value="">- Tahun Pelaksanaan -</option>
+                <option value="">- Tahun Buku -</option>
                 @foreach($years as $y)
                     <option value="{{ $y }}" {{ request('tahun') == $y ? 'selected' : '' }}>T.A. {{ $y }}</option>
                 @endforeach
             </select>
 
             <select name="jenis_wadah_id" onchange="this.form.submit()" class="w-full border border-gray-300 rounded text-xs font-bold uppercase focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
-                <option value="">- Spesifikasi Wadah -</option>
+                <option value="">- Klasifikasi Wadah -</option>
                 @foreach($jenisWadahs as $wadah)
                     <option value="{{ $wadah->id }}" {{ request('jenis_wadah_id') == $wadah->id ? 'selected' : '' }}>
                         {{ $wadah->nama_wadah }}
@@ -59,7 +59,7 @@
             </select>
 
             <select name="tingkat" onchange="this.form.submit()" class="w-full border border-gray-300 rounded text-xs font-bold uppercase focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
-                <option value="">- Hierarki Pelaksanaan -</option>
+                <option value="">- Hierarki Tingkat -</option>
                 <option value="sinode" {{ request('tingkat') == 'sinode' ? 'selected' : '' }}>PUSAT SINODE</option>
                 <option value="klasis" {{ request('tingkat') == 'klasis' ? 'selected' : '' }}>REGIONAL KLASIS</option>
                 <option value="jemaat" {{ request('tingkat') == 'jemaat' ? 'selected' : '' }}>LOKAL JEMAAT</option>
@@ -88,30 +88,30 @@
                         <th class="px-5 py-3">Organisasi Pelaksana</th>
                         <th class="px-5 py-3">Yurisdiksi (Wilayah)</th>
                         <th class="px-5 py-3 text-center">Status</th>
-                        <th class="px-5 py-3 text-right">RAB Proyeksi</th>
+                        <th class="px-5 py-3 text-right">RAB Estimasi (Rp)</th>
                         <th class="px-5 py-3 text-center w-24">Tindakan</th>
                     </tr>
                 </thead>
                 <tbody class="text-sm divide-y divide-gray-200">
                     @forelse($programs as $p)
                         <tr class="hover:bg-gray-50 transition group">
-                            <td class="px-5 py-4">
+                            <td class="px-5 py-4 align-top">
                                 <div class="font-bold text-gray-900 uppercase text-xs mb-1.5 leading-snug">{{ $p->nama_program }}</div>
                                 @if($p->parentProgram)
                                     <div class="text-[9px] text-gray-500 font-bold tracking-widest bg-gray-100 px-2 py-1 rounded inline-flex items-center border border-gray-200">
-                                        <i class="fas fa-link mr-1.5 text-blue-800"></i> INDUK: {{ Str::limit(strtoupper($p->parentProgram->nama_program), 30) }}
+                                        <i class="fas fa-sitemap mr-1.5 text-blue-800"></i> INDUK: {{ Str::limit(strtoupper($p->parentProgram->nama_program), 30) }}
                                     </div>
                                 @else
-                                    <div class="text-[8px] text-gray-400 font-bold uppercase tracking-widest italic">Program Mandiri</div>
+                                    <div class="text-[8px] text-gray-400 font-bold uppercase tracking-widest italic">Program Utama (Mandiri)</div>
                                 @endif
                             </td>
-                            <td class="px-5 py-4">
-                                <span class="block font-mono font-black text-gray-800 mb-1">T.A. {{ $p->tahun_program }}</span>
+                            <td class="px-5 py-4 align-top">
+                                <span class="block font-mono font-black text-gray-800 mb-1 text-xs">T.A. {{ $p->tahun_program }}</span>
                                 <span class="text-[9px] text-blue-800 font-bold uppercase tracking-widest bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 inline-block">
                                     {{ $p->jenisWadah->nama_wadah }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4">
+                            <td class="px-5 py-4 align-top">
                                 <div class="font-black uppercase text-[10px] text-gray-600 tracking-widest mb-1">{{ $p->tingkat }}</div>
                                 @if($p->tingkat == 'klasis')
                                     <div class="text-[10px] text-gray-900 font-bold uppercase"><i class="fas fa-map-marker-alt text-gray-400 mr-1"></i> {{ $p->klasis->nama_klasis ?? '-' }}</div>
@@ -120,7 +120,7 @@
                                     <div class="text-[8px] text-gray-400 uppercase tracking-widest">({{ $p->klasis->nama_klasis ?? '-' }})</div>
                                 @endif
                             </td>
-                            <td class="px-5 py-4 text-center">
+                            <td class="px-5 py-4 text-center align-top">
                                 @php
                                     $statusConfig = match($p->status_pelaksanaan) {
                                         1 => ['bg-blue-100', 'text-blue-800', 'border-blue-300'],
@@ -134,10 +134,10 @@
                                     {{ $p->status_label }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4 text-right">
-                                <span class="font-mono text-xs font-black text-gray-800">Rp {{ number_format($p->target_anggaran, 0, ',', '.') }}</span>
+                            <td class="px-5 py-4 text-right align-top">
+                                <span class="font-mono text-xs font-black text-gray-800">{{ number_format($p->target_anggaran, 0, ',', '.') }}</span>
                             </td>
-                            <td class="px-5 py-4 text-center">
+                            <td class="px-5 py-4 text-center align-top">
                                 <div class="flex justify-center gap-3">
                                     <a href="{{ route('admin.wadah.program.edit', $p->id) }}" class="text-gray-400 hover:text-yellow-600 transition" title="Modifikasi Dokumen">
                                         <i class="fas fa-edit text-sm"></i>

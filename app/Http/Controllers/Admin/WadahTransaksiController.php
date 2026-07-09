@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 class WadahTransaksiController extends Controller
 {
     /**
-     * Simpan Transaksi Baru.
+     * Simpan Transaksi Baru dan Update Saldo.
      */
     public function store(Request $request)
     {
@@ -32,9 +32,10 @@ class WadahTransaksiController extends Controller
         // Upload Bukti (Jika ada)
         $buktiPath = null;
         if ($request->hasFile('bukti_transaksi')) {
-            $buktiPath = $request->file('bukti_transaksi')->store('bukti_transaksi', 'public');
+            $buktiPath = $request->file('bukti_transaksi')->store('bukti_transaksi/wadah', 'public');
         }
 
+        // Buat Catatan Transaksi
         WadahKategorialTransaksi::create([
             'anggaran_id' => $request->anggaran_id,
             'tanggal_transaksi' => $request->tanggal_transaksi,
@@ -45,24 +46,31 @@ class WadahTransaksiController extends Controller
             'dicatat_oleh_user_id' => Auth::id(),
         ]);
 
-        // Note: Observer akan otomatis mengupdate jumlah_realisasi di tabel Anggaran
+        // MENGAMANKAN LOGIKA (SAFEGUARD): Update langsung realisasi anggaran tanpa menunggu Observer
+        $anggaran->increment('jumlah_realisasi', $request->jumlah);
 
-        return back()->with('success', 'Transaksi berhasil dicatat.');
+        return back()->with('success', 'Transaksi berhasil dicatat dan realisasi pos anggaran telah diperbarui.');
     }
 
     /**
-     * Hapus Transaksi.
+     * Hapus Transaksi dan Kembalikan Saldo.
      */
     public function destroy(WadahKategorialTransaksi $transaksi)
     {
-        // Hapus file bukti jika ada
-        if ($transaksi->bukti_transaksi) {
+        $anggaran = $transaksi->anggaran; // Tarik data anggaran sebelum transaksi dihapus
+
+        // Hapus file bukti fisik jika ada
+        if ($transaksi->bukti_transaksi && Storage::disk('public')->exists($transaksi->bukti_transaksi)) {
             Storage::disk('public')->delete($transaksi->bukti_transaksi);
         }
 
-        $transaksi->delete();
-        // Note: Observer akan otomatis mengurangi jumlah_realisasi di tabel Anggaran
+        // MENGAMANKAN LOGIKA (SAFEGUARD): Kembalikan (kurangi) saldo realisasi anggaran
+        if ($anggaran) {
+            $anggaran->decrement('jumlah_realisasi', $transaksi->jumlah);
+        }
 
-        return back()->with('success', 'Transaksi dibatalkan/dihapus.');
+        $transaksi->delete();
+
+        return back()->with('success', 'Transaksi berhasil dihapus dan saldo realisasi anggaran telah disesuaikan kembali.');
     }
 }

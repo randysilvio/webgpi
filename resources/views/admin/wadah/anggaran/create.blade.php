@@ -79,10 +79,10 @@
             
             <div class="bg-blue-50 border border-blue-200 p-4 rounded mb-6">
                 <label class="block text-[10px] font-bold text-blue-900 uppercase mb-1">Tautan Program Kerja (Opsional)</label>
-                <select id="program_kerja_id" name="program_kerja_id" class="w-full border border-blue-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 bg-white shadow-sm">
+                <select id="program_kerja_id" name="program_kerja_id" class="w-full border border-blue-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 bg-white shadow-sm font-bold text-gray-800">
                     <option value="">-- Bukan Anggaran Program (Anggaran Rutin) --</option>
                 </select>
-                <p class="text-[9px] text-blue-700 mt-1.5 font-bold uppercase tracking-widest"><i class="fas fa-info-circle mr-1"></i> Tautkan jika pos anggaran ini dirancang untuk mendanai kegiatan spesifik.</p>
+                <p class="text-[9px] text-blue-700 mt-1.5 font-bold uppercase tracking-widest"><i class="fas fa-info-circle mr-1"></i> Tautkan jika pos anggaran ini dirancang untuk mendanai program spesifik.</p>
             </div>
 
             <div class="space-y-6">

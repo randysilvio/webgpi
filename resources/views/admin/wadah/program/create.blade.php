@@ -6,7 +6,7 @@
 <div class="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between border-b-2 border-gray-800 pb-4">
     <div>
         <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest">Registrasi Program Baru</h2>
-        <p class="text-xs text-gray-600 mt-1">Sistem Perencanaan dan Pembuatan Matriks Program Kategorial.</p>
+        <p class="text-xs text-gray-600 mt-1">Sistem Perencanaan dan Pembuatan Matriks Program Kategorial Berjenjang.</p>
     </div>
     <a href="{{ route('admin.wadah.program.index') }}" class="text-gray-500 hover:text-blue-800 font-bold text-xs uppercase transition flex items-center mt-3 md:mt-0">
         <i class="fas fa-arrow-left mr-2"></i> Kembali ke Indeks
@@ -19,11 +19,11 @@
         
         {{-- KELOMPOK I: KONTEKS STRUKTURAL --}}
         <div class="bg-white border border-gray-300 p-5 rounded shadow-sm">
-            <h4 class="font-bold text-gray-800 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4"><i class="fas fa-sitemap mr-2 text-blue-800"></i> I. Parameter & Konteks Pelaksanaan</h4>
+            <h4 class="font-bold text-gray-800 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4"><i class="fas fa-sitemap mr-2 text-blue-800"></i> I. Parameter & Hierarki Pelaksanaan</h4>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tahun Anggaran Pelaksanaan <span class="text-red-600">*</span></label>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tahun Anggaran Berjalan <span class="text-red-600">*</span></label>
                     <select id="tahun_program" name="tahun_program" onchange="updateParentOptions()" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50 font-mono font-bold text-gray-900">
                         @for($i = date('Y') + 1; $i >= 2020; $i--)
                             <option value="{{ $i }}" {{ old('tahun_program', date('Y')) == $i ? 'selected' : '' }}>Tahun {{ $i }}</option>
@@ -39,17 +39,15 @@
                             <option value="{{ $wadah->id }}" {{ old('jenis_wadah_id') == $wadah->id ? 'selected' : '' }}>{{ strtoupper($wadah->nama_wadah) }}</option>
                         @endforeach
                     </select>
-                    @error('jenis_wadah_id') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Hierarki Kewenangan <span class="text-red-600">*</span></label>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tingkat Kewenangan Pelaksanaan <span class="text-red-600">*</span></label>
                     <select id="tingkat" name="tingkat" required onchange="handleLokasiChange()" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
                         <option value="sinode" {{ old('tingkat') == 'sinode' ? 'selected' : '' }}>Pusat Sinode</option>
                         <option value="klasis" {{ old('tingkat') == 'klasis' ? 'selected' : '' }}>Regional Klasis</option>
                         <option value="jemaat" {{ old('tingkat') == 'jemaat' ? 'selected' : '' }}>Lokal Jemaat</option>
                     </select>
-                    @error('tingkat') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>
 
@@ -80,19 +78,18 @@
             <h4 class="font-bold text-gray-800 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4"><i class="fas fa-file-alt mr-2 text-green-700"></i> II. Rincian & Klasifikasi Program</h4>
             
             <div class="bg-blue-50 border border-blue-200 p-4 rounded mb-6">
-                <label class="block text-[10px] font-bold text-blue-900 uppercase mb-1">Tautan Program Induk (Opsional)</label>
-                <select id="parent_program_id" name="parent_program_id" class="w-full border border-blue-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 bg-white shadow-sm">
+                <label class="block text-[10px] font-bold text-blue-900 uppercase mb-1">Tautan Program Induk Berjenjang (Opsional)</label>
+                <select id="parent_program_id" name="parent_program_id" class="w-full border border-blue-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 bg-white shadow-sm font-bold text-gray-700">
                     <option value="">-- Bukan Program Turunan (Mandiri) --</option>
                 </select>
-                <p class="text-[9px] text-blue-700 mt-1.5 font-bold uppercase tracking-widest"><i class="fas fa-info-circle mr-1"></i> Jika program ini merupakan derivasi/penjabaran dari program institusi tingkat atas.</p>
+                <p class="text-[9px] text-blue-700 mt-1.5 font-bold uppercase tracking-widest"><i class="fas fa-info-circle mr-1"></i> Jika program Jemaat, sistem akan menarik data Program Klasis. Jika program Klasis, menarik data Program Sinode.</p>
             </div>
 
             <div class="space-y-6">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Nomenklatur Program / Kegiatan <span class="text-red-600">*</span></label>
                     <input type="text" name="nama_program" value="{{ old('nama_program') }}" required placeholder="Contoh: Ibadah Padang Gabungan Kaum Bapak" 
-                        class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm uppercase bg-gray-50">
-                    @error('nama_program') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
+                        class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm uppercase bg-gray-50 font-bold">
                 </div>
 
                 <div>
@@ -120,7 +117,6 @@
                             <input type="number" name="target_anggaran" value="{{ old('target_anggaran') }}" placeholder="0" 
                                 class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm font-mono text-right focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50 font-bold">
                         </div>
-                        <p class="text-[9px] text-gray-500 mt-1 uppercase tracking-widest font-bold">Opsional. Digunakan untuk acuan finansial kegiatan.</p>
                     </div>
                 </div>
             </div>
@@ -187,11 +183,14 @@
 
         let url = `{{ route('admin.wadah.program.get-parents') }}?tingkat=${tingkat}&wadah_id=${wadahId}&tahun=${tahun}`;
         if (tingkat === 'jemaat') {
-            if(!klasisId) return;
+            if(!klasisId) {
+                parentSelect.innerHTML = '<option value="">-- Pilih Klasis Dahulu --</option>';
+                return;
+            }
             url += `&klasis_id=${klasisId}`;
         }
 
-        parentSelect.innerHTML = '<option value="">Menyelaraskan data server...</option>';
+        parentSelect.innerHTML = '<option value="">Menyelaraskan data program induk...</option>';
 
         fetch(url)
             .then(response => response.json())
@@ -199,7 +198,7 @@
                 parentSelect.innerHTML = '<option value="">-- Bukan Program Turunan (Mandiri) --</option>';
                 if (data.length > 0) {
                     data.forEach(program => {
-                        parentSelect.innerHTML += `<option value="${program.id}">${program.nama_program}</option>`;
+                        parentSelect.innerHTML += `<option value="${program.id}">[INDUK] ${program.nama_program}</option>`;
                     });
                 }
             })

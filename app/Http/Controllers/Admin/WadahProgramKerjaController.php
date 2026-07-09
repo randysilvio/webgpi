@@ -10,13 +10,9 @@ use App\Models\Jemaat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class WadahProgramKerjaController extends Controller
 {
-    /**
-     * Menampilkan daftar program kerja dengan statistik.
-     */
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -36,186 +32,122 @@ class WadahProgramKerjaController extends Controller
             $query->where('jemaat_id', $user->jemaat_id);
         }
 
-        // 3. Filter Search & Dropdown
-        if ($request->filled('jenis_wadah_id')) {
-            $query->where('jenis_wadah_id', $request->jenis_wadah_id);
+        // 3. Filter Pencarian
+        if ($request->filled('search')) {
+            $query->where('nama_program', 'like', '%' . $request->search . '%');
         }
         if ($request->filled('tahun')) {
             $query->where('tahun_program', $request->tahun);
         }
+        if ($request->filled('jenis_wadah_id')) {
+            $query->where('jenis_wadah_id', $request->jenis_wadah_id);
+        }
         if ($request->filled('tingkat')) {
             $query->where('tingkat', $request->tingkat);
         }
-        if ($request->filled('search')) {
-            $query->where('nama_program', 'like', '%' . $request->search . '%');
-        }
 
-        // --- 4. HITUNG STATISTIK (SAFE MODE) ---
-        // Clone query, hapus sorting bawaan agar aman untuk agregasi (SUM/COUNT)
+        // 4. Hitung Statistik Sederhana
         $statsQuery = clone $query;
-        $stats = $statsQuery->reorder()->selectRaw('
+        $stats = $statsQuery->selectRaw('
             count(*) as total_program,
             sum(target_anggaran) as total_rab,
             sum(case when status_pelaksanaan = 1 then 1 else 0 end) as total_berjalan,
             sum(case when status_pelaksanaan = 2 then 1 else 0 end) as total_selesai
         ')->first();
 
-        // 5. Ambil Data Tabel (Sort: Tahun terbaru, lalu tingkat sinode->klasis->jemaat)
-        $programs = $query->orderByDesc('tahun_program')
-                          ->orderByRaw("FIELD(tingkat, 'sinode', 'klasis', 'jemaat')")
-                          ->paginate(15)
-                          ->withQueryString();
-
-        // Data untuk Filter UI
-        $jenisWadahs = JenisWadahKategorial::all();
-        $years = WadahKategorialProgramKerja::select('tahun_program')->distinct()->orderByDesc('tahun_program')->pluck('tahun_program');
+        $programs = $query->latest()->paginate(15);
+        $jenisWadahs = JenisWadahKategorial::orderBy('nama_wadah')->get();
+        $years = WadahKategorialProgramKerja::select('tahun_program')->distinct()->orderBy('tahun_program', 'desc')->pluck('tahun_program');
+        if($years->isEmpty()) $years = collect([date('Y')]);
 
         return view('admin.wadah.program.index', compact('programs', 'jenisWadahs', 'years', 'stats'));
     }
 
-    /**
-     * Menampilkan form tambah program kerja.
-     */
     public function create()
     {
-        $jenisWadahs = JenisWadahKategorial::all();
-        $user = Auth::user();
-        
-        // Load Lokasi (Klasis/Jemaat) sesuai hak akses
-        $klasisList = collect();
-        $jemaatList = collect();
-
-        if ($user->hasRole(['Super Admin', 'Admin Sinode'])) {
-            $klasisList = Klasis::orderBy('nama_klasis')->get();
-        } elseif ($user->hasRole('Admin Klasis')) {
-            $klasisList = Klasis::where('id', $user->klasis_id)->get();
-            $jemaatList = Jemaat::where('klasis_id', $user->klasis_id)->orderBy('nama_jemaat')->get();
-        } elseif ($user->hasRole('Admin Jemaat')) {
-            $jemaatList = Jemaat::where('id', $user->jemaat_id)->get();
-        }
+        $jenisWadahs = JenisWadahKategorial::orderBy('nama_wadah')->get();
+        $klasisList = Klasis::orderBy('nama_klasis')->get();
+        $jemaatList = Jemaat::orderBy('nama_jemaat')->get();
 
         return view('admin.wadah.program.create', compact('jenisWadahs', 'klasisList', 'jemaatList'));
     }
 
-    /**
-     * Menyimpan program kerja baru.
-     */
     public function store(Request $request)
     {
         $request->validate([
-            'jenis_wadah_id' => 'required|exists:jenis_wadah_kategorial,id',
-            'tingkat' => ['required', Rule::in(['sinode', 'klasis', 'jemaat'])],
-            'klasis_id' => 'required_if:tingkat,klasis|nullable|exists:klasis,id',
-            'jemaat_id' => 'required_if:tingkat,jemaat|nullable|exists:jemaat,id',
-            'tahun_program' => 'required|integer|digits:4',
+            'tahun_program' => 'required|integer',
+            'jenis_wadah_id' => 'required|exists:jenis_wadah_kategorials,id',
+            'tingkat' => 'required|in:sinode,klasis,jemaat',
             'nama_program' => 'required|string|max:255',
-            'target_anggaran' => 'nullable|numeric|min:0',
             'parent_program_id' => 'nullable|exists:wadah_kategorial_program_kerja,id',
+            'target_anggaran' => 'nullable|numeric|min:0',
         ]);
 
-        try {
-            DB::transaction(function () use ($request) {
-                // Auto-fill logic untuk lokasi
-                $klasisId = $request->klasis_id;
-                $jemaatId = null;
+        $data = $request->all();
 
-                if ($request->tingkat == 'jemaat') {
-                    $jemaatId = $request->jemaat_id;
-                    $klasisId = Jemaat::find($jemaatId)->klasis_id; // Ambil klasis dari jemaat
-                } elseif ($request->tingkat == 'sinode') {
-                    $klasisId = null;
-                }
-
-                WadahKategorialProgramKerja::create([
-                    'jenis_wadah_id' => $request->jenis_wadah_id,
-                    'tingkat' => $request->tingkat,
-                    'klasis_id' => $klasisId,
-                    'jemaat_id' => $jemaatId,
-                    'tahun_program' => $request->tahun_program,
-                    'nama_program' => $request->nama_program,
-                    'deskripsi' => $request->deskripsi,
-                    'tujuan' => $request->tujuan,
-                    'penanggung_jawab' => $request->penanggung_jawab,
-                    'status_pelaksanaan' => 0, // Default: Direncanakan
-                    'target_anggaran' => $request->target_anggaran ?? 0,
-                    'parent_program_id' => $request->parent_program_id,
-                ]);
-            });
-
-            return redirect()->route('admin.wadah.program.index')
-                             ->with('success', 'Program Kerja berhasil ditambahkan.');
-        } catch (\Exception $e) {
-            return back()->withInput()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
+        // Pembersihan Data Otomatis (Sanitasi Tingkat)
+        if ($data['tingkat'] == 'sinode') {
+            $data['klasis_id'] = null;
+            $data['jemaat_id'] = null;
+            $data['parent_program_id'] = null; // Sinode adalah puncak, tidak punya induk
+        } elseif ($data['tingkat'] == 'klasis') {
+            $data['jemaat_id'] = null;
         }
+
+        // Set default status jika belum ada
+        if (!isset($data['status_pelaksanaan'])) {
+            $data['status_pelaksanaan'] = 0; // Rencana
+        }
+
+        WadahKategorialProgramKerja::create($data);
+
+        return redirect()->route('admin.wadah.program.index')->with('success', 'Rencana Program Kerja berhasil diajukan.');
     }
 
-    /**
-     * Menampilkan detail program kerja.
-     */
-    public function show(WadahKategorialProgramKerja $program)
-    {
-        $program->load(['jenisWadah', 'klasis', 'jemaat', 'parentProgram', 'childPrograms']);
-        return view('admin.wadah.program.show', compact('program'));
-    }
-
-    /**
-     * Menampilkan form edit.
-     */
     public function edit(WadahKategorialProgramKerja $program)
     {
-        $jenisWadahs = JenisWadahKategorial::all();
-        $user = Auth::user();
-
-        // Load Data Lokasi
-        $klasisList = Klasis::orderBy('nama_klasis')->get();
-        $jemaatList = collect();
-        if ($program->klasis_id) {
-            $jemaatList = Jemaat::where('klasis_id', $program->klasis_id)->orderBy('nama_jemaat')->get();
-        }
-
-        // Load Calon Program Induk (Parent)
+        $jenisWadahs = JenisWadahKategorial::orderBy('nama_wadah')->get();
+        
+        // Ambil potensi parent berdasarkan tingkat saat ini
         $potentialParents = collect();
-        if ($program->tingkat == 'jemaat' && $program->klasis_id) {
+        if ($program->tingkat == 'klasis') {
+            $potentialParents = WadahKategorialProgramKerja::where('tingkat', 'sinode')
+                ->where('tahun_program', $program->tahun_program)
+                ->where('jenis_wadah_id', $program->jenis_wadah_id)
+                ->get();
+        } elseif ($program->tingkat == 'jemaat') {
             $potentialParents = WadahKategorialProgramKerja::where('tingkat', 'klasis')
                 ->where('klasis_id', $program->klasis_id)
-                ->where('jenis_wadah_id', $program->jenis_wadah_id)
                 ->where('tahun_program', $program->tahun_program)
-                ->get();
-        } elseif ($program->tingkat == 'klasis') {
-            $potentialParents = WadahKategorialProgramKerja::where('tingkat', 'sinode')
                 ->where('jenis_wadah_id', $program->jenis_wadah_id)
-                ->where('tahun_program', $program->tahun_program)
                 ->get();
         }
 
-        return view('admin.wadah.program.edit', compact('program', 'jenisWadahs', 'klasisList', 'jemaatList', 'potentialParents'));
+        return view('admin.wadah.program.edit', compact('program', 'jenisWadahs', 'potentialParents'));
     }
 
-    /**
-     * Update data program kerja.
-     */
     public function update(Request $request, WadahKategorialProgramKerja $program)
     {
         $request->validate([
             'nama_program' => 'required|string|max:255',
             'tahun_program' => 'required|integer',
             'status_pelaksanaan' => 'required|integer',
-            'target_anggaran' => 'nullable|numeric',
+            'target_anggaran' => 'nullable|numeric|min:0',
+            'parent_program_id' => 'nullable|exists:wadah_kategorial_program_kerja,id',
         ]);
 
-        try {
-            $program->update([
-                'jenis_wadah_id' => $request->jenis_wadah_id, 
-                'tahun_program' => $request->tahun_program,
-                'nama_program' => $request->nama_program,
-                'deskripsi' => $request->deskripsi,
-                'tujuan' => $request->tujuan,
-                'penanggung_jawab' => $request->penanggung_jawab,
-                'status_pelaksanaan' => $request->status_pelaksanaan,
-                'target_anggaran' => $request->target_anggaran,
-                'parent_program_id' => $request->parent_program_id,
-            ]);
+        $data = $request->only([
+            'nama_program', 'tahun_program', 'status_pelaksanaan', 'target_anggaran', 
+            'deskripsi', 'tujuan', 'penanggung_jawab', 'parent_program_id'
+        ]);
 
+        // Proteksi Logika: Sinode tidak boleh dipaksa punya parent
+        if ($program->tingkat == 'sinode') {
+            $data['parent_program_id'] = null;
+        }
+
+        try {
+            $program->update($data);
             return redirect()->route('admin.wadah.program.index')
                              ->with('success', 'Program Kerja berhasil diperbarui.');
         } catch (\Exception $e) {
@@ -223,9 +155,6 @@ class WadahProgramKerjaController extends Controller
         }
     }
 
-    /**
-     * Hapus program kerja.
-     */
     public function destroy(WadahKategorialProgramKerja $program)
     {
         try {
@@ -233,12 +162,12 @@ class WadahProgramKerjaController extends Controller
             return redirect()->route('admin.wadah.program.index')
                              ->with('success', 'Program Kerja berhasil dihapus.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal menghapus data.');
+            return back()->with('error', 'Gagal menghapus data. Pastikan tidak ada anggaran yang masih mengikat program ini.');
         }
     }
 
     /**
-     * API Internal: Mendapatkan daftar program induk yang mungkin.
+     * API Internal: Mendapatkan daftar program induk berjenjang.
      */
     public function getParentPrograms(Request $request)
     {
@@ -255,9 +184,11 @@ class WadahProgramKerjaController extends Controller
         } elseif ($tingkat == 'klasis') {
             $query->where('tingkat', 'sinode');
         } else {
-            return response()->json([]);
+            return response()->json([]); // Sinode tidak punya parent
         }
 
-        return response()->json($query->select('id', 'nama_program')->get());
+        $programs = $query->select('id', 'nama_program', 'tingkat')->get();
+
+        return response()->json($programs);
     }
 }

@@ -36,8 +36,8 @@
                 @if($anggaran->program_kerja_id)
                     <div class="bg-gray-50 border border-gray-200 p-4 rounded mt-4">
                         <span class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 border-b border-gray-200 pb-1">Terkait Agenda Program</span>
-                        <a href="{{ route('admin.wadah.program.edit', $anggaran->program_kerja_id) }}" class="text-blue-800 hover:underline font-bold text-xs flex items-center">
-                            <i class="fas fa-link mr-2"></i> {{ strtoupper($anggaran->programKerja->nama_program) }}
+                        <a href="{{ route('admin.wadah.program.edit', $anggaran->program_kerja_id) }}" class="text-blue-800 hover:underline font-bold text-xs flex items-center uppercase">
+                            <i class="fas fa-link mr-2"></i> {{ $anggaran->programKerja->nama_program }}
                         </a>
                     </div>
                 @endif

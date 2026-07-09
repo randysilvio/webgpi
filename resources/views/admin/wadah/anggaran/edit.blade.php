@@ -27,6 +27,7 @@
                     Tahun Anggaran: <span class="text-blue-800">{{ $anggaran->tahun_anggaran }}</span> <br>
                     Klasifikasi Wadah: <span class="text-blue-800">{{ $anggaran->jenisWadah->nama_wadah }}</span> <br>
                     Hierarki Pelaksanaan: <span class="text-gray-900">{{ strtoupper($anggaran->tingkat) }}</span>
+                    @if($anggaran->klasis) <span class="mx-1">|</span> Wilayah: <span class="text-gray-900">{{ strtoupper($anggaran->klasis->nama_klasis) }}</span> @endif
                 </p>
             </div>
         </div>
@@ -39,7 +40,7 @@
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Nomenklatur Pos Anggaran <span class="text-red-600">*</span></label>
                     <input type="text" name="nama_pos_anggaran" value="{{ old('nama_pos_anggaran', $anggaran->nama_pos_anggaran) }}" required 
-                        class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm uppercase bg-gray-50">
+                        class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm uppercase bg-gray-50 font-bold">
                     @error('nama_pos_anggaran') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
                 </div>
 
