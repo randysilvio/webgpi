@@ -97,43 +97,43 @@
                 
                 <div class="menu-group">
                     <button onclick="toggleMenu('portal-pelayanan')" id="btn-portal-pelayanan" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                        <div class="flex items-center"><i class="fas fa-cross w-5 text-center mr-3"></i><span>Pastoral & Liturgi</span></div>
+                        <div class="flex items-center"><i class="fas fa-cross w-5 text-center mr-3"></i><span class="truncate">Pastoral & Liturgi</span></div>
                         <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                     </button>
                     <div class="submenu pl-10 space-y-1 mt-1" id="submenu-portal-pelayanan">
                         
                         @hasanyrole('Super Admin|Admin Bidang 1|Pendeta|Admin Klasis')
-                        <a href="{{ route('admin.jurnal.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.jurnal.*')) active-page @endif">Jurnal Pelayanan</a>
+                        <a href="{{ route('admin.jurnal.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.jurnal.*')) active-page @endif">Jurnal Pastoral</a>
                         @endhasanyrole
 
                         @hasanyrole('Super Admin|Admin Bidang 1')
-                        <a href="{{ route('admin.bursa.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.bursa.*') && !Request::routeIs('admin.bursa.transaksi.*')) active-page @endif">Katalog Dokumen Liturgi</a>
-                        <a href="{{ route('admin.bursa.transaksi.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.bursa.transaksi.*')) active-page @endif">Otorisasi Unduhan</a>
+                        <a href="{{ route('admin.bursa.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.bursa.*') && !Request::routeIs('admin.bursa.transaksi.*')) active-page @endif">Katalog Tata Ibadah</a>
+                        <a href="{{ route('admin.bursa.transaksi.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.bursa.transaksi.*')) active-page @endif">Otorisasi Unduhan</a>
                         @endhasanyrole
                         
                         @role('Pendeta')
-                        <a href="{{ route('admin.bursa.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.bursa.index')) active-page @endif">Bursa Materi Liturgi</a>
-                        <a href="{{ route('admin.bursa.transaksi.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.bursa.transaksi.*')) active-page @endif">Riwayat Otorisasi Saya</a>
+                        <a href="{{ route('admin.bursa.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.bursa.index')) active-page @endif">Katalog Tata Ibadah</a>
+                        <a href="{{ route('admin.bursa.transaksi.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.bursa.transaksi.*')) active-page @endif">Riwayat Otorisasi</a>
                         @endrole
 
                     </div>
                 </div>
                 @endhasanyrole
 
-                {{-- BIDANG 1: TEOLOGI & AJARAN --}}
+                {{-- BIDANG 1: PELAYANAN & PENDIDIKAN --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('bidang1_sakramen') || $appSetting->hasModuleAccess('bidang1_tata'))
-                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Teologi & Ajaran (Bidang I)</div>
+                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Bidang 1: Pelayanan & Pendidikan</div>
                 
                     @if(!$appSetting || $appSetting->hasModuleAccess('bidang1_sakramen'))
                     <div class="menu-group">
                         <button onclick="toggleMenu('sakramen')" id="btn-sakramen" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                            <div class="flex items-center"><i class="fas fa-hand-holding-water w-5 text-center mr-3"></i><span>Administrasi Sakramen</span></div>
+                            <div class="flex items-center"><i class="fas fa-hand-holding-water w-5 text-center mr-3"></i><span class="truncate">Pelayanan Sakramen</span></div>
                             <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                         </button>
                         <div class="submenu pl-10 space-y-1 mt-1" id="submenu-sakramen">
-                            <a href="{{ route('admin.sakramen.baptis.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.sakramen.baptis.*')) active-page @endif">Register Baptisan</a>
-                            <a href="{{ route('admin.sakramen.sidi.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.sakramen.sidi.*')) active-page @endif">Register Sidi</a>
-                            <a href="{{ route('admin.sakramen.nikah.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.sakramen.nikah.*')) active-page @endif">Register Pernikahan</a>
+                            <a href="{{ route('admin.sakramen.baptis.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.sakramen.baptis.*')) active-page @endif">Daftar Baptisan</a>
+                            <a href="{{ route('admin.sakramen.sidi.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.sakramen.sidi.*')) active-page @endif">Daftar Sidi</a>
+                            <a href="{{ route('admin.sakramen.nikah.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.sakramen.nikah.*')) active-page @endif">Daftar Pernikahan</a>
                         </div>
                     </div>
                     @endif
@@ -141,68 +141,68 @@
                     @if(!$appSetting || $appSetting->hasModuleAccess('bidang1_tata'))
                     <div class="menu-group">
                         <button onclick="toggleMenu('tata')" id="btn-tata" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                            <div class="flex items-center"><i class="fas fa-gavel w-5 text-center mr-3"></i><span>Tata Gereja</span></div>
+                            <div class="flex items-center"><i class="fas fa-gavel w-5 text-center mr-3"></i><span class="truncate">Tata Gereja</span></div>
                             <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                         </button>
                         <div class="submenu pl-10 space-y-1 mt-1" id="submenu-tata">
-                            <a href="{{ route('admin.tata-gereja.pejabat.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.tata-gereja.pejabat.*')) active-page @endif">Pejabat Gerejawi</a>
-                            <a href="{{ route('admin.tata-gereja.sidang.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.tata-gereja.sidang.*')) active-page @endif">Risalah Persidangan</a>
+                            <a href="{{ route('admin.tata-gereja.pejabat.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.tata-gereja.pejabat.*')) active-page @endif">Pejabat Gerejawi</a>
+                            <a href="{{ route('admin.tata-gereja.sidang.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.tata-gereja.sidang.*')) active-page @endif">Risalah Persidangan</a>
                         </div>
                     </div>
                     @endif
                 @endif
 
-                {{-- BIDANG 2: DAYA & DANA --}}
+                {{-- BIDANG 2: KEUANGAN & PEMBANGUNAN --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('bidang2_keuangan'))
-                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Daya & Dana (Bidang II)</div>
+                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Bidang 2: Keuangan & Pembangunan</div>
                 
                 <div class="menu-group">
                     <button onclick="toggleMenu('keuangan')" id="btn-keuangan" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                        <div class="flex items-center"><i class="fas fa-wallet w-5 text-center mr-3"></i><span>Keuangan Institusi</span></div>
+                        <div class="flex items-center"><i class="fas fa-wallet w-5 text-center mr-3"></i><span class="truncate">Perbendaharaan</span></div>
                         <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                     </button>
                     <div class="submenu pl-10 space-y-1 mt-1" id="submenu-keuangan">
-                        <a href="{{ route('admin.perbendaharaan.transaksi.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.transaksi.*')) active-page @endif">Buku Kas Umum (BKU)</a>
-                        <a href="{{ route('admin.perbendaharaan.anggaran.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.anggaran.*')) active-page @endif">Rencana RAPB</a>
-                        <a href="{{ route('admin.perbendaharaan.aset.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.aset.*')) active-page @endif">Daftar Aktiva (Aset)</a>
-                        <a href="{{ route('admin.perbendaharaan.mata-anggaran.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.mata-anggaran.*')) active-page @endif">Kode Akun (COA)</a>
+                        <a href="{{ route('admin.perbendaharaan.transaksi.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.transaksi.*')) active-page @endif">Buku Kas Umum (BKU)</a>
+                        <a href="{{ route('admin.perbendaharaan.anggaran.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.anggaran.*')) active-page @endif">Rencana APB</a>
+                        <a href="{{ route('admin.perbendaharaan.aset.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.aset.*')) active-page @endif">Harta Milik Gereja</a>
+                        <a href="{{ route('admin.perbendaharaan.mata-anggaran.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.mata-anggaran.*')) active-page @endif">Kode Akun (COA)</a>
                     </div>
                 </div>
                 @endif
 
-                {{-- BIDANG 3: PEMBINAAN SDM --}}
+                {{-- BIDANG 3: ORGANISASI --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('bidang3_hris'))
-                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Pembinaan SDM (Bidang III)</div>
+                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Bidang 3: Organisasi</div>
                 
                 <div class="menu-group">
                     <button onclick="toggleMenu('hris')" id="btn-hris" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                        <div class="flex items-center"><i class="fas fa-id-card w-5 text-center mr-3"></i><span>Buku Induk Personalia</span></div>
+                        <div class="flex items-center"><i class="fas fa-id-card w-5 text-center mr-3"></i><span class="truncate">Kepegawaian</span></div>
                         <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                     </button>
                     <div class="submenu pl-10 space-y-1 mt-1" id="submenu-hris">
-                        <a href="{{ route('admin.kepegawaian.pegawai.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.kepegawaian.pegawai.*')) active-page @endif">Buku Kepegawaian</a>
-                        <a href="{{ route('admin.mutasi.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.mutasi.*')) active-page @endif">Riwayat Mutasi & SK</a>
+                        <a href="{{ route('admin.kepegawaian.pegawai.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.kepegawaian.pegawai.*')) active-page @endif">Buku Induk Pegawai</a>
+                        <a href="{{ route('admin.mutasi.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.mutasi.*')) active-page @endif">Mutasi & Riwayat SK</a>
                     </div>
                 </div>
                 @endif
 
-                {{-- BIDANG 4: OIKUMENIS & INFORKOM --}}
+                {{-- BIDANG 4: KOMINFO --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_popup') || $appSetting->hasModuleAccess('bidang4_berita') || $appSetting->hasModuleAccess('bidang4_eoffice'))
-                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Oikumenis & Inforkom (Bid. IV)</div>
+                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Bidang 4: KOMINFO</div>
                 
                     @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_popup') || $appSetting->hasModuleAccess('bidang4_berita'))
                     <div class="menu-group">
                         <button onclick="toggleMenu('web')" id="btn-web" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                            <div class="flex items-center"><i class="fas fa-globe w-5 text-center mr-3"></i><span>Portal Informasi Publik</span></div>
+                            <div class="flex items-center"><i class="fas fa-globe w-5 text-center mr-3"></i><span class="truncate">Multi Media</span></div>
                             <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                         </button>
                         <div class="submenu pl-10 space-y-1 mt-1" id="submenu-web">
                             @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_popup'))
-                            <a href="{{ route('admin.popup.index') }}" class="sub-link block py-1.5 text-yellow-500 font-medium @if(Request::routeIs('admin.popup.*')) active-page @endif">Pengumuman (Popup)</a>
+                            <a href="{{ route('admin.popup.index') }}" class="sub-link block py-1.5 text-yellow-500 font-medium truncate @if(Request::routeIs('admin.popup.*')) active-page @endif">Pengumuman (Banner)</a>
                             @endif
                             @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_berita'))
-                            <a href="{{ route('admin.posts.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.posts.*')) active-page @endif">Dokumen Publikasi</a>
-                            <a href="{{ route('admin.messages') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.messages*')) active-page @endif">Pesan Interaktif</a>
+                            <a href="{{ route('admin.posts.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.posts.*')) active-page @endif">Dokumen Publikasi</a>
+                            <a href="{{ route('admin.messages') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.messages*')) active-page @endif">Pesan Masuk</a>
                             @endif
                         </div>
                     </div>
@@ -211,31 +211,31 @@
                     @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_eoffice'))
                     <div class="menu-group">
                         <button onclick="toggleMenu('eoffice')" id="btn-eoffice" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                            <div class="flex items-center"><i class="fas fa-envelope-open-text w-5 text-center mr-3"></i><span>Sistem E-Office</span></div>
+                            <div class="flex items-center"><i class="fas fa-envelope-open-text w-5 text-center mr-3"></i><span class="truncate">Tata Persuratan</span></div>
                             <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                         </button>
                         <div class="submenu pl-10 space-y-1 mt-1" id="submenu-eoffice">
-                            <a href="{{ route('admin.e-office.surat-masuk.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.e-office.surat-masuk.*')) active-page @endif">Buku Agenda Masuk</a>
-                            <a href="{{ route('admin.e-office.surat-keluar.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.e-office.surat-keluar.*')) active-page @endif">Buku Agenda Keluar</a>
+                            <a href="{{ route('admin.e-office.surat-masuk.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.e-office.surat-masuk.*')) active-page @endif">Agenda Surat Masuk</a>
+                            <a href="{{ route('admin.e-office.surat-keluar.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.e-office.surat-keluar.*')) active-page @endif">Agenda Surat Keluar</a>
                         </div>
                     </div>
                     @endif
                 @endif
 
-                {{-- WILAYAH PELAYANAN & WADAH KATEGORIAL --}}
+                {{-- STRUKTUR WILAYAH --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('wilayah_master') || $appSetting->hasModuleAccess('wilayah_wadah'))
-                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Teritorial Wilayah</div>
+                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Struktur & Wilayah</div>
                 
                     @if(!$appSetting || $appSetting->hasModuleAccess('wilayah_master'))
                     <div class="menu-group">
                         <button onclick="toggleMenu('master-wilayah')" id="btn-master-wilayah" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                            <div class="flex items-center"><i class="fas fa-database w-5 text-center mr-3"></i><span>Data Induk Wilayah</span></div>
+                            <div class="flex items-center"><i class="fas fa-database w-5 text-center mr-3"></i><span class="truncate">Pangkalan Data</span></div>
                             <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                         </button>
                         <div class="submenu pl-10 space-y-1 mt-1" id="submenu-master-wilayah">
-                            <a href="{{ route('admin.klasis.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.klasis.*')) active-page @endif">Direktori Klasis</a>
-                            <a href="{{ route('admin.jemaat.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.jemaat.*')) active-page @endif">Direktori Jemaat</a>
-                            <a href="{{ route('admin.anggota-jemaat.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.anggota-jemaat.*')) active-page @endif">Sensus Umat (Buku Induk)</a>
+                            <a href="{{ route('admin.klasis.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.klasis.*')) active-page @endif">Data Klasis</a>
+                            <a href="{{ route('admin.jemaat.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.jemaat.*')) active-page @endif">Data Jemaat</a>
+                            <a href="{{ route('admin.anggota-jemaat.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.anggota-jemaat.*')) active-page @endif">Daftar Induk Jemaat</a>
                         </div>
                     </div>
                     @endif
@@ -243,13 +243,13 @@
                     @if(!$appSetting || $appSetting->hasModuleAccess('wilayah_wadah'))
                     <div class="menu-group">
                         <button onclick="toggleMenu('wadah-wilayah')" id="btn-wadah-wilayah" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                            <div class="flex items-center"><i class="fas fa-users w-5 text-center mr-3"></i><span>Wadah Pelayanan (Kategorial)</span></div>
+                            <div class="flex items-center"><i class="fas fa-users w-5 text-center mr-3"></i><span class="truncate">Pelayanan Kategorial</span></div>
                             <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                         </button>
                         <div class="submenu pl-10 space-y-1 mt-1" id="submenu-wadah-wilayah">
-                            <a href="{{ route('admin.wadah.pengurus.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.pengurus.*')) active-page @endif">Personalia Kategorial</a>
-                            <a href="{{ route('admin.wadah.program.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.program.*')) active-page @endif">Matriks Program Kerja</a>
-                            <a href="{{ route('admin.wadah.anggaran.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.anggaran.*') || Request::routeIs('admin.wadah.transaksi.*')) active-page @endif">Realisasi Keuangan Wadah</a>
+                            <a href="{{ route('admin.wadah.pengurus.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.wadah.pengurus.*')) active-page @endif">Badan Pengurus</a>
+                            <a href="{{ route('admin.wadah.program.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.wadah.program.*')) active-page @endif">Program Pelayanan</a>
+                            <a href="{{ route('admin.wadah.anggaran.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.wadah.anggaran.*') || Request::routeIs('admin.wadah.transaksi.*')) active-page @endif">APB Kategorial</a>
                         </div>
                     </div>
                     @endif
@@ -257,24 +257,24 @@
 
                 {{-- PELAPORAN & ANALISIS --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('laporan_terpadu'))
-                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Buku Analisis & Evaluasi</div>
+                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Evaluasi Laporan</div>
                 
                 <div class="menu-group">
                     <button onclick="toggleMenu('pusat-laporan')" id="btn-pusat-laporan" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                        <div class="flex items-center"><i class="fas fa-chart-bar w-5 text-center mr-3"></i><span>Pusat Laporan Konsolidasi</span></div>
+                        <div class="flex items-center"><i class="fas fa-chart-bar w-5 text-center mr-3"></i><span class="truncate">Pusat Pelaporan</span></div>
                         <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                     </button>
                     
                     <div class="submenu pl-10 space-y-1 mt-1" id="submenu-pusat-laporan">
-                        <div class="py-1 text-[9px] text-slate-500 uppercase mt-1 font-extrabold tracking-wider border-b border-slate-700 pb-1 w-5/6">Perencanaan Strategis</div>
-                        <a href="{{ route('admin.laporan.renstra.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.laporan.renstra.*')) active-page @endif">Analisis Data Renstra</a>
-                        <a href="{{ route('admin.wadah.statistik.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.statistik.*')) active-page @endif">Agregat Demografi Wadah</a>
+                        <div class="py-1 text-[9px] text-slate-500 uppercase mt-1 font-extrabold tracking-wider border-b border-slate-700 pb-1 w-5/6">Rencana Strategis (RENSTRA)</div>
+                        <a href="{{ route('admin.laporan.renstra.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.laporan.renstra.*')) active-page @endif">Laporan Renstra</a>
+                        <a href="{{ route('admin.wadah.statistik.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.wadah.statistik.*')) active-page @endif">Statistik Kategorial</a>
 
                         @if(!$appSetting || $appSetting->hasModuleAccess('bidang2_keuangan'))
-                        <div class="py-1 text-[9px] text-slate-500 uppercase mt-3 font-bold tracking-wider border-b border-slate-700 pb-1 w-5/6">Keuangan & Aset</div>
-                        <a href="{{ route('admin.perbendaharaan.laporan.gabungan') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.laporan.gabungan')) active-page @endif">Konsolidasi Kas (BKU)</a>
-                        <a href="{{ route('admin.perbendaharaan.laporan.realisasi') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.laporan.realisasi')) active-page @endif">Serapan Realisasi RAPB</a>
-                        <a href="{{ route('admin.perbendaharaan.laporan.aset') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.perbendaharaan.laporan.aset')) active-page @endif">Buku Aktiva Tetap (Aset)</a>
+                        <div class="py-1 text-[9px] text-slate-500 uppercase mt-3 font-bold tracking-wider border-b border-slate-700 pb-1 w-5/6">Daya & Dana</div>
+                        <a href="{{ route('admin.perbendaharaan.laporan.gabungan') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.laporan.gabungan')) active-page @endif">Laporan Perbendaharaan</a>
+                        <a href="{{ route('admin.perbendaharaan.laporan.realisasi') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.laporan.realisasi')) active-page @endif">Realisasi APB</a>
+                        <a href="{{ route('admin.perbendaharaan.laporan.aset') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.laporan.aset')) active-page @endif">Laporan Harta Milik</a>
                         @endif
                     </div>
                 </div>
@@ -282,19 +282,19 @@
 
                 {{-- MENU KONFIGURASI SISTEM --}}
                 @hasanyrole('Super Admin|Admin Bidang 4')
-                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Konfigurasi</div>
+                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Konfigurasi</div>
                 <a href="{{ route('admin.settings') }}" class="sidebar-link flex items-center px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors @if(Request::routeIs('admin.settings')) active @endif">
                     <i class="fas fa-cog w-5 text-center mr-3"></i>
-                    <span>Pengaturan Ekosistem</span>
+                    <span class="truncate">Pengaturan Sistem</span>
                 </a>
                 @endhasanyrole
 
                 {{-- USER MANAGEMENT --}}
                 @role('Super Admin')
-                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Otoritas Akses</div>
+                <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Otoritas Akses</div>
                 <a href="{{ route('admin.users.index') }}" class="sidebar-link flex items-center px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors @if(Request::routeIs('admin.users.*')) active @endif">
                     <i class="fas fa-users-cog w-5 text-center mr-3"></i>
-                    <span>Manajemen Hak Akses</span>
+                    <span class="truncate">Manajemen Pengguna</span>
                 </a>
                 @endrole
 
@@ -304,7 +304,7 @@
                         @csrf
                         <button type="submit" class="w-full flex items-center px-3 py-2 text-red-400 hover:text-white hover:bg-red-900/30 rounded transition-colors font-bold">
                             <i class="fas fa-power-off w-5 text-center mr-3"></i>
-                            <span>Akhiri Sesi (Log Out)</span>
+                            <span class="truncate">Akhiri Sesi (Log Out)</span>
                         </button>
                     </form>
                 </div>
@@ -318,14 +318,14 @@
                     <button class="md:hidden text-slate-500 hover:text-brand-600 mr-4" id="hamburger-btn">
                          <i class="fas fa-bars text-xl"></i>
                     </button>
-                    <h1 class="text-sm font-bold text-slate-800 uppercase tracking-widest">@yield('header-title', 'Pusat Kendali Administrasi')</h1>
+                    <h1 class="text-sm font-bold text-slate-800 uppercase tracking-widest truncate">@yield('header-title', 'Pusat Kendali Administrasi')</h1>
                 </div>
                 
                 <div class="flex items-center gap-4">
                      @auth
                      <div class="text-right hidden sm:block">
-                         <div class="text-sm font-bold text-slate-800 uppercase tracking-wide">{{ Auth::user()->name }}</div>
-                         <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                         <div class="text-sm font-bold text-slate-800 uppercase tracking-wide truncate">{{ Auth::user()->name }}</div>
+                         <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider truncate">
                             {{ Auth::user()->roles->pluck('name')->first() }}
                          </div>
                      </div>
