@@ -1,128 +1,128 @@
 @extends('layouts.app')
 
-@section('title', 'Pusat Analisis Renstra')
+@section('title', 'Pusat Analisis Rencana Strategis')
 
 @section('content')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div class="space-y-8">
+<div class="space-y-6">
 
-    {{-- 1. SECTION FILTER SUPER LENGKAP --}}
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
-            <h2 class="text-white font-bold uppercase text-sm tracking-widest">
-                <i class="fas fa-filter mr-2"></i> Filter Data Komprehensif
+    {{-- HEADER & PENGATURAN --}}
+    <div class="bg-white rounded border border-gray-300 shadow-sm overflow-hidden border-l-4 border-l-gray-800">
+        <div class="bg-gray-100 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-200 gap-4">
+            <h2 class="text-gray-900 font-black uppercase text-sm tracking-widest">
+                <i class="fas fa-filter mr-2 text-gray-500"></i> Pusat Analisis Rencana Strategis (RENSTRA)
             </h2>
-            <a href="{{ route('admin.laporan.renstra.print', request()->all()) }}" target="_blank" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded transition flex items-center shadow-lg">
-                <i class="fas fa-file-pdf mr-2"></i> Ekspor Laporan PDF
+            <a href="{{ route('admin.laporan.renstra.print', request()->all()) }}" target="_blank" class="bg-red-700 hover:bg-red-800 text-white text-[10px] font-bold uppercase tracking-widest px-6 py-2.5 rounded transition flex items-center shadow-sm">
+                <i class="fas fa-file-pdf mr-2"></i> Ekspor Dokumen Resmi
             </a>
         </div>
 
-        <form method="GET" action="{{ route('admin.laporan.renstra.index') }}" class="p-6 bg-slate-50">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <form method="GET" action="{{ route('admin.laporan.renstra.index') }}" class="p-6 bg-white">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 
                 {{-- Kelompok 1: Wilayah --}}
-                <div class="space-y-3 border-b lg:border-b-0 lg:border-r border-slate-200 pb-4 lg:pb-0 lg:pr-4">
-                    <h3 class="text-xs font-black text-blue-600 uppercase mb-2">Wilayah Pelayanan</h3>
+                <div class="space-y-3 lg:border-r border-gray-200 lg:pr-6">
+                    <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest mb-3 border-b border-gray-100 pb-1">Lokasi Pelayanan</h3>
                     <div>
-                        <label class="label-filter">Klasis</label>
-                        <select name="klasis_id" class="input-filter" onchange="this.form.submit()">
-                            <option value="">Semua Klasis</option>
+                        <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Teritorial Klasis</label>
+                        <select name="klasis_id" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50" onchange="this.form.submit()">
+                            <option value="">Semua Teritorial</option>
                             @foreach($filterOptions['klasis'] as $id => $val) 
-                                <option value="{{ $id }}" {{ request('klasis_id') == $id ? 'selected' : '' }}>{{ $val }}</option> 
+                                <option value="{{ $id }}" {{ request('klasis_id') == $id ? 'selected' : '' }}>{{ strtoupper($val) }}</option> 
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="label-filter">Jemaat</label>
-                        <select name="jemaat_id" class="input-filter" onchange="this.form.submit()">
+                        <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Unit Jemaat</label>
+                        <select name="jemaat_id" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50" onchange="this.form.submit()">
                             <option value="">Semua Jemaat</option>
                             @foreach($filterOptions['jemaat'] as $id => $val) 
-                                <option value="{{ $id }}" {{ request('jemaat_id') == $id ? 'selected' : '' }}>{{ $val }}</option> 
+                                <option value="{{ $id }}" {{ request('jemaat_id') == $id ? 'selected' : '' }}>{{ strtoupper($val) }}</option> 
                             @endforeach
                         </select>
                     </div>
                 </div>
 
                 {{-- Kelompok 2: Demografi --}}
-                <div class="space-y-3 border-b lg:border-b-0 lg:border-r border-slate-200 pb-4 lg:pb-0 lg:pr-4">
-                    <h3 class="text-xs font-black text-purple-600 uppercase mb-2">Demografi</h3>
-                    <div class="grid grid-cols-2 gap-2">
+                <div class="space-y-3 lg:border-r border-gray-200 lg:pr-6">
+                    <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest mb-3 border-b border-gray-100 pb-1">Statistik Demografi</h3>
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="label-filter">Gender</label>
-                            <select name="gender" class="input-filter">
+                            <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Gender</label>
+                            <select name="gender" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50">
                                 <option value="">Semua</option>
-                                <option value="Laki-laki" {{ request('gender') == 'Laki-laki' ? 'selected' : '' }}>Laki-laki</option>
-                                <option value="Perempuan" {{ request('gender') == 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
+                                <option value="Laki-laki" {{ request('gender') == 'Laki-laki' ? 'selected' : '' }}>Pria</option>
+                                <option value="Perempuan" {{ request('gender') == 'Perempuan' ? 'selected' : '' }}>Wanita</option>
                             </select>
                         </div>
                         <div>
-                            <label class="label-filter">Status KK</label>
-                            <select name="status_keluarga" class="input-filter">
+                            <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Status KK</label>
+                            <select name="status_keluarga" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50">
                                 <option value="">Semua</option>
-                                <option value="Kepala Keluarga" {{ request('status_keluarga') == 'Kepala Keluarga' ? 'selected' : '' }}>Kepala Keluarga</option>
+                                <option value="Kepala Keluarga" {{ request('status_keluarga') == 'Kepala Keluarga' ? 'selected' : '' }}>K. Keluarga</option>
                                 <option value="Istri" {{ request('status_keluarga') == 'Istri' ? 'selected' : '' }}>Istri</option>
                             </select>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="label-filter">Usia Min</label>
-                            <input type="number" name="usia_min" value="{{ request('usia_min') }}" class="input-filter" placeholder="0">
+                            <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Usia Minimal</label>
+                            <input type="number" name="usia_min" value="{{ request('usia_min') }}" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50" placeholder="0">
                         </div>
                         <div>
-                            <label class="label-filter">Usia Max</label>
-                            <input type="number" name="usia_max" value="{{ request('usia_max') }}" class="input-filter" placeholder="100">
+                            <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Usia Maksimal</label>
+                            <input type="number" name="usia_max" value="{{ request('usia_max') }}" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50" placeholder="100">
                         </div>
                     </div>
                 </div>
 
                 {{-- Kelompok 3: Sosial Ekonomi --}}
-                <div class="space-y-3 border-b lg:border-b-0 lg:border-r border-slate-200 pb-4 lg:pb-0 lg:pr-4">
-                    <h3 class="text-xs font-black text-green-600 uppercase mb-2">Sosial Ekonomi</h3>
+                <div class="space-y-3 lg:border-r border-gray-200 lg:pr-6">
+                    <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest mb-3 border-b border-gray-100 pb-1">Kesejahteraan & Profesi</h3>
                     <div>
-                        <label class="label-filter">Pekerjaan</label>
-                        <select name="pekerjaan" class="input-filter">
-                            <option value="">Semua Pekerjaan</option>
+                        <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Profesi Utama</label>
+                        <select name="pekerjaan" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50">
+                            <option value="">Semua Kategori Pekerjaan</option>
                             @foreach($filterOptions['pekerjaan'] as $val) 
-                                <option value="{{ $val }}" {{ request('pekerjaan') == $val ? 'selected' : '' }}>{{ $val }}</option> 
+                                <option value="{{ $val }}" {{ request('pekerjaan') == $val ? 'selected' : '' }}>{{ strtoupper($val) }}</option> 
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="label-filter">Ekonomi (Pengeluaran)</label>
-                        <select name="penghasilan" class="input-filter">
-                            <option value="">Semua Rentang</option>
+                        <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Estimasi Pengeluaran / Bulan</label>
+                        <select name="penghasilan" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50">
+                            <option value="">Semua Rentang Ekonomi</option>
                             @foreach($filterOptions['penghasilan'] as $val) 
-                                <option value="{{ $val }}" {{ request('penghasilan') == $val ? 'selected' : '' }}>{{ $val }}</option> 
+                                <option value="{{ $val }}" {{ request('penghasilan') == $val ? 'selected' : '' }}>{{ strtoupper($val) }}</option> 
                             @endforeach
                         </select>
                     </div>
                 </div>
 
-                {{-- Kelompok 4: Renstra Khusus --}}
+                {{-- Kelompok 4: Indikator Infrastruktur & Digital --}}
                 <div class="space-y-3">
-                    <h3 class="text-xs font-black text-orange-600 uppercase mb-2">Indikator Renstra</h3>
+                    <h3 class="text-[10px] font-black text-gray-800 uppercase tracking-widest mb-3 border-b border-gray-100 pb-1">Infrastruktur & Kapabilitas Digital</h3>
                     <div>
-                        <label class="label-filter">Kondisi Rumah</label>
-                        <select name="kondisi_rumah" class="input-filter">
-                            <option value="">Semua Kondisi</option>
-                            <option value="Permanen" {{ request('kondisi_rumah') == 'Permanen' ? 'selected' : '' }}>Permanen</option>
+                        <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Konstruksi Rumah Tinggal</label>
+                        <select name="kondisi_rumah" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50">
+                            <option value="">Semua Kondisi Fisik</option>
+                            <option value="Permanen" {{ request('kondisi_rumah') == 'Permanen' ? 'selected' : '' }}>Permanen (Layak)</option>
                             <option value="Semi-Permanen" {{ request('kondisi_rumah') == 'Semi-Permanen' ? 'selected' : '' }}>Semi-Permanen</option>
                             <option value="Darurat/Kayu" {{ request('kondisi_rumah') == 'Darurat/Kayu' ? 'selected' : '' }}>Darurat / Kayu</option>
                         </select>
                     </div>
                     <div>
-                        <label class="label-filter">Aset & Digital</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <select name="digital" class="input-filter">
-                                <option value="">- Digital -</option>
-                                <option value="HP" {{ request('digital') == 'HP' ? 'selected' : '' }}>Punya HP</option>
-                                <option value="Gaptek" {{ request('digital') == 'Gaptek' ? 'selected' : '' }}>Non-Digital</option>
+                        <label class="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Variabel Khusus</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <select name="digital" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50">
+                                <option value="">- Status Digital -</option>
+                                <option value="HP" {{ request('digital') == 'HP' ? 'selected' : '' }}>Punya Smartphone</option>
+                                <option value="Gaptek" {{ request('digital') == 'Gaptek' ? 'selected' : '' }}>Tanpa Gadget</option>
                             </select>
-                            <select name="disabilitas" class="input-filter">
-                                <option value="">- Fisik -</option>
-                                <option value="Ya" {{ request('disabilitas') == 'Ya' ? 'selected' : '' }}>Disabilitas</option>
+                            <select name="disabilitas" class="w-full border border-gray-300 rounded text-xs focus:ring-gray-800 focus:border-gray-800 bg-gray-50">
+                                <option value="">- Disabilitas -</option>
+                                <option value="Ya" {{ request('disabilitas') == 'Ya' ? 'selected' : '' }}>Disabilitas Fisik/Mental</option>
                             </select>
                         </div>
                     </div>
@@ -130,119 +130,98 @@
             </div>
 
             {{-- Tombol Aksi --}}
-            <div class="mt-6 pt-4 border-t border-slate-200 flex justify-end gap-3">
+            <div class="mt-8 pt-4 border-t border-gray-200 flex justify-end gap-3">
                 @if(count(request()->all()) > 0)
-                    <a href="{{ route('admin.laporan.renstra.index') }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold uppercase rounded hover:bg-slate-50 transition">
-                        Reset Filter
+                    <a href="{{ route('admin.laporan.renstra.index') }}" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-600 text-[10px] font-bold uppercase tracking-widest rounded hover:bg-gray-100 transition shadow-sm">
+                        Reset Matriks
                     </a>
                 @endif
-                <button type="submit" class="px-6 py-2 bg-slate-800 text-white text-xs font-bold uppercase rounded hover:bg-slate-900 transition shadow-md">
-                    Terapkan Filter
+                <button type="submit" class="px-8 py-2.5 bg-gray-800 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-gray-900 transition shadow-sm flex items-center">
+                    <i class="fas fa-check-double mr-2"></i> Kalkulasi Data
                 </button>
             </div>
         </form>
     </div>
 
-    {{-- 2. DASHBOARD METRICS --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+    {{-- 2. PANEL RINGKASAN METRIK --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded border border-gray-300 shadow-sm flex items-center justify-between border-t-4 border-t-blue-800">
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Data Terfilter</p>
-                <h3 class="text-3xl font-black text-slate-800">{{ number_format($totalJiwa) }}</h3>
-                <p class="text-xs text-slate-500">Jiwa</p>
+                <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Total Sensus Jiwa</p>
+                <h3 class="text-3xl font-black text-gray-900 mt-1">{{ number_format($totalJiwa) }}</h3>
             </div>
-            <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
-                <i class="fas fa-users text-xl"></i>
-            </div>
+            <i class="fas fa-users text-3xl text-gray-300"></i>
         </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div class="bg-white p-5 rounded border border-gray-300 shadow-sm flex items-center justify-between border-t-4 border-t-blue-500">
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kepala Keluarga</p>
-                <h3 class="text-3xl font-black text-slate-800">{{ number_format($totalKK) }}</h3>
-                <p class="text-xs text-slate-500">Keluarga</p>
+                <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Total Kepala Keluarga</p>
+                <h3 class="text-3xl font-black text-gray-900 mt-1">{{ number_format($totalKK) }}</h3>
             </div>
-            <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                <i class="fas fa-house-user text-xl"></i>
-            </div>
+            <i class="fas fa-house-user text-3xl text-gray-300"></i>
         </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div class="bg-white p-5 rounded border border-gray-300 shadow-sm flex items-center justify-between border-t-4 border-t-green-700">
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rumah Layak</p>
-                <h3 class="text-3xl font-black text-green-600">{{ number_format($statsRumah['Permanen'] ?? 0) }}</h3>
-                <p class="text-xs text-slate-500">Unit Permanen</p>
+                <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Hunian Permanen (Layak)</p>
+                <h3 class="text-3xl font-black text-green-800 mt-1">{{ number_format($statsRumah['Permanen'] ?? 0) }}</h3>
             </div>
-            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-                <i class="fas fa-check-circle text-xl"></i>
-            </div>
+            <i class="fas fa-check-circle text-3xl text-green-200"></i>
         </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div class="bg-white p-5 rounded border border-gray-300 shadow-sm flex items-center justify-between border-t-4 border-t-red-700">
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rumah Darurat</p>
-                <h3 class="text-3xl font-black text-red-600">{{ number_format($statsRumah['Darurat/Kayu'] ?? 0) }}</h3>
-                <p class="text-xs text-slate-500">Perlu Bantuan</p>
+                <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Hunian Darurat / Kayu</p>
+                <h3 class="text-3xl font-black text-red-800 mt-1">{{ number_format($statsRumah['Darurat/Kayu'] ?? 0) }}</h3>
             </div>
-            <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-600">
-                <i class="fas fa-exclamation-triangle text-xl"></i>
-            </div>
+            <i class="fas fa-exclamation-triangle text-3xl text-red-200"></i>
         </div>
     </div>
 
-    {{-- 3. GRAPHIC ANALYSIS --}}
+    {{-- 3. VISUALISASI GRAFIK ANALISIS --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {{-- Chart 1: Demografi Usia --}}
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h4 class="font-bold text-slate-700 text-xs uppercase border-b pb-4 mb-4">Sebaran Kategori Usia</h4>
+        <div class="bg-white p-6 rounded border border-gray-300 shadow-sm">
+            <h4 class="font-black text-gray-800 text-[10px] uppercase tracking-widest border-b border-gray-200 pb-3 mb-5">Distribusi Kategori Usia</h4>
             <div class="h-64"><canvas id="chartUsia"></canvas></div>
         </div>
 
         {{-- Chart 2: Pendidikan --}}
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h4 class="font-bold text-slate-700 text-xs uppercase border-b pb-4 mb-4">Tingkat Pendidikan Terakhir</h4>
+        <div class="bg-white p-6 rounded border border-gray-300 shadow-sm">
+            <h4 class="font-black text-gray-800 text-[10px] uppercase tracking-widest border-b border-gray-200 pb-3 mb-5">Tingkat Pendidikan Terakhir</h4>
             <div class="h-64"><canvas id="chartPendidikan"></canvas></div>
         </div>
 
         {{-- Chart 3: Kondisi Rumah (Pie) --}}
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h4 class="font-bold text-slate-700 text-xs uppercase border-b pb-4 mb-4">Persentase Kondisi Hunian</h4>
+        <div class="bg-white p-6 rounded border border-gray-300 shadow-sm">
+            <h4 class="font-black text-gray-800 text-[10px] uppercase tracking-widest border-b border-gray-200 pb-3 mb-5">Indikator Kondisi Hunian</h4>
             <div class="h-64 flex justify-center"><canvas id="chartRumah"></canvas></div>
         </div>
 
         {{-- List: Aset Ekonomi --}}
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h4 class="font-bold text-slate-700 text-xs uppercase border-b pb-4 mb-4">Potensi Aset Ekonomi (Top 5)</h4>
-            <div class="space-y-4">
+        <div class="bg-white p-6 rounded border border-gray-300 shadow-sm">
+            <h4 class="font-black text-gray-800 text-[10px] uppercase tracking-widest border-b border-gray-200 pb-3 mb-5">Kapital Aset Ekonomi (Sektor Tertinggi)</h4>
+            <div class="space-y-5">
                 @foreach($statsAset as $aset => $jml)
                 <div>
-                    <div class="flex justify-between text-xs font-bold mb-1">
-                        <span class="text-slate-600">{{ $aset }}</span>
-                        <span class="text-slate-800">{{ $jml }} Unit</span>
+                    <div class="flex justify-between text-xs font-bold mb-1.5 uppercase">
+                        <span class="text-gray-700">{{ $aset }}</span>
+                        <span class="text-gray-900 font-mono">{{ $jml }} Unit</span>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2">
-                        <div class="bg-yellow-500 h-2 rounded-full" style="width: {{ ($totalKK > 0) ? ($jml/$totalKK)*100 : 0 }}%"></div>
+                    <div class="w-full bg-gray-200 border border-gray-300 rounded h-3 overflow-hidden">
+                        <div class="bg-gray-800 h-3" style="width: {{ ($totalKK > 0) ? ($jml/$totalKK)*100 : 0 }}%"></div>
                     </div>
                 </div>
                 @endforeach
-                @if(empty($statsAset)) <p class="text-xs text-slate-400 italic text-center py-10">Data aset tidak ditemukan.</p> @endif
+                @if(empty($statsAset)) <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic text-center py-10">Data aset tidak ditemukan pada parameter ini.</p> @endif
             </div>
         </div>
     </div>
 
 </div>
 
-{{-- STYLING TAMBAHAN --}}
-@push('styles')
-<style>
-    .label-filter { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
-    .input-filter { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; padding: 6px 10px; color: #334155; }
-    .input-filter:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
-</style>
-@endpush
-
 {{-- SCRIPT CHART --}}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.color = '#64748b';
+    Chart.defaults.font.family = "Arial, sans-serif";
+    Chart.defaults.color = '#4b5563';
 
     // 1. Chart Usia
     new Chart(document.getElementById('chartUsia'), {
@@ -250,10 +229,10 @@ document.addEventListener("DOMContentLoaded", function() {
         data: {
             labels: {!! json_encode($statsUsia->keys()) !!},
             datasets: [{
-                label: 'Jumlah Jiwa',
+                label: 'Jumlah Penduduk (Jiwa)',
                 data: {!! json_encode($statsUsia->values()) !!},
-                backgroundColor: '#3b82f6',
-                borderRadius: 4
+                backgroundColor: '#1e3a8a', // blue-900
+                borderRadius: 2
             }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
@@ -265,10 +244,10 @@ document.addEventListener("DOMContentLoaded", function() {
         data: {
             labels: {!! json_encode($statsPendidikan->keys()) !!},
             datasets: [{
-                label: 'Jumlah',
+                label: 'Jumlah Populasi',
                 data: {!! json_encode($statsPendidikan->values()) !!},
-                backgroundColor: '#8b5cf6',
-                borderRadius: 4
+                backgroundColor: '#374151', // gray-700
+                borderRadius: 2
             }]
         },
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
@@ -281,8 +260,9 @@ document.addEventListener("DOMContentLoaded", function() {
             labels: {!! json_encode($statsRumah->keys()) !!},
             datasets: [{
                 data: {!! json_encode($statsRumah->values()) !!},
-                backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#cbd5e1'],
-                borderWidth: 0
+                backgroundColor: ['#15803d', '#ca8a04', '#b91c1c', '#9ca3af'], // green, yellow, red, gray
+                borderWidth: 1,
+                borderColor: '#ffffff'
             }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }

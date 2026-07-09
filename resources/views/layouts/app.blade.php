@@ -170,7 +170,7 @@
                 </div>
                 @endif
 
-                {{-- BIDANG 3: KEPEGAWAIAN (DIPERBAIKI) --}}
+                {{-- BIDANG 3: KEPEGAWAIAN --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('bidang3_hris'))
                 <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Bidang 3: Kepegawaian</div>
                 
@@ -180,7 +180,6 @@
                         <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                     </button>
                     <div class="submenu pl-10 space-y-1 mt-1" id="submenu-hris">
-                        {{-- Menu Pegawai dijadikan satu pintu --}}
                         <a href="{{ route('admin.kepegawaian.pegawai.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.kepegawaian.pegawai.*')) active-page @endif">Direktori Pegawai</a>
                         <a href="{{ route('admin.mutasi.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.mutasi.*')) active-page @endif">Riwayat Mutasi</a>
                     </div>
@@ -223,7 +222,7 @@
                     @endif
                 @endif
 
-                {{-- WILAYAH PELAYANAN --}}
+                {{-- WILAYAH PELAYANAN & WADAH KATEGORIAL (PERBAIKAN MENU WADAH) --}}
                 @if(!$appSetting || $appSetting->hasModuleAccess('wilayah_master') || $appSetting->hasModuleAccess('wilayah_wadah'))
                 <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider">Struktur & Wilayah</div>
                 
@@ -248,7 +247,10 @@
                             <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                         </button>
                         <div class="submenu pl-10 space-y-1 mt-1" id="submenu-wadah-wilayah">
+                            {{-- PERBAIKAN: Penambahan menu Program & Anggaran --}}
                             <a href="{{ route('admin.wadah.pengurus.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.pengurus.*')) active-page @endif">Susunan Pengurus</a>
+                            <a href="{{ route('admin.wadah.program.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.program.*')) active-page @endif">Program Kerja</a>
+                            <a href="{{ route('admin.wadah.anggaran.index') }}" class="sub-link block py-1.5 @if(Request::routeIs('admin.wadah.anggaran.*') || Request::routeIs('admin.wadah.transaksi.*')) active-page @endif">Anggaran & Keuangan</a>
                         </div>
                     </div>
                     @endif

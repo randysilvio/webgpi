@@ -1,162 +1,138 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Anggaran')
+@section('title', 'Tinjauan Detail Pos Anggaran')
 
 @section('content')
 <div class="max-w-6xl mx-auto space-y-6">
     
-    {{-- Header & Navigasi --}}
-    <div class="flex items-center justify-between">
-        <a href="{{ route('admin.wadah.anggaran.index') }}" class="text-slate-500 hover:text-slate-800 text-xs font-bold uppercase tracking-wide flex items-center">
-            <i class="fas fa-arrow-left mr-2"></i> Kembali
+    {{-- Header --}}
+    <div class="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
+        <div>
+            <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest">Detail Dokumen Anggaran</h2>
+            <p class="text-xs text-gray-600 mt-1">Evaluasi rincian pos dan riwayat arus kas kategorial.</p>
+        </div>
+        <a href="{{ route('admin.wadah.anggaran.index') }}" class="text-gray-500 hover:text-blue-800 font-bold text-xs uppercase transition flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Kembali ke Indeks
         </a>
-        <h2 class="text-lg font-bold text-slate-800">Detail Pos & Transaksi</h2>
     </div>
 
-    {{-- Kartu Ringkasan --}}
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative overflow-hidden">
-        {{-- Background Decoration --}}
-        <div class="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -mr-8 -mt-8 z-0"></div>
-
-        <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+    {{-- KARTU RINGKASAN POS ANGGARAN --}}
+    <div class="bg-white rounded border border-gray-300 shadow-sm p-8 relative overflow-hidden border-l-8 border-l-blue-800">
+        <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8">
             <div class="md:col-span-2">
-                <h1 class="text-2xl font-black text-slate-800 mb-2">{{ $anggaran->nama_pos_anggaran }}</h1>
-                <div class="flex flex-wrap gap-2 mb-4">
-                    <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold uppercase">{{ $anggaran->tahun_anggaran }}</span>
-                    <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold uppercase">{{ $anggaran->jenisWadah->nama_wadah }}</span>
-                    <span class="px-2 py-1 bg-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'orange' }}-50 text-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'orange' }}-700 rounded text-xs font-bold uppercase border border-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'orange' }}-200">
-                        {{ ucfirst($anggaran->jenis_anggaran) }}
+                <h1 class="text-2xl font-black text-gray-900 uppercase tracking-widest mb-3 leading-tight">{{ $anggaran->nama_pos_anggaran }}</h1>
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="bg-gray-100 text-gray-800 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded border border-gray-300">
+                        TAHUN BUKU {{ $anggaran->tahun_anggaran }}
+                    </span>
+                    <span class="bg-blue-50 text-blue-800 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded border border-blue-200">
+                        {{ $anggaran->jenisWadah->nama_wadah }} ({{ strtoupper($anggaran->tingkat) }})
+                    </span>
+                    <span class="bg-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'red' }}-50 text-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'red' }}-800 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded border border-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green' : 'red' }}-200">
+                        {{ $anggaran->jenis_anggaran == 'penerimaan' ? 'ARUS KAS MASUK' : 'ARUS KAS KELUAR' }}
                     </span>
                 </div>
-                @if($anggaran->programKerja)
-                    <p class="text-sm text-blue-600"><i class="fas fa-link mr-1"></i> Program: {{ $anggaran->programKerja->nama_program }}</p>
-                @endif
-            </div>
-            
-            {{-- Statistik Angka --}}
-            <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 text-right">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Target Anggaran</p>
-                <div class="text-xl font-mono font-bold text-slate-700 mb-3">Rp {{ number_format($anggaran->jumlah_target, 0, ',', '.') }}</div>
                 
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Realisasi Saat Ini</p>
-                <div class="text-2xl font-mono font-black text-blue-600">Rp {{ number_format($anggaran->jumlah_realisasi, 0, ',', '.') }}</div>
-            </div>
-        </div>
-
-        {{-- Progress Bar --}}
-        <div class="mt-6 pt-6 border-t border-slate-100">
-            @php
-                $persen = $anggaran->jumlah_target > 0 ? ($anggaran->jumlah_realisasi / $anggaran->jumlah_target) * 100 : 0;
-                $barColor = $persen >= 100 ? 'bg-green-500' : 'bg-blue-500';
-                if($anggaran->jenis_anggaran == 'pengeluaran' && $persen > 100) $barColor = 'bg-red-500';
-            @endphp
-            <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
-                <span>Capaian Realisasi</span>
-                <span>{{ round($persen, 1) }}%</span>
-            </div>
-            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                <div class="{{ $barColor }} h-3 rounded-full transition-all duration-1000" style="width: {{ min($persen, 100) }}%"></div>
-            </div>
-            <p class="text-xs text-slate-400 mt-2 text-right">
-                {{ $anggaran->selisih >= 0 ? 'Sisa Target: ' : 'Surplus/Over: ' }} 
-                <span class="font-mono font-bold text-slate-600">Rp {{ number_format(abs($anggaran->selisih), 0, ',', '.') }}</span>
-            </p>
-        </div>
-    </div>
-
-    {{-- Layout Grid: Form Input & Tabel Riwayat --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {{-- Kolom Kiri: Form Input Transaksi --}}
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sticky top-4">
-                <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">
-                    <i class="fas fa-plus-circle mr-2 text-blue-600"></i> Catat Transaksi Baru
-                </h3>
-
-                @if(session('success'))
-                    <div class="mb-4 bg-green-50 text-green-700 px-3 py-2 rounded text-xs flex items-center border border-green-200">
-                        <i class="fas fa-check-circle mr-2"></i> {{ session('success') }}
+                @if($anggaran->program_kerja_id)
+                    <div class="bg-gray-50 border border-gray-200 p-4 rounded mt-4">
+                        <span class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 border-b border-gray-200 pb-1">Terkait Agenda Program</span>
+                        <a href="{{ route('admin.wadah.program.edit', $anggaran->program_kerja_id) }}" class="text-blue-800 hover:underline font-bold text-xs flex items-center">
+                            <i class="fas fa-link mr-2"></i> {{ strtoupper($anggaran->programKerja->nama_program) }}
+                        </a>
                     </div>
                 @endif
-
-                <form action="{{ route('admin.wadah.transaksi.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-                    @csrf
-                    <input type="hidden" name="anggaran_id" value="{{ $anggaran->id }}">
-
-                    <x-form-input type="date" label="Tanggal" name="tanggal_transaksi" value="{{ date('Y-m-d') }}" required />
-                    
-                    <x-form-input type="number" label="Jumlah (Rp)" name="jumlah" required placeholder="Contoh: 500000" />
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Uraian / Keterangan</label>
-                        <textarea name="uraian" rows="3" class="w-full border-slate-300 rounded text-sm focus:ring-slate-500 focus:border-slate-500 placeholder-slate-400" required placeholder="Contoh: Terima persembahan..."></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Bukti (Opsional)</label>
-                        <input type="file" name="bukti_transaksi" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
-                    </div>
-
-                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded text-sm shadow-md transition">
-                        Simpan Transaksi
-                    </button>
-                </form>
+                
+                @if($anggaran->keterangan)
+                    <p class="text-xs text-gray-600 mt-4 leading-relaxed italic border-l-2 border-gray-300 pl-3">"{{ $anggaran->keterangan }}"</p>
+                @endif
             </div>
-        </div>
 
-        {{-- Kolom Kanan: Tabel Riwayat --}}
-        <div class="lg:col-span-2">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Riwayat Transaksi</h3>
+            <div class="bg-gray-50 p-6 rounded border border-gray-200 flex flex-col justify-center">
+                <div class="mb-4 border-b border-gray-200 pb-3">
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Target Nominal (RAB)</span>
+                    <span class="font-mono font-black text-gray-900 text-xl">Rp {{ number_format($anggaran->jumlah_target, 0, ',', '.') }}</span>
+                </div>
+                <div>
+                    <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Akumulasi Realisasi</span>
+                    <span class="font-mono font-black text-{{ $anggaran->jenis_anggaran == 'penerimaan' ? 'green-700' : 'red-700' }} text-2xl">Rp {{ number_format($anggaran->jumlah_realisasi, 0, ',', '.') }}</span>
                 </div>
                 
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-white border-b border-slate-100">
-                        <tr>
-                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase">Tanggal</th>
-                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase">Uraian</th>
-                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase text-right">Jumlah</th>
-                            <th class="px-6 py-3 text-center text-[10px] font-bold text-slate-400 uppercase">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-50">
-                        @forelse($anggaran->transaksi()->latest('tanggal_transaksi')->get() as $t)
-                            <tr class="hover:bg-slate-50 transition">
-                                <td class="px-6 py-3 text-xs text-slate-600 whitespace-nowrap align-top">
-                                    {{ $t->tanggal_transaksi->format('d/m/Y') }}
-                                </td>
-                                <td class="px-6 py-3 text-xs text-slate-700 align-top">
-                                    <div class="font-medium">{{ $t->uraian }}</div>
-                                    @if($t->bukti_transaksi)
-                                        <a href="{{ Storage::url($t->bukti_transaksi) }}" target="_blank" class="text-blue-500 hover:underline mt-1 inline-block text-[10px]">
-                                            <i class="fas fa-paperclip mr-1"></i> Lihat Bukti
-                                        </a>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-3 text-xs font-mono font-bold text-slate-800 text-right align-top">
-                                    Rp {{ number_format($t->jumlah, 0, ',', '.') }}
-                                </td>
-                                <td class="px-6 py-3 text-center align-top">
-                                    <form action="{{ route('admin.wadah.transaksi.destroy', $t->id) }}" method="POST" onsubmit="return confirm('Hapus transaksi ini? Saldo akan disesuaikan kembali.');">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-slate-300 hover:text-red-500 transition" title="Hapus">
-                                            <i class="fas fa-times-circle"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic text-sm">Belum ada transaksi yang dicatat.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                @php
+                    $persen = $anggaran->jumlah_target > 0 ? ($anggaran->jumlah_realisasi / $anggaran->jumlah_target) * 100 : 0;
+                    $barColor = $anggaran->jenis_anggaran == 'penerimaan' ? 'bg-green-600' : 'bg-red-600';
+                @endphp
+                <div class="mt-4 pt-3 border-t border-gray-200">
+                    <div class="flex items-center justify-between text-[10px] font-bold text-gray-600 mb-1.5 uppercase">
+                        <span>Serapan Anggaran</span>
+                        <span>{{ number_format($persen, 1) }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded h-1.5 overflow-hidden border border-gray-300">
+                        <div class="{{ $barColor }} h-1.5" style="width: {{ min($persen, 100) }}%"></div>
+                    </div>
+                </div>
             </div>
         </div>
-
     </div>
+
+    {{-- TABEL RIWAYAT TRANSAKSI --}}
+    <div class="bg-white border border-gray-300 rounded shadow-sm overflow-hidden mt-8 border-t-4 border-t-gray-800">
+        <div class="bg-gray-100 px-6 py-4 flex justify-between items-center border-b border-gray-200">
+            <h3 class="text-xs font-black text-gray-800 uppercase tracking-widest"><i class="fas fa-list-ul mr-2 text-gray-500"></i> Riwayat Pencatatan Transaksi</h3>
+            <a href="{{ route('admin.wadah.transaksi.index', ['anggaran_id' => $anggaran->id]) }}" class="bg-gray-800 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded hover:bg-gray-900 transition shadow-sm">
+                <i class="fas fa-plus mr-1"></i> Catat Transaksi
+            </a>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 border-b-2 border-gray-800 text-[10px] text-gray-700 uppercase tracking-wider font-bold">
+                        <th class="px-6 py-3 w-32 text-center">Tanggal Nota</th>
+                        <th class="px-6 py-3">Uraian Pencatatan / Bukti Dokumen</th>
+                        <th class="px-6 py-3 text-right w-40">Nominal Arus Kas</th>
+                        <th class="px-6 py-3 text-center w-24">Tindakan</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm divide-y divide-gray-200">
+                    @forelse($anggaran->transaksi as $t)
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-3 text-center align-top">
+                                <span class="font-mono text-[11px] font-bold text-gray-700">{{ \Carbon\Carbon::parse($t->tanggal_transaksi)->format('d/m/Y') }}</span>
+                            </td>
+                            <td class="px-6 py-3 align-top">
+                                <div class="font-bold text-gray-800 text-xs mb-1 uppercase">{{ $t->keterangan }}</div>
+                                @if($t->bukti_path)
+                                    <a href="{{ Storage::url($t->bukti_path) }}" target="_blank" class="inline-flex items-center text-[9px] font-black text-blue-800 uppercase tracking-widest hover:text-blue-600 transition">
+                                        <i class="fas fa-paperclip mr-1 text-gray-400"></i> Lihat Berkas Bukti Transaksi
+                                    </a>
+                                @else
+                                    <span class="text-[9px] font-bold text-gray-400 italic uppercase tracking-widest">Tanpa Berkas Fisik</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-3 text-right align-top">
+                                <span class="font-mono font-black text-gray-900 text-xs">Rp {{ number_format($t->jumlah, 0, ',', '.') }}</span>
+                            </td>
+                            <td class="px-6 py-3 text-center align-top">
+                                <form action="{{ route('admin.wadah.transaksi.destroy', $t->id) }}" method="POST" onsubmit="return confirm('Peringatan: Menghapus catatan transaksi ini akan mempengaruhi saldo realisasi pos anggaran. Lanjutkan?');">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-gray-400 hover:text-red-700 transition" title="Batalkan/Hapus Transaksi">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="px-6 py-10 text-center text-gray-500 text-sm">
+                                <i class="fas fa-receipt text-3xl mb-3 block text-gray-300"></i>
+                                Belum ada transaksi yang dibebankan pada pos anggaran ini.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 @endsection

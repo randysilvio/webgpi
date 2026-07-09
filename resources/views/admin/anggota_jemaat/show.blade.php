@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Tinjauan Biodata Umat')
+@section('title', 'Tinjauan Biodata Anggota')
 
 @section('content')
 <div class="max-w-6xl mx-auto space-y-6" x-data="{ activeTab: 'profil' }">

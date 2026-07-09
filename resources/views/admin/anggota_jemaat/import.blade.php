@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Migrasi Pangkalan Data Umat')
+@section('title', 'Migrasi Pangkalan Data Anggota Jemaat')
 
 @section('content')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -10,7 +10,7 @@
         
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center border-l-4 border-l-gray-800">
             <div>
-                <h2 class="font-black text-gray-900 uppercase text-sm tracking-widest">Import Buku Induk Umat</h2>
+                <h2 class="font-black text-gray-900 uppercase text-sm tracking-widest">Import Buku Induk Anggota</h2>
                 <p class="text-[10px] font-bold text-gray-500 mt-1">Sistem migrasi massal menggunakan format Excel / CSV.</p>
             </div>
             <a href="{{ route('admin.anggota-jemaat.index') }}" class="text-gray-400 hover:text-red-700 transition" title="Batal & Tutup"><i class="fas fa-times text-lg"></i></a>

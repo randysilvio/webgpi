@@ -8,7 +8,7 @@
     {{-- HEADER & TOOLS --}}
     <div class="bg-white rounded border border-gray-300 p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-l-4 border-l-gray-800">
         <div>
-            <h2 class="text-lg font-black text-gray-900 uppercase tracking-widest">Buku Induk Umat Jemaat</h2>
+            <h2 class="text-lg font-black text-gray-900 uppercase tracking-widest">Buku Induk Anggota Jemaat</h2>
             <p class="text-xs text-gray-600 mt-1">Pangkalan data registrasi seluruh anggota jemaat (Sidi, Baptis, dan Anak).</p>
         </div>
         <div class="flex flex-col sm:flex-row gap-2">
@@ -23,7 +23,7 @@
             </a>
             @endcan
             <a href="{{ route('admin.anggota-jemaat.create') }}" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-[10px] font-bold uppercase shadow-sm transition flex items-center">
-                <i class="fas fa-user-plus mr-2"></i> Registrasi Umat Baru
+                <i class="fas fa-user-plus mr-2"></i> Registrasi Anggota Baru
             </a>
         </div>
     </div>
@@ -31,7 +31,7 @@
     {{-- STATISTIK RINGKAS --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white p-4 border border-gray-300 shadow-sm text-center">
-            <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Total Populasi Umat</p>
+            <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Total Populasi Anggota</p>
             <p class="text-xl font-black text-gray-900 mt-1">{{ number_format($stats->total ?? 0) }}</p>
         </div>
         <div class="bg-white p-4 border border-gray-300 shadow-sm text-center border-b-4 border-b-blue-800">
@@ -96,7 +96,7 @@
                 <thead>
                     <tr class="bg-gray-100 border-b-2 border-gray-800 text-[10px] text-gray-700 uppercase tracking-wider font-bold">
                         <th class="px-5 py-3 w-40 text-center">No. Register / NIK</th>
-                        <th class="px-5 py-3">Identitas Umat</th>
+                        <th class="px-5 py-3">Identitas Anggota</th>
                         <th class="px-5 py-3">Organisasi Jemaat</th>
                         <th class="px-5 py-3 text-center">Usia & Kelamin</th>
                         <th class="px-5 py-3 text-center">Status</th>
@@ -168,7 +168,7 @@
                         <tr>
                             <td colspan="6" class="px-5 py-12 text-center text-gray-500 text-xs italic">
                                 <i class="fas fa-users-slash text-3xl mb-3 block text-gray-300"></i>
-                                Pangkalan Data Umat masih kosong atau tidak ditemukan.
+                                Pangkalan Data Anggota masih kosong atau tidak ditemukan.
                             </td>
                         </tr>
                     @endforelse

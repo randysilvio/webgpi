@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Pembaruan Buku Induk Umat')
+@section('title', 'Pembaruan Buku Induk Anggota')
 
 @section('content')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 <div class="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between border-b-2 border-gray-800 pb-4">
     <div>
-        <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest">Modifikasi Buku Induk Umat</h2>
+        <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest">Modifikasi Buku Induk Anggota</h2>
         <p class="text-xs text-gray-600 mt-1">Pembaruan data registrasi atas nama: <strong class="text-gray-900 uppercase">{{ $anggotaJemaat->nama_lengkap }}</strong></p>
     </div>
     <a href="{{ route('admin.anggota-jemaat.index') }}" class="text-gray-500 hover:text-blue-800 font-bold text-xs uppercase transition flex items-center mt-3 md:mt-0">
