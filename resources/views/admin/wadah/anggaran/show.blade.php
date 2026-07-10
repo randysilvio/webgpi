@@ -78,9 +78,11 @@
     <div class="bg-white border border-gray-300 rounded shadow-sm overflow-hidden mt-8 border-t-4 border-t-gray-800">
         <div class="bg-gray-100 px-6 py-4 flex justify-between items-center border-b border-gray-200">
             <h3 class="text-xs font-black text-gray-800 uppercase tracking-widest"><i class="fas fa-list-ul mr-2 text-gray-500"></i> Riwayat Pencatatan Transaksi</h3>
-            <a href="{{ route('admin.wadah.transaksi.index', ['anggaran_id' => $anggaran->id]) }}" class="bg-gray-800 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded hover:bg-gray-900 transition shadow-sm">
+            
+            {{-- TOMBOL PEMICU MODAL --}}
+            <button type="button" onclick="toggleModal('modalTransaksi')" class="bg-gray-800 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded hover:bg-gray-900 transition shadow-sm">
                 <i class="fas fa-plus mr-1"></i> Catat Transaksi
-            </a>
+            </button>
         </div>
         
         <div class="overflow-x-auto">
@@ -100,9 +102,9 @@
                                 <span class="font-mono text-[11px] font-bold text-gray-700">{{ \Carbon\Carbon::parse($t->tanggal_transaksi)->format('d/m/Y') }}</span>
                             </td>
                             <td class="px-6 py-3 align-top">
-                                <div class="font-bold text-gray-800 text-xs mb-1 uppercase">{{ $t->keterangan }}</div>
-                                @if($t->bukti_path)
-                                    <a href="{{ Storage::url($t->bukti_path) }}" target="_blank" class="inline-flex items-center text-[9px] font-black text-blue-800 uppercase tracking-widest hover:text-blue-600 transition">
+                                <div class="font-bold text-gray-800 text-xs mb-1 uppercase">{{ $t->uraian ?? $t->keterangan }}</div>
+                                @if($t->bukti_transaksi)
+                                    <a href="{{ Storage::url($t->bukti_transaksi) }}" target="_blank" class="inline-flex items-center text-[9px] font-black text-blue-800 uppercase tracking-widest hover:text-blue-600 transition">
                                         <i class="fas fa-paperclip mr-1 text-gray-400"></i> Lihat Berkas Bukti Transaksi
                                     </a>
                                 @else
@@ -113,7 +115,7 @@
                                 <span class="font-mono font-black text-gray-900 text-xs">Rp {{ number_format($t->jumlah, 0, ',', '.') }}</span>
                             </td>
                             <td class="px-6 py-3 text-center align-top">
-                                <form action="{{ route('admin.wadah.transaksi.destroy', $t->id) }}" method="POST" onsubmit="return confirm('Peringatan: Menghapus catatan transaksi ini akan mempengaruhi saldo realisasi pos anggaran. Lanjutkan?');">
+                                <form action="{{ route('admin.wadah.transaksi.destroy', $t->id) }}" method="POST" onsubmit="return confirm('Peringatan: Menghapus catatan transaksi ini akan mengurangi saldo realisasi pos anggaran secara otomatis. Lanjutkan?');">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-gray-400 hover:text-red-700 transition" title="Batalkan/Hapus Transaksi">
                                         <i class="fas fa-trash-alt"></i>
@@ -134,5 +136,82 @@
         </div>
     </div>
 
+    {{-- MODAL FORM CATAT TRANSAKSI --}}
+    <div id="modalTransaksi" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-gray-900/70 backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-white rounded shadow-2xl w-full max-w-lg border border-gray-300 overflow-hidden scale-95 transform transition-transform" id="modalContent">
+            
+            <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-xs font-black text-gray-800 uppercase tracking-widest"><i class="fas fa-file-invoice-dollar mr-2 text-gray-500"></i> Form Catat Transaksi</h3>
+                <button type="button" onclick="toggleModal('modalTransaksi')" class="text-gray-400 hover:text-red-600 transition"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            
+            <form action="{{ route('admin.wadah.transaksi.store') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="anggaran_id" value="{{ $anggaran->id }}">
+                
+                <div class="p-6 space-y-5">
+                    <div class="bg-blue-50 border border-blue-200 p-3 rounded">
+                        <p class="text-[10px] font-bold text-blue-800 uppercase tracking-widest">
+                            <i class="fas fa-info-circle mr-1"></i> Arus Kas: {{ $anggaran->jenis_anggaran == 'penerimaan' ? 'PEMASUKAN / PENERIMAAN' : 'PENGELUARAN / BELANJA' }}
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tanggal Transaksi <span class="text-red-600">*</span></label>
+                        <input type="date" name="tanggal_transaksi" required class="w-full border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Uraian / Keterangan Transaksi <span class="text-red-600">*</span></label>
+                        <input type="text" name="uraian" required placeholder="Contoh: Pembelian konsumsi / Penerimaan iuran..." class="w-full border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white uppercase">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Nominal Transaksi (Rp) <span class="text-red-600">*</span></label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold text-[10px]">Rp</span>
+                            <input type="number" name="jumlah" required placeholder="0" min="0" class="w-full pl-9 pr-3 py-2 border-gray-300 rounded text-sm font-mono text-right focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50 font-bold">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Upload Bukti Nota / Dokumen (Opsional)</label>
+                        <input type="file" name="bukti_transaksi" accept=".jpg,.jpeg,.png,.pdf" class="w-full border border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white p-1">
+                        <p class="text-[9px] text-gray-500 mt-1 uppercase tracking-widest font-bold">Maksimal 2MB (Hanya format JPG, PNG, PDF).</p>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+                    <button type="button" onclick="toggleModal('modalTransaksi')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-gray-100 transition">Batalkan</button>
+                    <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded text-[10px] font-bold uppercase tracking-widest shadow-sm transition flex items-center"><i class="fas fa-save mr-2"></i> Simpan Transaksi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
+
+@push('scripts')
+<script>
+    // Script untuk membuka dan menutup Modal Pop-up dengan animasi halus
+    function toggleModal(modalID) {
+        const modal = document.getElementById(modalID);
+        const content = document.getElementById('modalContent');
+        
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        } else {
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 150);
+        }
+    }
+</script>
+@endpush
 @endsection

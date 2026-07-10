@@ -62,9 +62,10 @@
                         class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Tanggal Lahir</label>
-                    <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir') }}" 
-                        class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Tanggal Lahir <span class="text-red-600">*</span></label>
+                    <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir') }}" required
+                        class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                    @error('tanggal_lahir') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Jenis Kelamin</label>
@@ -113,6 +114,7 @@
                         <option value="Pegawai Kantor" {{ old('jenis_pegawai') == 'Pegawai Kantor' ? 'selected' : '' }}>Pegawai Kantor Sinode</option>
                         <option value="Staff Khusus" {{ old('jenis_pegawai') == 'Staff Khusus' ? 'selected' : '' }}>Staff Khusus / Honorer</option>
                     </select>
+                    @error('jenis_pegawai') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Status Kepegawaian <span class="text-red-600">*</span></label>
@@ -135,9 +137,21 @@
             </div>
 
             <div id="field_pendeta" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded hidden">
-                <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2"><i class="fas fa-cross text-blue-800 mr-2"></i> Khusus Pendeta (Tahbisan)</label>
-                <input type="date" name="tanggal_tahbisan" value="{{ old('tanggal_tahbisan') }}" 
-                    class="w-full md:w-1/3 border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                <h5 class="text-xs font-bold text-gray-700 uppercase mb-4"><i class="fas fa-cross text-blue-800 mr-2"></i> Khusus Pendeta (Tahbisan)</h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Tanggal Tahbisan <span class="text-red-600">*</span></label>
+                        <input type="date" name="tanggal_tahbisan" value="{{ old('tanggal_tahbisan') }}" 
+                            class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                        @error('tanggal_tahbisan') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Tempat Lokasi Tahbisan <span class="text-red-600">*</span></label>
+                        <input type="text" name="tempat_tahbisan" value="{{ old('tempat_tahbisan') }}" placeholder="Contoh: Jemaat GKI Siloam..."
+                            class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                        @error('tempat_tahbisan') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
+                    </div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t border-gray-200 pt-4">
@@ -169,6 +183,7 @@
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Email (Akses Sistem)</label>
                         <input type="email" name="email" value="{{ old('email') }}" 
                             class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50">
+                        @error('email') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Nomor Telepon / WhatsApp</label>

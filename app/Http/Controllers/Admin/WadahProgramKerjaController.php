@@ -76,7 +76,7 @@ class WadahProgramKerjaController extends Controller
     {
         $request->validate([
             'tahun_program' => 'required|integer',
-            'jenis_wadah_id' => 'required|exists:jenis_wadah_kategorials,id',
+            'jenis_wadah_id' => 'required|exists:jenis_wadah_kategorial,id', 
             'tingkat' => 'required|in:sinode,klasis,jemaat',
             'nama_program' => 'required|string|max:255',
             'parent_program_id' => 'nullable|exists:wadah_kategorial_program_kerja,id',
@@ -98,6 +98,9 @@ class WadahProgramKerjaController extends Controller
         if (!isset($data['status_pelaksanaan'])) {
             $data['status_pelaksanaan'] = 0; // Rencana
         }
+
+        // PENYELESAIAN ERROR: Ubah Null menjadi 0 agar MySQL menerimanya
+        $data['target_anggaran'] = $data['target_anggaran'] ?? 0;
 
         WadahKategorialProgramKerja::create($data);
 
@@ -140,6 +143,9 @@ class WadahProgramKerjaController extends Controller
             'nama_program', 'tahun_program', 'status_pelaksanaan', 'target_anggaran', 
             'deskripsi', 'tujuan', 'penanggung_jawab', 'parent_program_id'
         ]);
+
+        // PENYELESAIAN ERROR: Ubah Null menjadi 0 saat diperbarui
+        $data['target_anggaran'] = $data['target_anggaran'] ?? 0;
 
         // Proteksi Logika: Sinode tidak boleh dipaksa punya parent
         if ($program->tingkat == 'sinode') {

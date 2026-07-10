@@ -19,9 +19,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class PegawaiController extends Controller
 {
-    /**
-     * Menampilkan daftar personil (Bisa difilter Pendeta/Pegawai).
-     */
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -34,7 +31,6 @@ class PegawaiController extends Controller
             $query->where('jemaat_id', $user->jemaat_id);
         }
 
-        // Statistik Sederhana (Unified)
         $statsQuery = clone $query;
         $stats = $statsQuery->reorder()->selectRaw('
             count(*) as total,
@@ -43,7 +39,6 @@ class PegawaiController extends Controller
             sum(case when status_aktif = "Aktif" then 1 else 0 end) as total_aktif
         ')->first();
 
-        // Filters
         if ($request->filled('search')) {
             $query->where(function($q) use ($request) {
                 $q->where('nama_lengkap', 'like', '%' . $request->search . '%')
@@ -62,13 +57,11 @@ class PegawaiController extends Controller
     public function create()
     {
         $klasisList = Klasis::orderBy('nama_klasis')->get();
-        // Dropdown Jemaat di-load via AJAX di frontend
         return view('admin.pegawai.create', compact('klasisList'));
     }
 
     public function store(Request $request)
     {
-        // 1. Validasi Dasar
         $rules = [
             'nama_lengkap' => 'required|string|max:255',
             'nipg' => 'required|string|unique:pegawai,nipg|max:30',
@@ -81,35 +74,30 @@ class PegawaiController extends Controller
             'foto_diri' => 'nullable|image|max:2048',
         ];
 
-        // 2. Validasi Tambahan KHUSUS PENDETA
         if ($request->jenis_pegawai == 'Pendeta') {
             $rules['tanggal_tahbisan'] = 'required|date';
-            $rules['tempat_tahbisan'] = 'required|string';
+            $rules['tempat_tahbisan'] = 'required|string|max:255';
         }
 
         $request->validate($rules);
 
         try {
             DB::transaction(function () use ($request) {
-                // Buat User Login
                 $email = $request->email ?? strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $request->nipg) . '@gpipapua.org');
                 $user = User::create([
                     'name' => $request->nama_lengkap,
                     'email' => $email,
                     'password' => Hash::make($request->nipg),
-                    // Jika admin Klasis/Jemaat, user ini jg di set
                     'klasis_id' => $request->klasis_id,
                     'jemaat_id' => $request->jemaat_id,
                 ]);
 
-                // Assign Role
                 if ($request->jenis_pegawai == 'Pendeta') {
                     $user->assignRole('Pendeta');
                 } else {
-                    $user->assignRole('Pegawai'); // Pastikan role ini ada
+                    $user->assignRole('Pegawai'); 
                 }
 
-                // Upload Foto
                 $fotoPath = null;
                 if ($request->hasFile('foto_diri')) {
                     $fotoPath = $request->file('foto_diri')->store('foto_pegawai', 'public');
@@ -117,16 +105,14 @@ class PegawaiController extends Controller
 
                 $tglPensiun = \Carbon\Carbon::parse($request->tanggal_lahir)->addYears(60);
 
-                // Simpan Data Pegawai (Termasuk kolom pendeta jika ada)
-                Pegawai::create(array_merge($request->all(), [
+                $pegawai = Pegawai::create(array_merge($request->all(), [
                     'user_id' => $user->id,
                     'foto_diri' => $fotoPath,
                     'status_aktif' => 'Aktif',
                     'tanggal_pensiun' => $tglPensiun
                 ]));
                 
-                // Update relasi user ke pegawai
-                $user->update(['pegawai_id' => $user->pegawai?->id]); // Atau ambil ID dr create di atas
+                $user->update(['pegawai_id' => $pegawai->id]);
             });
 
             return redirect()->route('admin.kepegawaian.pegawai.index')->with('success', 'Data Personil berhasil disimpan.');
@@ -151,14 +137,21 @@ class PegawaiController extends Controller
 
     public function update(Request $request, Pegawai $pegawai)
     {
-        // Validasi mirip store, tapi ignore unique ID sendiri
         $rules = [
-            'nama_lengkap' => 'required',
-            'nipg' => ['required', Rule::unique('pegawai')->ignore($pegawai->id)],
+            'nama_lengkap' => 'required|string|max:255',
+            'nipg' => ['required', 'string', 'max:30', Rule::unique('pegawai')->ignore($pegawai->id)],
+            'jenis_pegawai' => 'required|string',
+            'status_kepegawaian' => 'required|string',
+            'tanggal_lahir' => 'required|date',
+            'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($pegawai->user_id ?? 0)],
+            'klasis_id' => 'nullable|exists:klasis,id',
+            'jemaat_id' => 'nullable|exists:jemaat,id',
+            'foto_diri' => 'nullable|image|max:2048',
         ];
         
-        if ($pegawai->jenis_pegawai == 'Pendeta') {
+        if ($request->jenis_pegawai == 'Pendeta') {
              $rules['tanggal_tahbisan'] = 'required|date';
+             $rules['tempat_tahbisan'] = 'required|string|max:255';
         }
         
         $request->validate($rules);
@@ -172,19 +165,29 @@ class PegawaiController extends Controller
             $data['foto_diri'] = $request->file('foto_diri')->store('foto_pegawai', 'public');
         }
 
+        // Sanitasi: Kosongkan tahbisan jika diubah menjadi non-Pendeta
+        if ($request->jenis_pegawai != 'Pendeta') {
+            $data['tanggal_tahbisan'] = null;
+            $data['tempat_tahbisan'] = null;
+        }
+
+        // Update estimasi pensiun jika tanggal lahir berubah
+        $data['tanggal_pensiun'] = \Carbon\Carbon::parse($request->tanggal_lahir)->addYears(60);
+
         $pegawai->update($data);
         
-        // Sync User Info
         if ($pegawai->user) {
             $pegawai->user->update([
                 'name' => $request->nama_lengkap,
                 'klasis_id' => $request->klasis_id,
                 'jemaat_id' => $request->jemaat_id
             ]);
-            if($request->email) $pegawai->user->update(['email' => $request->email]);
+            if($request->email) {
+                $pegawai->user->update(['email' => $request->email]);
+            }
         }
 
-        return redirect()->route('admin.kepegawaian.pegawai.show', $pegawai->id)->with('success', 'Data diperbarui.');
+        return redirect()->route('admin.kepegawaian.pegawai.show', $pegawai->id)->with('success', 'Data diperbarui dengan sukses.');
     }
 
     public function destroy(Pegawai $pegawai)
@@ -194,26 +197,13 @@ class PegawaiController extends Controller
         return redirect()->route('admin.kepegawaian.pegawai.index')->with('success', 'Data dihapus.');
     }
 
-/**
-     * Mencetak Dokumen Biodata Pegawai / Pendeta ke format PDF
-     */
     public function print($id)
     {
-        // 1. Ambil data pegawai beserta relasinya
         $pegawai = Pegawai::with(['klasis', 'jemaat', 'riwayatSk'])->findOrFail($id);
-        
-        // 2. Ambil data pengaturan untuk Kop Surat (Logo, Alamat, dll)
         $setting = \App\Models\Setting::firstOrCreate(['id' => 1]);
-
-        // 3. Render ke dalam PDF menggunakan DomPDF
         $pdf = Pdf::loadView('admin.pegawai.pdf_biodata', compact('pegawai', 'setting'));
-
-        // 4. Konfigurasi Kertas (A4 Portrait)
         $pdf->setPaper('a4', 'portrait');
-
-        // 5. Tampilkan PDF di tab baru (stream) dengan nama file dinamis
         $namaFile = 'Kutipan_Buku_Induk_' . str_replace(' ', '_', $pegawai->nama_lengkap) . '.pdf';
-        
         return $pdf->stream($namaFile);
     }    
 }

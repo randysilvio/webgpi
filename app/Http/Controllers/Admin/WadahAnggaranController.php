@@ -66,7 +66,7 @@ class WadahAnggaranController extends Controller
     {
         $request->validate([
             'tahun_anggaran' => 'required|integer',
-            'jenis_wadah_id' => 'required|exists:jenis_wadah_kategorials,id',
+            'jenis_wadah_id' => 'required|exists:jenis_wadah_kategorial,id',
             'tingkat' => 'required|in:sinode,klasis,jemaat',
             'nama_pos_anggaran' => 'required|string|max:255',
             'jumlah_target' => 'required|numeric|min:0',
