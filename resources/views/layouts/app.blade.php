@@ -337,10 +337,25 @@
             </header>
 
             <main class="flex-1 p-6 lg:p-8">
-                {{-- STATUS INDIKATOR OFFLINE --}}
+                
+                {{-- STATUS INDIKATOR OFFLINE DASAR --}}
                 <div id="offline-indicator" class="hidden mb-6 bg-red-600 text-white p-3 rounded shadow-md flex items-center justify-center animate-pulse">
                     <i class="fas fa-wifi-slash mr-2"></i>
-                    <span class="font-bold text-xs uppercase tracking-wider">Koneksi Terputus. Beberapa fitur cloud dinonaktifkan sementara.</span>
+                    <span class="font-bold text-xs uppercase tracking-wider">Koneksi Terputus. Beberapa fitur dinonaktifkan sementara.</span>
+                </div>
+
+                {{-- INDIKATOR ANTREAN UNIVERSAL OFFLINE --}}
+                <div id="universal-offline-badge" class="hidden mb-6 bg-orange-100 border border-orange-300 p-4 rounded shadow-sm items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-satellite-dish text-orange-600 text-2xl mr-3 animate-pulse"></i>
+                        <div>
+                            <h4 class="font-bold text-orange-900 text-xs uppercase tracking-widest" id="universal-offline-text">Sistem Menunggu Sinyal</h4>
+                            <p class="text-[10px] text-orange-700 mt-1">Terdapat <b id="universal-offline-count">0</b> antrean aksi yang disimpan di perangkat ini dan akan diunggah otomatis saat internet stabil.</p>
+                        </div>
+                    </div>
+                    <button onclick="syncAllOfflineData()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest shadow transition">
+                        Paksa Sinkronisasi
+                    </button>
                 </div>
 
                 @if (session('success'))
@@ -458,6 +473,10 @@
             });
         }
     </script>
+
+    {{-- SCRIPT MANAJEMEN OFFLINE UNIVERSAL --}}
+    <script src="{{ asset('js/offlineManager.js') }}"></script>
+    
     @stack('scripts')
 </body>
 </html>
