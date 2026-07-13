@@ -189,11 +189,16 @@
                         <tbody class="text-sm divide-y divide-gray-200">
                             @forelse($pegawai->keluarga ?? [] as $kel)
                             <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3 font-bold text-gray-800 uppercase text-xs">{{ $kel->nama }}</td>
+                                <td class="px-4 py-3 font-bold text-gray-800 uppercase text-xs">
+                                    {{ $kel->nama_lengkap }}
+                                    @if($kel->status_tunjangan)
+                                        <span class="ml-2 inline-block bg-green-100 text-green-800 text-[8px] px-1.5 py-0.5 rounded uppercase tracking-widest border border-green-300" title="Masuk Dalam Tanggungan">Tertanggung</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     <span class="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{{ $kel->hubungan }}</span>
                                 </td>
-                                <td class="px-4 py-3 text-xs text-gray-600">{{ $kel->tempat_lahir }}, {{ \Carbon\Carbon::parse($kel->tanggal_lahir)->format('d M Y') }}</td>
+                                <td class="px-4 py-3 text-xs text-gray-600">{{ $kel->tempat_lahir ?? '-' }}, {{ $kel->tanggal_lahir ? \Carbon\Carbon::parse($kel->tanggal_lahir)->format('d M Y') : '-' }}</td>
                                 <td class="px-4 py-3 text-xs text-gray-600">{{ $kel->pekerjaan ?? '-' }}</td>
                                 <td class="px-4 py-3 text-center">
                                     <form action="{{ route('admin.kepegawaian.keluarga.destroy', $kel->id) }}" method="POST" onsubmit="return confirm('Hapus data tanggungan keluarga ini?');">
@@ -337,29 +342,41 @@
             <div class="p-6 space-y-4">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Nama Lengkap Anggota Keluarga <span class="text-red-600">*</span></label>
-                    <input type="text" name="nama" required class="w-full border-gray-300 rounded text-sm focus:ring-blue-800 uppercase">
+                    <input type="text" name="nama_lengkap" required class="w-full border-gray-300 rounded text-sm focus:ring-blue-800 uppercase">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Hubungan Sipil <span class="text-red-600">*</span></label>
                         <select name="hubungan" required class="w-full border-gray-300 rounded text-sm focus:ring-blue-800">
-                            <option value="Suami">Suami</option><option value="Istri">Istri</option><option value="Anak">Anak</option>
+                            <option value="Suami">Suami</option><option value="Istri">Istri</option><option value="Anak">Anak</option><option value="Lainnya">Lainnya</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Pekerjaan</label>
-                        <input type="text" name="pekerjaan" class="w-full border-gray-300 rounded text-sm focus:ring-blue-800">
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Jenis Kelamin</label>
+                        <select name="jenis_kelamin" class="w-full border-gray-300 rounded text-sm focus:ring-blue-800">
+                            <option value="L">Laki-Laki</option><option value="P">Perempuan</option>
+                        </select>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tempat Lahir <span class="text-red-600">*</span></label>
-                        <input type="text" name="tempat_lahir" required class="w-full border-gray-300 rounded text-sm focus:ring-blue-800">
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tempat Lahir</label>
+                        <input type="text" name="tempat_lahir" class="w-full border-gray-300 rounded text-sm focus:ring-blue-800">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tanggal Lahir <span class="text-red-600">*</span></label>
-                        <input type="date" name="tanggal_lahir" required class="w-full border-gray-300 rounded text-sm focus:ring-blue-800">
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tanggal Lahir</label>
+                        <input type="date" name="tanggal_lahir" class="w-full border-gray-300 rounded text-sm focus:ring-blue-800">
                     </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Pekerjaan / Aktivitas</label>
+                    <input type="text" name="pekerjaan" class="w-full border-gray-300 rounded text-sm focus:ring-blue-800">
+                </div>
+                <div class="mt-4 bg-yellow-50 p-3 rounded border border-yellow-200">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="status_tunjangan" value="1" class="rounded border-gray-400 text-blue-800 focus:ring-blue-800 h-4 w-4" checked>
+                        <span class="ml-2 text-[10px] font-bold text-gray-700 uppercase tracking-widest">Masuk Dalam Tanggungan (Tunjangan Keluarga)</span>
+                    </label>
                 </div>
             </div>
             <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
