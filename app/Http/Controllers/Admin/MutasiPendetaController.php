@@ -4,82 +4,83 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MutasiPendeta;
-use App\Models\Pendeta;
+use App\Models\Pegawai;
 use App\Models\Klasis;
 use App\Models\Jemaat;
-use Illuminate\Http\Request; // <-- Tambahkan Request di index
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
 class MutasiPendetaController extends Controller
 {
-    // Middleware untuk hak akses
     public function __construct()
     {
         $this->middleware(['auth']);
-        // Izinkan Super Admin & Admin Bidang 3 melihat/mengelola semua
         $this->middleware('role:Super Admin|Admin Bidang 3');
-        // (Opsional) Jika role lain boleh melihat index, tambahkan middleware terpisah:
-        // $this->middleware('role:Super Admin|Admin Bidang 3|NamaRoleLain')->only(['index']);
     }
 
     /**
-     * (Baru) Display a listing of the resource.
-     * Tampilkan daftar semua riwayat mutasi pendeta.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\View\View
+     * Tampilkan daftar semua riwayat mutasi personel.
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
+        
         $query = MutasiPendeta::with([
-                    'pendeta',
+                    'pegawai',
                     'asalKlasis', 'asalJemaat',
                     'tujuanKlasis', 'tujuanJemaat'
-                 ])->latest('tanggal_sk'); // Urutkan berdasarkan Tgl SK terbaru
+                 ])->latest('tanggal_sk');
 
-        // --- Fitur Filter (Opsional) ---
+        // RBAC WILAYAH
+        if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
+            $query->where(function($q) use ($user) {
+                $q->where('asal_klasis_id', $user->klasis_id)
+                  ->orWhere('tujuan_klasis_id', $user->klasis_id);
+            });
+        } elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
+            $query->where(function($q) use ($user) {
+                $q->where('asal_jemaat_id', $user->jemaat_id)
+                  ->orWhere('tujuan_jemaat_id', $user->jemaat_id);
+            });
+        }
+
+        // FILTER PENCARIAN
         if ($request->filled('search')) {
             $searchTerm = '%' . $request->search . '%';
             $query->where(function($q) use ($searchTerm) {
                 $q->where('nomor_sk', 'like', $searchTerm)
-                  ->orWhereHas('pendeta', function($subQ) use ($searchTerm) {
+                  ->orWhereHas('pegawai', function($subQ) use ($searchTerm) {
                       $subQ->where('nama_lengkap', 'like', $searchTerm)
-                           ->orWhere('nipg', 'like', $searchTerm);
+                           ->orWhere('nipg', 'like', $searchTerm)
+                           ->orWhere('nip', 'like', $searchTerm);
                   });
             });
         }
         if ($request->filled('jenis_mutasi')) {
             $query->where('jenis_mutasi', $request->jenis_mutasi);
         }
-        // Tambahkan filter lain jika perlu (misal berdasarkan klasis tujuan/asal)
 
-        $mutasiHistory = $query->paginate(20)->appends($request->query()); // Paginasi
-
-        // Ambil opsi untuk filter jenis mutasi
+        $mutasiHistory = $query->paginate(20)->appends($request->query());
         $jenisMutasiOptions = MutasiPendeta::select('jenis_mutasi')->distinct()->pluck('jenis_mutasi', 'jenis_mutasi');
 
-        return view('admin.mutasi_pendeta.index', compact('mutasiHistory', 'jenisMutasiOptions', 'request'));
+        return view('admin.mutasi.index', compact('mutasiHistory', 'jenisMutasiOptions', 'request'));
     }
 
-
     /**
-     * Show the form for creating a new resource.
-     * (Kode create tetap sama)
-     *
-     * @param  \App\Models\Pendeta  $pendeta
-     * @return \Illuminate\View\View
+     * Form penambahan mutasi baru untuk spesifik Pegawai
      */
-    public function create(Pendeta $pendeta)
+    public function create(Pegawai $pegawai)
     {
         $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
         $jemaatOptions = Jemaat::orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
-        $asalKlasisId = $pendeta->klasis_penempatan_id;
-        $asalJemaatId = $pendeta->jemaat_penempatan_id;
+        
+        $asalKlasisId = $pegawai->klasis_id;
+        $asalJemaatId = $pegawai->jemaat_id;
 
-        return view('admin.mutasi_pendeta.create', compact(
-            'pendeta',
+        return view('admin.mutasi.create', compact(
+            'pegawai',
             'klasisOptions',
             'jemaatOptions',
             'asalKlasisId',
@@ -88,14 +89,9 @@ class MutasiPendetaController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
-     * (Kode store tetap sama)
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Pendeta  $pendeta
-     * @return \Illuminate\Http\RedirectResponse
+     * Simpan Mutasi Baru dan Lakukan Update Wilayah pada Pegawai & User
      */
-    public function store(Request $request, Pendeta $pendeta)
+    public function store(Request $request, Pegawai $pegawai)
     {
         $validatedData = $request->validate([
             'tanggal_sk' => 'required|date',
@@ -108,48 +104,105 @@ class MutasiPendetaController extends Controller
             'tanggal_efektif' => 'nullable|date',
             'keterangan' => 'nullable|string',
         ]);
-        $validatedData['pendeta_id'] = $pendeta->id;
+        
+        $validatedData['pegawai_id'] = $pegawai->id;
 
         DB::beginTransaction();
         try {
             $mutasi = MutasiPendeta::create($validatedData);
-            Log::info("Riwayat mutasi baru ID: {$mutasi->id} (Pendeta ID: {$pendeta->id})");
 
             $tujuanKlasisId = $mutasi->tujuan_klasis_id;
             $tujuanJemaatId = $mutasi->tujuan_jemaat_id;
-            if (in_array(strtolower($mutasi->jenis_mutasi), ['emeritus', 'keluar', 'meninggal'])) {
-                 $tujuanKlasisId = null; $tujuanJemaatId = null;
+            
+            // Logika Sanitasi Pensiun/Meninggal
+            if (in_array(strtolower($mutasi->jenis_mutasi), ['emeritus', 'pensiun', 'keluar', 'meninggal'])) {
+                 $tujuanKlasisId = null; 
+                 $tujuanJemaatId = null;
+                 $pegawai->status_aktif = ucfirst($mutasi->jenis_mutasi);
             }
 
-            $pendeta->update([
-                'klasis_penempatan_id' => $tujuanKlasisId,
-                'jemaat_penempatan_id' => $tujuanJemaatId,
+            // Update penempatan di tabel pegawai
+            $pegawai->update([
+                'klasis_id' => $tujuanKlasisId,
+                'jemaat_id' => $tujuanJemaatId,
             ]);
-            Log::info("Penempatan Pendeta ID: {$pendeta->id} diupdate.");
 
-            if ($pendeta->user) {
-                $pendeta->user->update([
+            // Update penempatan di tabel users (Akses Login)
+            if ($pegawai->user) {
+                $pegawai->user->update([
                     'klasis_id' => $tujuanKlasisId,
                     'jemaat_id' => $tujuanJemaatId,
                 ]);
-                Log::info("Penempatan User ID: {$pendeta->user->id} diupdate.");
             }
 
             DB::commit();
-            return redirect()->route('admin.pendeta.show', $pendeta->id)
-                             ->with('success', 'Data mutasi Pendeta berhasil ditambahkan.');
+            
+            return redirect()->route('admin.kepegawaian.pegawai.show', $pegawai->id)
+                             ->with('success', 'Arsip mutasi dan penyesuaian wilayah kedinasan personel berhasil diproses.');
+                             
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Gagal simpan mutasi (Pendeta ID: {$pendeta->id}). Error: " . $e->getMessage());
-            return redirect()->route('admin.pendeta.mutasi.create', $pendeta->id)
-                             ->with('error', 'Gagal menyimpan data mutasi. Error: ' . $e->getMessage())
+            Log::error("Gagal simpan mutasi (Pegawai ID: {$pegawai->id}). Error: " . $e->getMessage());
+            return redirect()->back()
+                             ->with('error', 'Gagal memproses surat mutasi. Kesalahan sistem: ' . $e->getMessage())
                              ->withInput();
         }
     }
 
-    // Method lain (show, edit, update, destroy untuk mutasi) bisa ditambahkan di sini
-    // public function show(MutasiPendeta $mutasi) { /* Tampilkan detail 1 mutasi */ }
-    // public function edit(MutasiPendeta $mutasi) { /* Form edit mutasi */ }
-    // public function update(Request $request, MutasiPendeta $mutasi) { /* Proses update mutasi */ }
-    // public function destroy(MutasiPendeta $mutasi) { /* Hapus riwayat mutasi */ }
+    /**
+     * Tampilkan detail dokumen Mutasi
+     */
+    public function show($id)
+    {
+        $mutasi = MutasiPendeta::with(['pegawai', 'asalKlasis', 'asalJemaat', 'tujuanKlasis', 'tujuanJemaat'])->findOrFail($id);
+        
+        return view('admin.mutasi.show', compact('mutasi'));
+    }
+
+    /**
+     * Tampilkan Form Koreksi Data Historis Mutasi
+     */
+    public function edit($id)
+    {
+        $mutasi = MutasiPendeta::with('pegawai')->findOrFail($id);
+        
+        return view('admin.mutasi.edit', compact('mutasi'));
+    }
+
+    /**
+     * Update data SK (Tanpa memicu trigger pemindahan lokasi, hanya mengubah label historis)
+     */
+    public function update(Request $request, $id)
+    {
+        $mutasi = MutasiPendeta::findOrFail($id);
+        
+        $validatedData = $request->validate([
+            'nomor_sk' => 'required|string|max:255|unique:mutasi_pendeta,nomor_sk,' . $mutasi->id,
+            'tanggal_sk' => 'required|date',
+            'tanggal_efektif' => 'nullable|date',
+            'keterangan' => 'nullable|string',
+            // Field khusus ini hanya string label di view edit yang disediakan
+            'asal_instansi' => 'nullable|string',
+            'tujuan_instansi' => 'nullable|string',
+        ]);
+
+        $mutasi->update($validatedData);
+
+        return redirect()->route('admin.mutasi.show', $mutasi->id)->with('success', 'Data historis SK Mutasi berhasil dikoreksi.');
+    }
+
+    /**
+     * Membatalkan/Menghapus Mutasi
+     */
+    public function destroy($id)
+    {
+        $mutasi = MutasiPendeta::findOrFail($id);
+        
+        try {
+            $mutasi->delete();
+            return redirect()->route('admin.mutasi.index')->with('success', 'Arsip Surat Mutasi berhasil dihapus/dibatalkan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus mutasi. Error: ' . $e->getMessage());
+        }
+    }
 }

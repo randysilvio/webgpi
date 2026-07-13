@@ -203,7 +203,6 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::prefix('kepegawaian')->name('kepegawaian.')
         ->middleware(['auth'])
         ->group(function () {
-            
             Route::resource('pegawai', PegawaiController::class);
             Route::get('pegawai/{pegawai}/print', [PegawaiController::class, 'print'])->name('pegawai.print');
             
@@ -225,14 +224,14 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
             Route::put('sk/{sk}', [RiwayatSkController::class, 'update'])->name('sk.update');
             Route::delete('sk/{sk}', [RiwayatSkController::class, 'destroy'])->name('sk.destroy');
 
+            // PERBAIKAN ROUTE CREATE MUTASI: Tetap di bawah profil Pegawai
             Route::get('pegawai/{pegawai}/mutasi/create', [MutasiPendetaController::class, 'create'])->name('pegawai.mutasi.create');
-            Route::post('pegawai/{pegawai}/mutasi', [MutasiPendetaController::class, 'store'])->name('pegawai.mutasi.store');
         });
 
+    // PERBAIKAN ROUTE MUTASI INDUK: Dipisah agar sesuai resource standar (show, edit, destroy)
     Route::middleware('role:Super Admin|Admin Bidang 3')->group(function () {
-        Route::resource('mutasi', MutasiPendetaController::class)
-             ->except(['create', 'store'])
-             ->parameters(['mutasi' => 'mutasiPendeta']);
+        Route::post('mutasi/pegawai/{pegawai}', [MutasiPendetaController::class, 'store'])->name('mutasi.store');
+        Route::resource('mutasi', MutasiPendetaController::class)->except(['create', 'store']);
     });
 
     // 9. Perbendaharaan, Aset & Keuangan
@@ -263,11 +262,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // 13. Modul Bursa Materi Khotbah & Transaksi
     Route::get('bursa/{bursa}/download', [MateriKhotbahController::class, 'download'])->name('bursa.download');
-    Route::resource('bursa', MateriKhotbahController::class); // <-- DIPERBAIKI: Tanpa ->names() agar tidak double prefix
+    Route::resource('bursa', MateriKhotbahController::class);
     
-    Route::get('bursa-transaksi', [TransaksiMateriController::class, 'index'])->name('bursa.transaksi.index'); // <-- DIPERBAIKI: Hapus 'admin.'
-    Route::post('bursa-transaksi', [TransaksiMateriController::class, 'store'])->name('bursa.transaksi.store'); // <-- DIPERBAIKI: Hapus 'admin.'
-    Route::put('bursa-transaksi/{transaksi}', [TransaksiMateriController::class, 'update'])->name('bursa.transaksi.update'); // <-- DIPERBAIKI: Hapus 'admin.'
+    Route::get('bursa-transaksi', [TransaksiMateriController::class, 'index'])->name('bursa.transaksi.index');
+    Route::post('bursa-transaksi', [TransaksiMateriController::class, 'store'])->name('bursa.transaksi.store');
+    Route::put('bursa-transaksi/{transaksi}', [TransaksiMateriController::class, 'update'])->name('bursa.transaksi.update');
 
 });
 

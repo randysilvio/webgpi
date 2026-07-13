@@ -33,17 +33,26 @@ class AnggotaJemaatController extends Controller
          $this->middleware('can:export anggota jemaat')->only(['export']);
     }
 
-    // --- SEARCH SELECT2 ---
+    // --- SEARCH SELECT2 (DENGAN PENAMBAHAN KEAMANAN RBAC) ---
     public function search(Request $request)
     {
+        $user = Auth::user();
         $term = $request->get('q');
-        $results = AnggotaJemaat::aktif()
-            ->where(function($query) use ($term) {
-                $query->where('nama_lengkap', 'LIKE', '%' . $term . '%')
-                      ->orWhere('nik', 'LIKE', '%' . $term . '%');
-            })
-            ->limit(10)
-            ->get(['id', 'nama_lengkap', 'nik']);
+        
+        $query = AnggotaJemaat::aktif()
+            ->where(function($q) use ($term) {
+                $q->where('nama_lengkap', 'LIKE', '%' . $term . '%')
+                  ->orWhere('nik', 'LIKE', '%' . $term . '%');
+            });
+
+        // SAFEGUARD: Mencegah manipulasi pencarian beda wilayah
+        if ($user->hasRole('Admin Jemaat')) {
+            $query->where('jemaat_id', $user->jemaat_id);
+        } elseif ($user->hasRole('Admin Klasis')) {
+            $query->whereHas('jemaat', fn($q) => $q->where('klasis_id', $user->klasis_id));
+        }
+
+        $results = $query->limit(10)->get(['id', 'nama_lengkap', 'nik']);
 
         return response()->json($results->map(function($item){
             return [
@@ -242,7 +251,6 @@ class AnggotaJemaatController extends Controller
         }
 
         try {
-            // Konversi Array ke String untuk Aset Ekonomi
             if($request->has('aset_ekonomi')) {
                 $validatedData['aset_ekonomi'] = implode(', ', $request->aset_ekonomi);
             }
@@ -259,7 +267,7 @@ class AnggotaJemaatController extends Controller
                 ])->with('success', 'Data berhasil ditambahkan. Lanjut input anggota keluarga berikutnya.');
             } else {
                  return redirect()->route('admin.anggota-jemaat.index')
-                                  ->with('success', 'Anggota Jemaat berhasil ditambahkan.');
+                                  ->with('success', 'Anggota Jemaat berhasil ditambahkan ke pangkalan data.');
             }
 
         } catch (\Exception $e) {
