@@ -66,6 +66,7 @@ use App\Models\Post;
 use App\Models\Service;
 use App\Models\Jemaat;
 use App\Models\Klasis;
+use App\Models\PopupAd;
 
 /*
 |--------------------------------------------------------------------------
@@ -84,12 +85,21 @@ Route::get('/', function () {
                      ->take(3)
                      ->get();
         $services = Service::orderBy('order')->orderBy('created_at')->get();
+        
+        // --- LOGIKA SLIDESHOW/BANNER OTOMATIS ---
+        $slideshows = PopupAd::where('is_active', true)
+                     ->whereDate('mulai_tanggal', '<=', now())
+                     ->whereDate('selesai_tanggal', '>=', now())
+                     ->latest()
+                     ->get();
+
     } catch (\Exception $e) {
         $setting = new Setting();
         $posts = collect();
         $services = collect();
+        $slideshows = collect();
     }
-    return view('welcome', compact('setting', 'posts', 'services'));
+    return view('welcome', compact('setting', 'posts', 'services', 'slideshows'));
 })->name('home');
 
 Route::get('/berita', [PostPublicController::class, 'index'])->name('posts.public.index');
