@@ -27,13 +27,8 @@ class JemaatController extends Controller
 
     public function index(Request $request)
     {
-        // Panggil relasi sekaligus hitung total anggota & KK secara real-time
-        $query = Jemaat::with('klasis')->withCount([
-            'anggotaJemaat as real_jiwa',
-            'anggotaJemaat as real_kk' => function($q) {
-                $q->where('status_dalam_keluarga', 'Kepala Keluarga');
-            }
-        ]); 
+        // 1. MULAI TANPA WITHCOUNT DULU (Agar tidak terjadi konflik SQL Agregat)
+        $query = Jemaat::with('klasis'); 
         
         $user = Auth::user();
 
@@ -61,6 +56,7 @@ class JemaatController extends Controller
             }
         }
 
+        // 2. HITUNG STATISTIK (Saat query masih murni, belum disuntik withCount)
         $statsQuery = clone $query;
         $stats = $statsQuery->reorder()->selectRaw('
             count(*) as total,
@@ -85,8 +81,16 @@ class JemaatController extends Controller
             $stats->total_jiwa = $realJiwaCount;
         } else {
             $statsManual = clone $query;
-            $stats->total_jiwa = $statsManual->reorder()->sum('jumlah_total_jiwa');
+            $stats->total_jiwa = $statsManual->sum('jumlah_total_jiwa');
         }
+
+        // 3. SETELAH STATS SELESAI, BARU TAMBAHKAN WITHCOUNT UNTUK TABEL
+        $query->withCount([
+            'anggotaJemaat as real_jiwa',
+            'anggotaJemaat as real_kk' => function($q) {
+                $q->where('status_dalam_keluarga', 'Kepala Keluarga');
+            }
+        ]);
 
          if ($request->filled('search')) {
              $searchTerm = '%' . $request->search . '%';
@@ -96,6 +100,7 @@ class JemaatController extends Controller
              });
          }
 
+        // 4. Lakukan Pagination
         $jemaatData = $query->latest()->paginate(15)->appends($request->query());
 
         $klasisFilterOptions = collect();
