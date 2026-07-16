@@ -27,7 +27,14 @@ class JemaatController extends Controller
 
     public function index(Request $request)
     {
-        $query = Jemaat::with('klasis'); 
+        // Panggil relasi sekaligus hitung total anggota & KK secara real-time
+        $query = Jemaat::with('klasis')->withCount([
+            'anggotaJemaat as real_jiwa',
+            'anggotaJemaat as real_kk' => function($q) {
+                $q->where('status_dalam_keluarga', 'Kepala Keluarga');
+            }
+        ]); 
+        
         $user = Auth::user();
 
         if ($user->hasRole('Admin Klasis')) {
@@ -54,15 +61,32 @@ class JemaatController extends Controller
             }
         }
 
-        // BIARKAN STATS INI SEPERTI ASLINYA SESUAI PERMINTAAN ANDA
         $statsQuery = clone $query;
         $stats = $statsQuery->reorder()->selectRaw('
             count(*) as total,
             sum(case when status_jemaat = "Mandiri" then 1 else 0 end) as total_mandiri,
             sum(case when status_jemaat = "Bakal Jemaat" then 1 else 0 end) as total_bakal,
-            sum(case when status_jemaat = "Pos Pelayanan" then 1 else 0 end) as total_pos,
-            sum(jumlah_total_jiwa) as total_jiwa
+            sum(case when status_jemaat = "Pos Pelayanan" then 1 else 0 end) as total_pos
         ')->first();
+
+        // Cari Grand Total Jiwa Real (Fallback ke manual jika 0)
+        $totalJiwaQuery = \App\Models\AnggotaJemaat::query();
+        if ($user->hasRole('Admin Klasis') && $user->klasis_id) {
+            $totalJiwaQuery->whereHas('jemaat', fn($q) => $q->where('klasis_id', $user->klasis_id));
+        } elseif ($user->hasRole('Admin Jemaat') && $user->jemaat_id) {
+            $totalJiwaQuery->where('jemaat_id', $user->jemaat_id);
+        }
+        if ($request->filled('klasis_id')) {
+            $totalJiwaQuery->whereHas('jemaat', fn($q) => $q->where('klasis_id', $request->klasis_id));
+        }
+        
+        $realJiwaCount = $totalJiwaQuery->count();
+        if ($realJiwaCount > 0) {
+            $stats->total_jiwa = $realJiwaCount;
+        } else {
+            $statsManual = clone $query;
+            $stats->total_jiwa = $statsManual->reorder()->sum('jumlah_total_jiwa');
+        }
 
          if ($request->filled('search')) {
              $searchTerm = '%' . $request->search . '%';
@@ -141,14 +165,11 @@ class JemaatController extends Controller
 
         $jemaat->load(['klasis', 'anggotaJemaat', 'pendetaDitempatkan']); 
 
-        // PERBAIKAN: Hitung Jiwa & KK secara real-time dari tabel anggota_jemaat
         $realJiwaLaki = $jemaat->anggotaJemaat()->where('jenis_kelamin', 'Laki-laki')->count();
         $realJiwaPerempuan = $jemaat->anggotaJemaat()->where('jenis_kelamin', 'Perempuan')->count();
         $realTotalJiwa = $realJiwaLaki + $realJiwaPerempuan;
         $realTotalKk = $jemaat->anggotaJemaat()->where('status_dalam_keluarga', 'Kepala Keluarga')->count();
 
-        // Update nilai properti (tidak disimpan ke DB, hanya untuk ditampilkan di View)
-        // Gunakan $realTotalJiwa jika $jemaat->jumlah_total_jiwa kosong/0
         $jemaat->real_total_jiwa = $realTotalJiwa > 0 ? $realTotalJiwa : ($jemaat->jumlah_total_jiwa ?? 0);
         $jemaat->real_total_kk = $realTotalKk > 0 ? $realTotalKk : ($jemaat->jumlah_kk ?? 0);
 
@@ -266,9 +287,11 @@ class JemaatController extends Controller
         $jemaat->real_total_jiwa = $realTotalJiwa > 0 ? $realTotalJiwa : ($jemaat->jumlah_total_jiwa ?? 0);
         $jemaat->real_total_kk = $realTotalKk > 0 ? $realTotalKk : ($jemaat->jumlah_kk ?? 0);
 
-        // Render PDF 
-        // Mengingat Anda belum punya file template pdf untuk profil jemaat,
-        // sistem akan mereturn string error, silakan buat template cetak jika dibutuhkan.
-        return back()->with('warning', 'Fitur cetak PDF sedang disiapkan (Template belum tersedia di sistem).');
+        $setting = \App\Models\Setting::first(); 
+
+        $pdf = Pdf::loadView('admin.jemaat.pdf', compact('jemaat', 'realJiwaLaki', 'realJiwaPerempuan', 'setting'))
+                  ->setPaper('a4', 'portrait'); 
+
+        return $pdf->stream('Profil_Jemaat_' . \Illuminate\Support\Str::slug($jemaat->nama_jemaat) . '.pdf');
     }
 }

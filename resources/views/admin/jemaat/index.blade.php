@@ -126,11 +126,11 @@
                             <td class="px-5 py-4 text-center">
                                 <div class="flex justify-center gap-4 text-[10px] font-bold text-gray-600">
                                     <div class="text-center bg-gray-50 border border-gray-200 p-1.5 rounded w-14">
-                                        <span class="block font-black text-gray-900 text-xs">{{ number_format($jemaat->jumlah_kk ?? 0) }}</span>
+                                        <span class="block font-black text-gray-900 text-xs">{{ number_format($jemaat->real_kk > 0 ? $jemaat->real_kk : ($jemaat->jumlah_kk ?? 0)) }}</span>
                                         <span class="text-[8px] text-gray-400 uppercase tracking-widest mt-0.5 block">Keluarga</span>
                                     </div>
                                     <div class="text-center bg-blue-50 border border-blue-200 p-1.5 rounded w-14">
-                                        <span class="block font-black text-blue-900 text-xs">{{ number_format($jemaat->jumlah_total_jiwa ?? 0) }}</span>
+                                        <span class="block font-black text-blue-900 text-xs">{{ number_format($jemaat->real_jiwa > 0 ? $jemaat->real_jiwa : ($jemaat->jumlah_total_jiwa ?? 0)) }}</span>
                                         <span class="text-[8px] text-blue-400 uppercase tracking-widest mt-0.5 block">Jiwa</span>
                                     </div>
                                 </div>
