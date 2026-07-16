@@ -15,7 +15,8 @@
     </a>
 </div>
 
-<form action="{{ route('admin.anggota-jemaat.store') }}" method="POST" enctype="multipart/form-data">
+{{-- PENAMBAHAN CLASS OFFLINE-READY --}}
+<form action="{{ route('admin.anggota-jemaat.store') }}" method="POST" enctype="multipart/form-data" class="offline-ready">
     @csrf
     <div class="space-y-6 max-w-6xl mx-auto">
         
@@ -36,8 +37,14 @@
                     <input type="text" name="nomor_buku_induk" value="{{ old('nomor_buku_induk') }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white font-mono">
                 </div>
                 
-                <x-form-input label="Tempat Kelahiran" name="tempat_lahir" />
-                <x-form-input type="date" label="Tanggal Kelahiran" name="tanggal_lahir" />
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tempat Kelahiran</label>
+                    <input type="text" name="tempat_lahir" value="{{ old('tempat_lahir') }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tanggal Kelahiran</label>
+                    <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir') }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                </div>
                 
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Jenis Kelamin Sipil <span class="text-red-600">*</span></label>
@@ -75,7 +82,10 @@
                     </select>
                 </div>
 
-                <x-form-input label="No. Telepon / Ponsel Aktif" name="telepon" />
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">No. Telepon / Ponsel Aktif</label>
+                    <input type="text" name="telepon" value="{{ old('telepon') }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white font-mono">
+                </div>
                 
                 <div class="md:col-span-2">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Alamat Lengkap / Domisili Domestik</label>
@@ -113,16 +123,34 @@
                     <input type="text" name="nomor_kk" value="{{ old('nomor_kk', $prefillData['nomor_kk'] ?? '') }}" class="w-full border border-blue-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 font-mono shadow-sm bg-white">
                 </div>
 
-                <x-form-input label="Sektor Wilayah Pelayanan" name="sektor_pelayanan" value="{{ $prefillData['sektor_pelayanan'] ?? '' }}" />
-                <x-form-input label="Unit Pembinaan Khusus" name="unit_pelayanan" value="{{ $prefillData['unit_pelayanan'] ?? '' }}" />
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Sektor Wilayah Pelayanan</label>
+                    <input type="text" name="sektor_pelayanan" value="{{ old('sektor_pelayanan', $prefillData['sektor_pelayanan'] ?? '') }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Unit Pembinaan Khusus</label>
+                    <input type="text" name="unit_pelayanan" value="{{ old('unit_pelayanan', $prefillData['unit_pelayanan'] ?? '') }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                </div>
 
                 <div class="lg:col-span-3 border-t border-gray-200 pt-4 mt-2">
                     <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Administrasi Sakramen (Opsional)</h5>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <x-form-input type="date" label="Tanggal Baptisan Air" name="tanggal_baptis" />
-                        <x-form-input label="Lokasi/Gereja Baptis" name="tempat_baptis" />
-                        <x-form-input type="date" label="Tanggal Peneguhan Sidi" name="tanggal_sidi" />
-                        <x-form-input label="Lokasi/Gereja Sidi" name="tempat_sidi" />
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Baptis Air</label>
+                            <input type="date" name="tanggal_baptis" value="{{ old('tanggal_baptis') }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Lokasi Baptis</label>
+                            <input type="text" name="tempat_baptis" value="{{ old('tempat_baptis') }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Peneguhan Sidi</label>
+                            <input type="date" name="tanggal_sidi" value="{{ old('tanggal_sidi') }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Lokasi Sidi</label>
+                            <input type="text" name="tempat_sidi" value="{{ old('tempat_sidi') }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -135,12 +163,12 @@
                 <div class="bg-gray-50 p-4 border border-gray-200 rounded">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Tautan Data Biologis Ayah</label>
                     <select name="ayah_id" id="select-ayah" class="w-full"></select>
-                    <input type="text" name="nama_ayah" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm" placeholder="Atau ketik nama ayah secara manual jika tidak terdata...">
+                    <input type="text" name="nama_ayah" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm focus:ring-blue-800 focus:border-blue-800" placeholder="Atau ketik nama ayah secara manual jika tidak terdata...">
                 </div>
                 <div class="bg-gray-50 p-4 border border-gray-200 rounded">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Tautan Data Biologis Ibu</label>
                     <select name="ibu_id" id="select-ibu" class="w-full"></select>
-                    <input type="text" name="nama_ibu" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm" placeholder="Atau ketik nama ibu secara manual jika tidak terdata...">
+                    <input type="text" name="nama_ibu" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm focus:ring-blue-800 focus:border-blue-800" placeholder="Atau ketik nama ibu secara manual jika tidak terdata...">
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Kedudukan & Status Dalam Kartu Keluarga (KK) <span class="text-red-600">*</span></label>
@@ -160,7 +188,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Status Konstruksi Rumah</label>
-                    <select name="kondisi_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="kondisi_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         <option value="Permanen">Bangunan Permanen</option>
                         <option value="Semi-Permanen">Semi-Permanen (Papan/Beton)</option>
                         <option value="Darurat/Kayu">Darurat / Non-Permanen</option>
@@ -168,7 +196,7 @@
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Legalitas Kepemilikan Rumah</label>
-                    <select name="status_kepemilikan_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="status_kepemilikan_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         <option value="Milik Sendiri">Aset Hak Milik Sendiri</option>
                         <option value="Sewa">Sewa / Kontrak Berkala</option>
                         <option value="Menumpang">Menumpang Pada Kerabat</option>
@@ -177,7 +205,7 @@
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Estimasi Pengeluaran Rutin</label>
-                    <select name="rentang_pengeluaran" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="rentang_pengeluaran" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         <option value="< 1jt">Dibawah Rp 1.000.000</option>
                         <option value="1jt - 3jt">Rp 1.000.000 - Rp 3.000.000</option>
                         <option value="> 3jt">Diatas Rp 3.000.000</option>
@@ -188,18 +216,18 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Pekerjaan / Mata Pencaharian</label>
-                    <input type="text" name="pekerjaan_utama" value="{{ old('pekerjaan_utama') }}" placeholder="Cth: PNS, Petani, Nelayan..." class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <input type="text" name="pekerjaan_utama" value="{{ old('pekerjaan_utama') }}" placeholder="Cth: PNS, Petani, Nelayan..." class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Kepemilikan Perangkat Cerdas (Smartphone)</label>
-                    <select name="punya_smartphone" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="punya_smartphone" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         <option value="0">Tidak Memiliki Perangkat</option>
                         <option value="1">Ya, Memiliki Perangkat</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Akses Jaringan Internet Domestik</label>
-                    <select name="akses_internet" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="akses_internet" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         <option value="0">Tidak Terjangkau Sinyal / Akses</option>
                         <option value="1">Ya, Tersedia Akses Konstan</option>
                     </select>
@@ -245,7 +273,7 @@
                 ajax: {
                     url: "{{ route('admin.anggota-jemaat.search') }}",
                     dataType: 'json',
-                    delay: 350, // Perlambat sedikit request untuk server
+                    delay: 350,
                     data: function (params) { return { q: params.term }; },
                     processResults: function (data) { return { results: data }; },
                     cache: true

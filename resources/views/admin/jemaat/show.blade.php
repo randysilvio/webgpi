@@ -26,13 +26,14 @@
                     <span class="block text-[9px] uppercase text-gray-500 font-bold tracking-widest">Status</span>
                     <span class="text-sm font-black text-gray-800 uppercase">{{ $jemaat->status_jemaat }}</span>
                 </div>
+                {{-- PERUBAHAN: MEMANGGIL DATA REAL --}}
                 <div class="px-4 py-2 bg-gray-50 border border-gray-200 rounded text-center min-w-[100px]">
                     <span class="block text-[9px] uppercase text-gray-500 font-bold tracking-widest">Sensus KK</span>
-                    <span class="text-sm font-black text-blue-800">{{ number_format($jemaat->jumlah_kk ?? 0) }}</span>
+                    <span class="text-sm font-black text-blue-800">{{ number_format($jemaat->real_total_kk ?? 0) }}</span>
                 </div>
                 <div class="px-4 py-2 bg-gray-50 border border-gray-200 rounded text-center min-w-[100px]">
                     <span class="block text-[9px] uppercase text-gray-500 font-bold tracking-widest">Total Populasi</span>
-                    <span class="text-sm font-black text-green-700">{{ number_format($jemaat->jumlah_total_jiwa ?? 0) }}</span>
+                    <span class="text-sm font-black text-green-700">{{ number_format($jemaat->real_total_jiwa ?? 0) }}</span>
                 </div>
             </div>
         </div>
@@ -45,6 +46,10 @@
                 <i class="fas fa-edit mr-1"></i> Modifikasi Profil
             </a>
             @endcan
+            {{-- TAMBAHAN TOMBOL CETAK --}}
+            <button onclick="window.print()" class="text-center px-4 py-2 bg-white border border-gray-300 text-green-700 text-[10px] font-bold uppercase tracking-widest rounded hover:bg-green-50 transition shadow-sm">
+                <i class="fas fa-print mr-1"></i> Cetak Profil
+            </button>
         </div>
     </div>
 
@@ -62,7 +67,7 @@
                     </tr>
                     <tr class="border-b border-gray-50">
                         <td class="py-2.5 w-1/3 text-[10px] font-bold text-gray-500 uppercase">Tanggal Peresmian</td>
-                        <td class="py-2.5 font-bold text-gray-800">{{ $jemaat->tanggal_berdiri ? $jemaat->tanggal_berdiri->isoFormat('D MMMM Y') : 'Belum Terdata' }}</td>
+                        <td class="py-2.5 font-bold text-gray-800">{{ $jemaat->tanggal_berdiri ? \Carbon\Carbon::parse($jemaat->tanggal_berdiri)->isoFormat('D MMMM Y') : 'Belum Terdata' }}</td>
                     </tr>
                     <tr class="border-b border-gray-50">
                         <td class="py-2.5 w-1/3 text-[10px] font-bold text-gray-500 uppercase">Telepon Sekretariat</td>
@@ -77,6 +82,28 @@
                         <td class="py-2.5 text-gray-800 leading-relaxed text-xs">{{ $jemaat->alamat_gereja ?? '-' }}</td>
                     </tr>
                 </table>
+            </div>
+
+            {{-- TAMBAHAN: GRAFIK RINGKASAN POPULASI --}}
+            <div class="bg-white border border-gray-300 rounded shadow-sm p-6">
+                <h3 class="text-xs font-black text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4"><i class="fas fa-chart-pie mr-2 text-green-700"></i> III. Demografi Umat</h3>
+                <div class="flex flex-col md:flex-row items-center gap-8">
+                    <div class="w-full md:w-1/2 flex justify-center">
+                        <div style="position: relative; height: 180px; width: 180px;">
+                            <canvas id="demografiChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2 space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded">
+                            <span class="text-xs font-bold text-gray-700 uppercase"><i class="fas fa-male text-blue-600 mr-2"></i>Laki-Laki</span>
+                            <span class="text-sm font-black text-gray-900">{{ number_format($realJiwaLaki ?? 0) }} Jiwa</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded">
+                            <span class="text-xs font-bold text-gray-700 uppercase"><i class="fas fa-female text-pink-600 mr-2"></i>Perempuan</span>
+                            <span class="text-sm font-black text-gray-900">{{ number_format($realJiwaPerempuan ?? 0) }} Jiwa</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -111,4 +138,34 @@
 
     </div>
 </div>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('demografiChart');
+        if(ctx) {
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Laki-Laki', 'Perempuan'],
+                    datasets: [{
+                        data: [{{ $realJiwaLaki ?? 0 }}, {{ $realJiwaPerempuan ?? 0 }}],
+                        backgroundColor: ['#2563eb', '#db2777'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    });
+</script>
+@endpush
 @endsection

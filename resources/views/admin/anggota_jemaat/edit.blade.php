@@ -15,7 +15,8 @@
     </a>
 </div>
 
-<form action="{{ route('admin.anggota-jemaat.update', $anggotaJemaat->id) }}" method="POST" enctype="multipart/form-data">
+{{-- PENAMBAHAN CLASS OFFLINE-READY --}}
+<form action="{{ route('admin.anggota-jemaat.update', $anggotaJemaat->id) }}" method="POST" enctype="multipart/form-data" class="offline-ready">
     @csrf
     @method('PUT')
     <div class="space-y-6 max-w-6xl mx-auto">
@@ -100,7 +101,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Instansi Jemaat Terdaftar <span class="text-red-600">*</span></label>
-                    <select name="jemaat_id" class="w-full border border-gray-300 rounded text-sm shadow-sm font-bold {{ !Auth::user()->hasRole('Super Admin') ? 'bg-gray-100 text-gray-500 cursor-not-allowed pointer-events-none' : 'bg-white' }}" {{ !Auth::user()->hasRole('Super Admin') ? 'readonly' : '' }}>
+                    <select name="jemaat_id" class="w-full border border-gray-300 rounded text-sm shadow-sm font-bold {{ !Auth::user()->hasRole('Super Admin') ? 'bg-gray-100 text-gray-500 cursor-not-allowed pointer-events-none' : 'bg-white focus:ring-blue-800 focus:border-blue-800' }}" {{ !Auth::user()->hasRole('Super Admin') ? 'readonly' : '' }}>
                         @foreach ($jemaatOptions as $id => $nama)
                             <option value="{{ $id }}" {{ $anggotaJemaat->jemaat_id == $id ? 'selected' : '' }}>{{ $nama }}</option>
                         @endforeach
@@ -135,10 +136,10 @@
                 <div class="lg:col-span-3 border-t border-gray-200 pt-4 mt-2">
                     <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Administrasi Sakramen Rekaman</h5>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Baptis Air</label><input type="date" name="tanggal_baptis" value="{{ old('tanggal_baptis', optional($anggotaJemaat->tanggal_baptis)->format('Y-m-d')) }}" class="w-full border-gray-300 rounded text-xs"></div>
-                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Lokasi Baptis</label><input type="text" name="tempat_baptis" value="{{ old('tempat_baptis', $anggotaJemaat->tempat_baptis) }}" class="w-full border-gray-300 rounded text-xs"></div>
-                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Peneguhan Sidi</label><input type="date" name="tanggal_sidi" value="{{ old('tanggal_sidi', optional($anggotaJemaat->tanggal_sidi)->format('Y-m-d')) }}" class="w-full border-gray-300 rounded text-xs"></div>
-                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Lokasi Sidi</label><input type="text" name="tempat_sidi" value="{{ old('tempat_sidi', $anggotaJemaat->tempat_sidi) }}" class="w-full border-gray-300 rounded text-xs"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Baptis Air</label><input type="date" name="tanggal_baptis" value="{{ old('tanggal_baptis', optional($anggotaJemaat->tanggal_baptis)->format('Y-m-d')) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Lokasi Baptis</label><input type="text" name="tempat_baptis" value="{{ old('tempat_baptis', $anggotaJemaat->tempat_baptis) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Peneguhan Sidi</label><input type="date" name="tanggal_sidi" value="{{ old('tanggal_sidi', optional($anggotaJemaat->tanggal_sidi)->format('Y-m-d')) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Lokasi Sidi</label><input type="text" name="tempat_sidi" value="{{ old('tempat_sidi', $anggotaJemaat->tempat_sidi) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
                     </div>
                 </div>
             </div>
@@ -151,12 +152,12 @@
                 <div class="bg-gray-50 p-4 border border-gray-200 rounded">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Tautan Data Biologis Ayah</label>
                     <select name="ayah_id" id="select-ayah" class="w-full"></select>
-                    <input type="text" name="nama_ayah" value="{{ old('nama_ayah', $anggotaJemaat->nama_ayah) }}" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm" placeholder="Atau ketik nama ayah secara manual jika tidak terdata...">
+                    <input type="text" name="nama_ayah" value="{{ old('nama_ayah', $anggotaJemaat->nama_ayah) }}" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm focus:ring-blue-800 focus:border-blue-800" placeholder="Atau ketik nama ayah secara manual jika tidak terdata...">
                 </div>
                 <div class="bg-gray-50 p-4 border border-gray-200 rounded">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Tautan Data Biologis Ibu</label>
                     <select name="ibu_id" id="select-ibu" class="w-full"></select>
-                    <input type="text" name="nama_ibu" value="{{ old('nama_ibu', $anggotaJemaat->nama_ibu) }}" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm" placeholder="Atau ketik nama ibu secara manual jika tidak terdata...">
+                    <input type="text" name="nama_ibu" value="{{ old('nama_ibu', $anggotaJemaat->nama_ibu) }}" class="w-full mt-3 border border-gray-300 rounded text-xs p-2 shadow-sm focus:ring-blue-800 focus:border-blue-800" placeholder="Atau ketik nama ibu secara manual jika tidak terdata...">
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-2">Kedudukan & Status Dalam Kartu Keluarga (KK) <span class="text-red-600">*</span></label>
@@ -176,7 +177,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Status Konstruksi Rumah</label>
-                    <select name="kondisi_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="kondisi_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         @foreach(['Permanen','Semi-Permanen','Darurat/Kayu'] as $kr)
                             <option value="{{ $kr }}" {{ old('kondisi_rumah', $anggotaJemaat->kondisi_rumah) == $kr ? 'selected' : '' }}>{{ strtoupper($kr) }}</option>
                         @endforeach
@@ -184,7 +185,7 @@
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Legalitas Kepemilikan Rumah</label>
-                    <select name="status_kepemilikan_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="status_kepemilikan_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         @foreach(['Milik Sendiri','Sewa','Menumpang','Dinas'] as $sr)
                             <option value="{{ $sr }}" {{ old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) == $sr ? 'selected' : '' }}>{{ strtoupper($sr) }}</option>
                         @endforeach
@@ -192,7 +193,7 @@
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Estimasi Pengeluaran Rutin</label>
-                    <select name="rentang_pengeluaran" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="rentang_pengeluaran" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         @foreach(['< 1jt','1jt - 3jt','> 3jt'] as $rp)
                             <option value="{{ $rp }}" {{ old('rentang_pengeluaran', $anggotaJemaat->rentang_pengeluaran) == $rp ? 'selected' : '' }}>{{ strtoupper($rp) }}</option>
                         @endforeach
@@ -203,18 +204,18 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Pekerjaan / Mata Pencaharian</label>
-                    <input type="text" name="pekerjaan_utama" value="{{ old('pekerjaan_utama', $anggotaJemaat->pekerjaan_utama) }}" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <input type="text" name="pekerjaan_utama" value="{{ old('pekerjaan_utama', $anggotaJemaat->pekerjaan_utama) }}" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Kepemilikan Perangkat Cerdas (Smartphone)</label>
-                    <select name="punya_smartphone" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="punya_smartphone" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         <option value="0" {{ old('punya_smartphone', $anggotaJemaat->punya_smartphone) == 0 ? 'selected' : '' }}>TIDAK MEMILIKI</option>
                         <option value="1" {{ old('punya_smartphone', $anggotaJemaat->punya_smartphone) == 1 ? 'selected' : '' }}>YA, MEMILIKI</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Akses Jaringan Internet Domestik</label>
-                    <select name="akses_internet" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white">
+                    <select name="akses_internet" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
                         <option value="0" {{ old('akses_internet', $anggotaJemaat->akses_internet) == 0 ? 'selected' : '' }}>TIDAK TERSEDIA</option>
                         <option value="1" {{ old('akses_internet', $anggotaJemaat->akses_internet) == 1 ? 'selected' : '' }}>YA, TERSEDIA</option>
                     </select>
