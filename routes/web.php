@@ -132,6 +132,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('/popup-ads', [PopupAdController::class, 'store'])->name('popup.store');
         Route::delete('/popup-ads/{popup}', [PopupAdController::class, 'destroy'])->name('popup.destroy');
         Route::patch('/popup-ads/{popup}/toggle', [PopupAdController::class, 'toggle'])->name('popup.toggle');
+        Route::get('jemaat/{jemaat}/cetak', [JemaatController::class, 'cetakPdf'])->name('jemaat.cetak');
     });
 
     // 3. E-Office / Persuratan Digital

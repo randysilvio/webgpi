@@ -42,7 +42,7 @@
                 <i class="fas fa-edit mr-1"></i> Modifikasi
             </a>
             @endcan
-            <a href="{{ route('jemaat.cetak', $jemaat->id) }}" target="_blank" class="text-center px-4 py-2 bg-white border border-gray-300 text-green-700 text-[10px] font-bold uppercase tracking-widest rounded hover:bg-green-50 transition shadow-sm">
+            <a href="{{ route('admin.jemaat.cetak', $jemaat->id) }}" target="_blank" class="text-center px-4 py-2 bg-white border border-gray-300 text-green-700 text-[10px] font-bold uppercase tracking-widest rounded hover:bg-green-50 transition shadow-sm">
                 <i class="fas fa-print mr-1"></i> Cetak Profil
             </a>
         </div>
