@@ -2,11 +2,11 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Kartu Keluarga Gereja - {{ $anggota->nama_kepala_keluarga ?? $anggota->nama_lengkap }}</title>
+    <title>Kartu Keluarga Jemaat</title>
     <style>
         @page {
             size: A4 landscape;
-            margin: 10mm 15mm 10mm 15mm; /* Atas Kanan Bawah Kiri - Agak lebar di samping agar rapi */
+            margin: 10mm 15mm 10mm 15mm;
         }
         body {
             font-family: Arial, sans-serif;
@@ -30,7 +30,7 @@
             width: 90%;
             text-align: center;
             vertical-align: middle;
-            padding-right: 10%; /* Kompensasi agar teks benar-benar di tengah relatif terhadap halaman */
+            padding-right: 10%;
         }
         .header-text h1 {
             margin: 0;
@@ -95,7 +95,7 @@
         table.data-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9pt; /* Font tabel diperkecil agar muat */
+            font-size: 9pt;
         }
         table.data-table th, table.data-table td {
             border: 1px solid #000;
@@ -113,9 +113,9 @@
         
         /* FOOTER TANDA TANGAN */
         .footer {
-            margin-top: 25px; /* Jarak dari tabel */
+            margin-top: 25px;
             width: 100%;
-            page-break-inside: avoid; /* Mencegah terpotong ke halaman baru */
+            page-break-inside: avoid;
         }
         .signature-box {
             width: 30%;
@@ -128,7 +128,7 @@
             float: left;
         }
         .signature-space {
-            height: 50px; /* Ruang tanda tangan */
+            height: 50px;
         }
         .nama-terang {
             font-weight: bold;
@@ -139,13 +139,39 @@
 </head>
 <body>
 
+    @php
+        // 1. SOLUSI BASE64 UNTUK LOGO AGAR TERBACA DI DOMPDF
+        $logoBase64 = null;
+        if(isset($setting) && $setting->logo_path) {
+            $path = storage_path('app/public/' . $setting->logo_path);
+            if (file_exists($path)) {
+                $type = pathinfo($path, PATHINFO_EXTENSION);
+                $dataImg = file_get_contents($path);
+                $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($dataImg);
+            }
+        }
+
+        // 2. SOLUSI PENCARIAN KEPALA KELUARGA YANG AKURAT
+        $namaKepalaKeluarga = '-';
+        $kepalaKeluargaObject = $keluarga->where('status_dalam_keluarga', 'Kepala Keluarga')->first();
+        
+        if ($kepalaKeluargaObject) {
+            $namaKepalaKeluarga = $kepalaKeluargaObject->nama_lengkap;
+        } elseif ($anggota->nama_kepala_keluarga) {
+            // Jika tidak ada di tabel koleksi, tapi dia nulis nama ayah/kk manual
+            $namaKepalaKeluarga = $anggota->nama_kepala_keluarga;
+        } else {
+            // Fallback terakhir: Asumsikan orang yang dicetak ini adalah pimpinannya
+            $namaKepalaKeluarga = $anggota->nama_lengkap;
+        }
+    @endphp
+
     {{-- HEADER / KOP SURAT --}}
     <table class="header-table">
         <tr>
             <td class="header-logo">
-                {{-- Logika Gambar Logo --}}
-                @if(isset($setting) && $setting->logo)
-                    <img src="{{ public_path('storage/' . $setting->logo) }}" width="70" alt="Logo">
+                @if($logoBase64)
+                    <img src="{{ $logoBase64 }}" width="70" alt="Logo">
                 @else
                     <div style="width: 70px; height: 70px; background: #eee; border:1px dashed #999; text-align:center; line-height:70px; font-size:10px;">LOGO</div>
                 @endif
@@ -170,7 +196,7 @@
         <tr>
             <td class="label">Nama Kepala Keluarga</td>
             <td class="separator">:</td>
-            <td class="isi" width="40%">{{ $anggota->nama_kepala_keluarga ?? $anggota->nama_lengkap }}</td>
+            <td class="isi" width="40%">{{ $namaKepalaKeluarga }}</td>
             
             <td class="label" style="padding-left: 30px;">Sektor Pelayanan</td>
             <td class="separator">:</td>
@@ -227,7 +253,7 @@
                     {{ ($kel->tanggal_sidi || $kel->dataSidi) ? '✔' : '-' }}
                 </td>
                 <td class="text-center" style="font-family: DejaVu Sans, sans-serif;">
-                    {{ ($kel->status_pernikahan == 'Kawin') ? '✔' : '-' }}
+                    {{ ($kel->status_pernikahan == 'Menikah' || $kel->status_pernikahan == 'Kawin') ? '✔' : '-' }}
                 </td>
             </tr>
             @endforeach
@@ -261,7 +287,7 @@
                 Kepala Keluarga
             </p>
             <div class="signature-space"></div>
-            <p class="nama-terang">{{ $anggota->nama_kepala_keluarga ?? $anggota->nama_lengkap }}</p>
+            <p class="nama-terang">{{ $namaKepalaKeluarga }}</p>
         </div>
     </div>
 
