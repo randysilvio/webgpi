@@ -13,7 +13,7 @@
         <x-slot name="tableHead">
             <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100">Uraian Dokumen</th>
             <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100 text-center">Klasifikasi</th>
-            <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100 text-right">Biaya / Infaq</th>
+            <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100 text-right">Biaya</th>
             <th class="px-6 py-3 font-bold text-gray-700 text-xs uppercase border-b-2 border-gray-800 bg-gray-100 text-center w-24">Tindakan</th>
         </x-slot>
 

@@ -31,7 +31,7 @@
                     
                     <div class="border-t border-gray-200 pt-3 mt-auto">
                         <p class="text-xs font-bold text-gray-900 mb-3 text-center">
-                            {{ $materi->harga_dokumen == 0 ? 'DOKUMEN BEBAS BIAYA (GRATIS)' : 'BIAYA INFAQ: Rp ' . number_format($materi->harga_dokumen, 0, ',', '.') }}
+                            {{ $materi->harga_dokumen == 0 ? 'DOKUMEN BEBAS BIAYA (GRATIS)' : 'BIAYA: Rp ' . number_format($materi->harga_dokumen, 0, ',', '.') }}
                         </p>
 
                         @if($materi->harga_dokumen == 0)

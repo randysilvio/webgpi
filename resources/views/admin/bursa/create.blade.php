@@ -37,7 +37,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Infaq / Biaya Penggantian (Rp) <span class="text-red-600">*</span></label>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Biaya Penggantian (Rp) <span class="text-red-600">*</span></label>
                     <input type="number" name="harga_dokumen" required min="0" value="0"
                         class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm"
                         placeholder="Isi 0 jika dokumen ini dibagikan gratis">
