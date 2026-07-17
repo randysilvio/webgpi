@@ -1,82 +1,114 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Detail User: ' . $user->name)
-@section('header-title', 'Detail Pengguna Sistem')
+@section('title', 'Tinjauan Detail Pengguna: ' . $user->name)
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6 md:p-8 max-w-3xl mx-auto">
-    {{-- Header Detail --}}
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
-        <div class="flex items-center space-x-4">
-             <div class="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center text-gray-600">
-                <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
-            </div>
-            <div>
-                <h2 class="text-2xl font-semibold text-gray-800">{{ $user->name }}</h2>
-                <p class="text-sm text-gray-500">Email: {{ $user->email }}</p>
-                <p class="text-sm text-gray-500">
-                    Roles:
-                    @forelse($user->roles as $role)
-                         <span class="ml-1 px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{{ $role->name }}</span>
-                    @empty
-                         <span class="ml-1 italic text-gray-400">Tidak ada</span>
-                    @endforelse
-                </p>
-            </div>
-        </div>
-        <div class="mt-3 sm:mt-0 flex space-x-2">
-            {{-- @hasrole('Super Admin') --}}
-            <a href="{{ route('admin.users.edit', $user->id) }}" class="bg-indigo-500 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md shadow text-sm transition duration-150 ease-in-out whitespace-nowrap">
-                Edit User
-            </a>
-            {{-- @endhasrole --}}
-            <a href="{{ route('admin.users.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md shadow text-sm transition duration-150 ease-in-out whitespace-nowrap">
-                &larr; Kembali
+<div class="max-w-4xl mx-auto space-y-6">
+    
+    {{-- Action Bar --}}
+    <div class="flex items-center justify-between mb-6">
+        <a href="{{ route('admin.users.index') }}" class="text-gray-500 hover:text-blue-800 font-bold text-xs uppercase transition flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Indeks Pengguna
+        </a>
+        <div class="flex gap-2">
+            <a href="{{ route('admin.users.edit', $user->id) }}" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-wide shadow-sm transition flex items-center">
+                <i class="fas fa-edit mr-2"></i> Modifikasi Kredensial
             </a>
         </div>
     </div>
 
-    {{-- Grid Detail Data --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm mt-6">
-
-        {{-- Kolom 1: Relasi --}}
-        <div class="space-y-3 bg-white shadow rounded-lg p-6 border">
-            <h3 class="text-base font-semibold text-gray-700 mb-2 border-b pb-1">Relasi Data</h3>
-             <p><strong class="font-medium text-gray-600 w-32 inline-block">Terhubung ke Pendeta:</strong></p>
-             @if($user->pendeta)
-                <a href="{{ route('admin.pendeta.show', $user->pendeta_id) }}" class="text-primary hover:underline ml-4">{{ $user->pendeta->nama_lengkap }} (NIPG: {{ $user->pendeta->nipg }})</a>
-             @else
-                <p class="ml-4 text-gray-500 italic">- Tidak terhubung -</p>
-             @endif
-
-             <p><strong class="font-medium text-gray-600 w-32 inline-block">Terhubung ke Klasis:</strong></p>
-             @if($user->klasisTugas)
-                 <a href="{{ route('admin.klasis.show', $user->klasis_id) }}" class="text-primary hover:underline ml-4">{{ $user->klasisTugas->nama_klasis }}</a>
-             @else
-                <p class="ml-4 text-gray-500 italic">- Tidak terhubung -</p>
-             @endif
-
-             <p><strong class="font-medium text-gray-600 w-32 inline-block">Terhubung ke Jemaat:</strong></p>
-             @if($user->jemaatTugas)
-                 <a href="{{ route('admin.jemaat.show', $user->jemaat_id) }}" class="text-primary hover:underline ml-4">{{ $user->jemaatTugas->nama_jemaat }}</a>
-             @else
-                <p class="ml-4 text-gray-500 italic">- Tidak terhubung -</p>
-             @endif
+    {{-- Kertas Dokumen Profil --}}
+    <div class="bg-white border border-gray-300 rounded shadow-sm overflow-hidden">
+        
+        <div class="bg-gray-100 border-b-2 border-gray-800 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
+            <div class="h-24 w-24 rounded bg-white border border-gray-300 shadow-sm flex items-center justify-center text-4xl font-black text-gray-400 uppercase">
+                {{ substr($user->name, 0, 1) }}
+            </div>
+            <div class="text-center md:text-left flex-grow">
+                <h1 class="text-2xl font-black text-gray-900 uppercase tracking-widest">{{ $user->name }}</h1>
+                <p class="text-sm font-medium text-gray-600 mt-1">{{ $user->email }}</p>
+                <div class="mt-3 flex flex-wrap gap-2 justify-center md:justify-start">
+                    @forelse($user->roles as $role)
+                        <span class="px-3 py-1 bg-blue-900 text-white text-[10px] font-bold uppercase tracking-widest rounded">{{ $role->name }}</span>
+                    @empty
+                        <span class="text-[10px] text-gray-500 border border-gray-300 px-3 py-1 rounded uppercase font-bold">Akses Terbatas / Kosong</span>
+                    @endforelse
+                </div>
+            </div>
         </div>
 
-        {{-- Kolom 2: Info Akun --}}
-        <div class="space-y-3 bg-white shadow rounded-lg p-6 border">
-             <h3 class="text-base font-semibold text-gray-700 mb-2 border-b pb-1">Info Akun</h3>
-             <p><strong class="font-medium text-gray-600 w-32 inline-block">ID User:</strong> {{ $user->id }}</p>
-             <p><strong class="font-medium text-gray-600 w-32 inline-block">Email Terverifikasi:</strong>
-                @if($user->email_verified_at)
-                    <span class="text-green-600">{{ $user->email_verified_at->isoFormat('DD MMMM YYYY, HH:mm') }}</span>
+        <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            {{-- Panel Administratif --}}
+            <div>
+                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 border-b border-gray-200 pb-2">Status Administratif</h3>
+                <ul class="space-y-4 text-sm">
+                    <li class="flex justify-between items-center border-b border-gray-100 pb-2">
+                        <span class="text-gray-500 text-xs font-bold uppercase">ID Pangkalan Data</span>
+                        <span class="font-mono text-gray-900 font-bold">#USR-{{ str_pad($user->id, 4, '0', STR_PAD_LEFT) }}</span>
+                    </li>
+                    <li class="flex justify-between items-center border-b border-gray-100 pb-2">
+                        <span class="text-gray-500 text-xs font-bold uppercase">Validasi Email</span>
+                        @if($user->email_verified_at)
+                            <span class="text-green-700 font-bold text-[10px] uppercase bg-green-100 px-2 py-1 rounded"><i class="fas fa-check mr-1"></i> Terverifikasi</span>
+                        @else
+                            <span class="text-red-600 font-bold text-[10px] uppercase bg-red-100 px-2 py-1 rounded">Belum Verifikasi</span>
+                        @endif
+                    </li>
+                    <li class="flex justify-between items-center border-b border-gray-100 pb-2">
+                        <span class="text-gray-500 text-xs font-bold uppercase">Tanggal Registrasi</span>
+                        <span class="font-bold text-gray-800">{{ $user->created_at->isoFormat('D MMMM YYYY') }}</span>
+                    </li>
+                    <li class="flex justify-between items-center">
+                        <span class="text-gray-500 text-xs font-bold uppercase">Update Terakhir</span>
+                        <span class="font-bold text-gray-800">{{ $user->updated_at->diffForHumans() }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Panel Penugasan --}}
+            <div>
+                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 border-b border-gray-200 pb-2">Tautan & Penugasan Wilayah</h3>
+                
+                @if($user->pegawai || $user->klasis_id || $user->jemaat_id || $user->jenis_wadah_id)
+                    <ul class="space-y-4 text-sm">
+                        @if($user->pegawai)
+                        <li class="bg-blue-50 border border-blue-200 p-3 rounded">
+                            <span class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Tautan Induk Kepegawaian</span>
+                            <a href="{{ route('admin.kepegawaian.pegawai.show', $user->pegawai->id) }}" class="font-bold text-blue-900 hover:underline">
+                                <i class="fas fa-id-card mr-2 text-blue-500"></i> {{ $user->pegawai->nipg }} - {{ $user->pegawai->nama_lengkap }}
+                            </a>
+                        </li>
+                        @endif
+
+                        @if($user->klasis_id)
+                        <li class="flex justify-between items-center border-b border-gray-100 pb-2">
+                            <span class="text-gray-500 text-xs font-bold uppercase"><i class="fas fa-map-marker-alt w-5 text-center mr-1"></i> Otoritas Klasis</span>
+                            <span class="font-bold text-gray-900">{{ $user->klasisTugas->nama_klasis ?? '-' }}</span>
+                        </li>
+                        @endif
+
+                        @if($user->jemaat_id)
+                        <li class="flex justify-between items-center border-b border-gray-100 pb-2">
+                            <span class="text-gray-500 text-xs font-bold uppercase"><i class="fas fa-church w-5 text-center mr-1"></i> Otoritas Jemaat</span>
+                            <span class="font-bold text-gray-900">{{ $user->jemaatTugas->nama_jemaat ?? '-' }}</span>
+                        </li>
+                        @endif
+
+                        @if($user->jenis_wadah_id)
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-500 text-xs font-bold uppercase"><i class="fas fa-users w-5 text-center mr-1"></i> Otoritas Wadah</span>
+                            <span class="font-bold text-gray-900">{{ $user->jenisWadah->nama_wadah ?? '-' }}</span>
+                        </li>
+                        @endif
+                    </ul>
                 @else
-                    <span class="text-red-600">Belum</span>
+                    <div class="bg-gray-50 border border-gray-200 p-6 rounded text-center">
+                        <i class="fas fa-link text-gray-400 text-2xl mb-2"></i>
+                        <p class="text-xs text-gray-600 font-bold uppercase">Akun Independen</p>
+                        <p class="text-[10px] text-gray-500 mt-1">Tidak terikat pada struktur kepegawaian atau wilayah tertentu (Tingkat Sinode).</p>
+                    </div>
                 @endif
-             </p>
-             <p><strong class="font-medium text-gray-600 w-32 inline-block">Dibuat pada:</strong> {{ $user->created_at->isoFormat('DD MMMM YYYY, HH:mm') }}</p>
-             <p><strong class="font-medium text-gray-600 w-32 inline-block">Update terakhir:</strong> {{ $user->updated_at->isoFormat('DD MMMM YYYY, HH:mm') }}</p>
+            </div>
         </div>
     </div>
 </div>

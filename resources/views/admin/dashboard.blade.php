@@ -1,205 +1,243 @@
-{{-- resources/views/admin/dashboard.blade.php --}}
-@extends('admin.layout') {{-- Mewarisi layout admin --}}
+@extends('layouts.app')
 
-@section('title', 'Dashboard') {{-- Mengisi judul halaman --}}
-@section('header-title', 'Dashboard Utama') {{-- Mengisi judul header --}}
+@section('title', 'Pusat Kendali Administrasi')
+@section('header-title', 'Tinjauan Eksekutif & Statistik')
 
-@section('content') {{-- Mulai mengisi konten utama --}}
+@section('content')
 
-    {{-- Pesan Selamat Datang & Info User --}}
-    <div class="p-4 md:p-6 bg-white rounded-lg shadow-md mb-6 border-l-4 border-primary">
-        {{-- Gunakan null coalescing operator (??) untuk fallback jika $user null --}}
-        <h2 class="text-xl font-semibold text-gray-800 mb-2">Selamat Datang, {{ $user->name ?? 'Pengguna' }}!</h2>
-        @if ($user) {{-- Hanya tampilkan info role jika user ada --}}
-            <p class="text-gray-600 text-sm mb-1">Anda login sebagai:
-                @forelse ($user->getRoleNames() as $role)
-                    <span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">{{ $role }}</span>
-                @empty
-                    <span class="text-gray-500 italic">(Tidak ada role)</span>
-                @endforelse
+{{-- UCAPAN SELAMAT DATANG BERDASARKAN ROLE --}}
+<div class="mb-6 border-b-2 border-gray-800 pb-4">
+    <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest">Selamat Datang, {{ Auth::user()->name }}</h2>
+    <p class="text-xs text-gray-600 mt-1 font-bold uppercase tracking-wider">
+        Otoritas Akses: <span class="text-blue-800">{{ Auth::user()->roles->pluck('name')->first() ?? 'Pengguna Standar' }}</span>
+        @if(Auth::user()->klasis_id) | Wilayah: KLASIS {{ strtoupper(Auth::user()->klasisTugas->nama_klasis) }} @endif
+        @if(Auth::user()->jemaat_id) | JEMAAT {{ strtoupper(Auth::user()->jemaatTugas->nama_jemaat) }} @endif
+    </p>
+</div>
+
+{{-- 1. KARTU INDIKATOR KINERJA UTAMA (KPI DEMOGRAFI) --}}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    
+    @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 3|Admin Bidang 4|Admin Klasis')
+    <div class="bg-white rounded border border-gray-300 p-5 shadow-sm border-l-4 border-l-blue-800">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Teritorial Klasis</p>
+                <h3 class="text-2xl font-black text-gray-900 mt-1">{{ number_format($stats['klasis'] ?? 0) }}</h3>
+            </div>
+            <div class="w-10 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400"><i class="fas fa-map text-lg"></i></div>
+        </div>
+    </div>
+    @endhasanyrole
+
+    @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 3|Admin Bidang 4|Admin Klasis|Admin Jemaat')
+    <div class="bg-white rounded border border-gray-300 p-5 shadow-sm border-l-4 border-l-gray-800">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Institusi Jemaat</p>
+                <h3 class="text-2xl font-black text-gray-900 mt-1">{{ number_format($stats['jemaat'] ?? 0) }}</h3>
+            </div>
+            <div class="w-10 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400"><i class="fas fa-church text-lg"></i></div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded border border-gray-300 p-5 shadow-sm border-l-4 border-l-green-700">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Populasi Umat</p>
+                <h3 class="text-2xl font-black text-gray-900 mt-1">{{ number_format($stats['anggota'] ?? 0) }}</h3>
+            </div>
+            <div class="w-10 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400"><i class="fas fa-users text-lg"></i></div>
+        </div>
+    </div>
+    @endhasanyrole
+
+    @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 3|Admin Klasis')
+    <div class="bg-gray-800 rounded border border-gray-900 p-5 shadow-sm relative overflow-hidden">
+        <div class="flex justify-between items-start relative z-10">
+            <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personel Pegawai</p>
+                <h3 class="text-2xl font-black text-white mt-1">{{ number_format($stats['pendeta'] ?? 0) }}</h3>
+            </div>
+        </div>
+        <i class="fas fa-user-tie text-5xl text-gray-700 absolute -right-2 -bottom-2 opacity-50"></i>
+    </div>
+    @endhasanyrole
+</div>
+
+{{-- 2. KARTU INDIKATOR KEUANGAN & ASET (Hanya untuk Role yang Berwenang) --}}
+@if(!Auth::user()->hasRole('Admin Bidang 3') && !Auth::user()->hasRole('Admin Bidang 4'))
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white border border-gray-300 p-4 rounded shadow-sm flex items-center justify-between">
+        <div>
+            <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Target RAPB (Tahun Berjalan)</p>
+            <p class="text-lg font-mono font-black text-gray-800 mt-1">Rp {{ number_format($stats['keuangan_target'] ?? 0, 0, ',', '.') }}</p>
+        </div>
+        <i class="fas fa-file-invoice-dollar text-3xl text-gray-300"></i>
+    </div>
+    <div class="bg-white border border-gray-300 p-4 rounded shadow-sm flex items-center justify-between">
+        <div>
+            <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Realisasi Anggaran</p>
+            <p class="text-lg font-mono font-black text-blue-800 mt-1">Rp {{ number_format($stats['keuangan_realisasi'] ?? 0, 0, ',', '.') }}</p>
+        </div>
+        <i class="fas fa-chart-line text-3xl text-blue-200"></i>
+    </div>
+    <div class="bg-white border border-gray-300 p-4 rounded shadow-sm flex items-center justify-between border-b-4 border-b-green-700">
+        <div>
+            <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Posisi Saldo Kas Akhir</p>
+            <p class="text-lg font-mono font-black {{ ($stats['saldo_kas'] ?? 0) < 0 ? 'text-red-700' : 'text-green-700' }} mt-1">
+                Rp {{ number_format($stats['saldo_kas'] ?? 0, 0, ',', '.') }}
             </p>
-            {{-- Tampilkan info Klasis/Jemaat jika ada --}}
-            @if ($user->klasisTugas)
-                <p class="text-gray-600 text-sm">Klasis Tugas: <span class="font-medium">{{ $user->klasisTugas->nama_klasis }}</span></p>
-            @endif
-            @if ($user->jemaatTugas)
-                <p class="text-gray-600 text-sm">Jemaat Tugas: <span class="font-medium">{{ $user->jemaatTugas->nama_jemaat }}</span></p>
-            @endif
-        @endif
+        </div>
+        <i class="fas fa-wallet text-3xl text-green-200"></i>
     </div>
+</div>
+@endif
 
-    {{-- Ringkasan Statistik (Menggunakan data dari $stats) --}}
-    <h2 class="text-xl font-semibold text-gray-800 mb-4">Ringkasan Statistik</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-        {{-- Card Anggota Jemaat --}}
-        <div class="bg-white rounded-lg shadow p-6 flex items-center space-x-4 border-l-4 border-primary">
-            <div class="p-3 rounded-full bg-blue-100 text-primary"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg></div>
-            <div>
-                <p class="text-sm text-gray-500 font-medium">Total Anggota Aktif</p>
-                {{-- Tampilkan statistik jika ada --}}
-                <p class="text-2xl font-bold text-gray-900">
-                    {{ $stats['total_anggota'] ?? ($stats['total_anggota_di_klasis'] ?? ($stats['total_anggota_di_jemaat'] ?? '-')) }}
-                </p>
-            </div>
-        </div>
-        {{-- Card Gereja Lokal (Jemaat) --}}
-        <div class="bg-white rounded-lg shadow p-6 flex items-center space-x-4 border-l-4 border-accent"> <div class="p-3 rounded-full bg-green-100 text-accent"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" /></svg></div>
-            <div>
-                <p class="text-sm text-gray-500 font-medium">Total Jemaat</p>
-                <p class="text-2xl font-bold text-gray-900">{{ $stats['total_jemaat'] ?? ($stats['total_jemaat_di_klasis'] ?? '-') }}</p>
-            </div>
-        </div>
-        {{-- Card Pendeta --}}
-         <div class="bg-white rounded-lg shadow p-6 flex items-center space-x-4 border-l-4 border-secondary"> <div class="p-3 rounded-full bg-orange-100 text-secondary"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg></div>
-            <div>
-                <p class="text-sm text-gray-500 font-medium">Total Pendeta Aktif</p>
-                <p class="text-2xl font-bold text-gray-900">{{ $stats['total_pendeta'] ?? '-' }}</p>
-            </div>
-        </div>
-        {{-- Card Klasis --}}
-         <div class="bg-white rounded-lg shadow p-6 flex items-center space-x-4 border-l-4 border-purple-500"> <div class="p-3 rounded-full bg-purple-100 text-purple-600"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h6M9 11.25h6m-6 4.5h6M6.75 21v-2.25a2.25 2.25 0 0 1 2.25-2.25h6a2.25 2.25 0 0 1 2.25 2.25V21" /></svg></div>
-            <div>
-                <p class="text-sm text-gray-500 font-medium">Total Klasis</p>
-                <p class="text-2xl font-bold text-gray-900">{{ $stats['total_klasis'] ?? '-' }}</p>
-            </div>
-        </div>
-    </div>
-
-    {{-- Panel Aksi Cepat / Informasi per Role --}}
-    <h2 class="text-xl font-semibold text-gray-800 mb-4 mt-8">Akses Cepat & Informasi</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-        {{-- === KONTEN KHUSUS SUPER ADMIN === --}}
-        @hasrole('Super Admin')
-        <div class="bg-gradient-to-r from-purple-500 to-indigo-600 p-6 rounded-lg shadow-lg text-white">
-            <h3 class="text-lg font-semibold mb-3 border-b border-purple-300 pb-2">Panel Super Admin</h3>
-            <p class="text-sm mb-4">Akses penuh ke semua modul sistem.</p>
-            <div class="space-y-2 text-sm">
-                <a href="{{ route('admin.users.index') }}" class="block hover:underline">- Manajemen User & Roles</a>
-                <a href="{{ route('admin.settings') }}" class="block hover:underline">- Pengaturan Situs</a>
-                <a href="{{ route('admin.pendeta.index') }}" class="block hover:underline">- Kelola Data Pendeta</a>
-                <a href="{{ route('admin.klasis.index') }}" class="block hover:underline">- Kelola Data Klasis</a>
-            </div>
-        </div>
-        @endhasrole
-
-        {{-- === KONTEN KHUSUS ADMIN BIDANG 3 === --}}
-        @hasrole('Admin Bidang 3')
-        <div class="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 rounded-lg shadow-lg text-white">
-            <h3 class="text-lg font-semibold mb-3 border-b border-blue-300 pb-2">Panel Admin Bidang 3</h3>
-            <p class="text-sm mb-4">Akses ke modul data kepegawaian dan struktur gereja.</p>
-            <div class="space-y-2 text-sm">
-                <a href="{{ route('admin.pendeta.index') }}" class="block hover:underline">- Manajemen Pendeta</a>
-                <a href="{{ route('admin.klasis.index') }}" class="block hover:underline">- Manajemen Klasis</a>
-                <a href="{{ route('admin.jemaat.index') }}" class="block hover:underline">- Manajemen Jemaat</a>
-                <a href="{{ route('admin.anggota-jemaat.index') }}" class="block hover:underline">- Lihat/Ekspor Anggota</a>
-            </div>
-        </div>
-        @endhasrole
-
-        {{-- === KONTEN KHUSUS ADMIN BIDANG 4 === --}}
-        @hasrole('Admin Bidang 4')
-        <div class="bg-gradient-to-r from-emerald-500 to-green-600 p-6 rounded-lg shadow-lg text-white">
-            <h3 class="text-lg font-semibold mb-3 border-b border-emerald-300 pb-2">Panel Admin Bidang 4</h3>
-            <p class="text-sm mb-4">Akses ke modul konten website dan komunikasi.</p>
-            <div class="space-y-2 text-sm">
-                <a href="{{ route('admin.posts.index') }}" class="block hover:underline">- Manajemen Berita</a>
-                <a href="{{ route('admin.services.index') }}" class="block hover:underline">- Manajemen Layanan</a>
-                <a href="{{ route('admin.messages.index') }}" class="block hover:underline">- Pesan Masuk</a>
-                <a href="{{ route('admin.settings') }}" class="block hover:underline">- Pengaturan Situs</a>
-            </div>
-        </div>
-        @endhasrole
-
-         {{-- === KONTEN KHUSUS ADMIN KLASIS === --}}
-        @hasrole('Admin Klasis')
-        <div class="bg-gradient-to-r from-sky-500 to-blue-500 p-6 rounded-lg shadow-lg text-white">
-            <h3 class="text-lg font-semibold mb-3 border-b border-sky-300 pb-2">Panel Admin Klasis</h3>
-             @if ($user?->klasisTugas)
-                <p class="mb-1 text-sm">Klasis: <span class="font-medium">{{ $user->klasisTugas->nama_klasis }}</span></p>
-             @else
-                 <p class="mb-1 text-yellow-300 font-semibold text-sm">Peringatan: Akun Anda belum terhubung ke Klasis.</p>
-             @endif
-            <p class="text-sm mb-4">Kelola data Jemaat dan Anggota Jemaat dalam Klasis Anda.</p>
-            <div class="space-y-2 text-sm">
-                <a href="{{ route('admin.jemaat.index') }}" class="block hover:underline">- Manajemen Jemaat</a>
-                <a href="{{ route('admin.anggota-jemaat.index') }}" class="block hover:underline">- Manajemen Anggota Jemaat</a>
-                @if ($user?->klasisTugas)
-                 <a href="{{ route('admin.klasis.edit', $user->klasis_id) }}" class="block hover:underline">- Edit Info Kontak Klasis</a>
-                @endif
-            </div>
-        </div>
-        @endhasrole
-
-        {{-- === KONTEN KHUSUS ADMIN JEMAAT === --}}
-        @hasrole('Admin Jemaat')
-        <div class="bg-gradient-to-r from-teal-500 to-cyan-600 p-6 rounded-lg shadow-lg text-white">
-            <h3 class="text-lg font-semibold mb-3 border-b border-teal-300 pb-2">Panel Admin Jemaat</h3>
-             @if ($user?->jemaatTugas)
-                <p class="mb-1 text-sm">Jemaat: <span class="font-medium">{{ $user->jemaatTugas->nama_jemaat }}</span></p>
-                @if ($user->jemaatTugas->klasis)
-                 <p class="mb-1 text-xs opacity-90">Klasis: {{ $user->jemaatTugas->klasis->nama_klasis }}</p>
-                @endif
-             @else
-                 <p class="mb-1 text-yellow-300 font-semibold text-sm">Peringatan: Akun Anda belum terhubung ke Jemaat.</p>
-             @endif
-            <p class="text-sm mb-4">Kelola data Anggota Jemaat dalam Jemaat Anda.</p>
-            <div class="space-y-2 text-sm">
-                <a href="{{ route('admin.anggota-jemaat.index') }}" class="block hover:underline">- Manajemen Anggota Jemaat</a>
-                @if ($user?->jemaatTugas)
-                <a href="{{ route('admin.jemaat.edit', $user->jemaat_id) }}" class="block hover:underline">- Edit Data Jemaat Anda</a>
-                @endif
-                <a href="{{ route('admin.anggota-jemaat.create') }}" class="block hover:underline">- Tambah Anggota Baru</a>
-            </div>
-        </div>
-        @endhasrole
-
-        {{-- === KONTEN KHUSUS PENDETA === --}}
-        @hasrole('Pendeta')
-        <div class="bg-gradient-to-r from-gray-700 to-gray-800 p-6 rounded-lg shadow-lg text-white">
-            <h3 class="text-lg font-semibold mb-3 border-b border-gray-600 pb-2">Panel Pendeta</h3>
-            <p class="text-sm mb-4">Akses lihat data dan profil.</p>
-            <div class="space-y-2 text-sm">
-                 @if($user?->pendeta)
-                    <a href="{{ route('admin.pendeta.show', $user->pendeta->id) }}" class="block hover:underline">- Lihat Profil Pendeta Anda</a>
-                 @else
-                     <span class="text-yellow-400 text-sm">Data Pendeta Anda belum terhubung.</span>
-                 @endif
-                 <a href="{{ route('admin.klasis.index') }}" class="block hover:underline">- Lihat Daftar Klasis</a>
-                <a href="{{ route('admin.jemaat.index') }}" class="block hover:underline">- Lihat Daftar Jemaat</a>
-                <a href="{{ route('admin.anggota-jemaat.index') }}" class="block hover:underline">- Lihat Daftar Anggota Jemaat</a>
-            </div>
-        </div>
-        @endhasrole
-
-        {{-- === KONTEN UMUM / FALLBACK JIKA TIDAK ADA ROLE DI ATAS === --}}
-        @if($user && !$user->hasAnyRole(['Super Admin', 'Admin Bidang 3', 'Admin Bidang 4', 'Admin Klasis', 'Admin Jemaat', 'Pendeta']))
-        <div class="bg-white p-6 rounded-lg shadow md:col-span-2 lg:col-span-3">
-            <h3 class="text-lg font-semibold text-gray-700 mb-2">Informasi</h3>
-            <p class="text-gray-600 text-sm">Dashboard Anda sedang dalam pengembangan atau Anda belum memiliki akses ke modul khusus.</p>
-        </div>
+{{-- 3. PINTASAN AKSI CEPAT (QUICK ACTIONS) --}}
+<div class="bg-gray-50 border border-gray-200 p-4 rounded mb-8 shadow-sm">
+    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-3"><i class="fas fa-bolt mr-1"></i> Panel Aksi Cepat Administratif</p>
+    <div class="flex flex-wrap gap-2">
+        @if(Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Klasis', 'Admin Jemaat']))
+        <a href="{{ route('admin.anggota-jemaat.create') }}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-gray-100 hover:text-blue-800 transition shadow-sm flex items-center">
+            <i class="fas fa-user-plus mr-2 text-gray-400"></i> Register Umat Baru
+        </a>
         @endif
 
-    </div> {{-- Akhir Grid Panel Aksi Cepat --}}
+        @if(Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 2', 'Admin Klasis', 'Admin Jemaat']))
+        <a href="{{ route('admin.perbendaharaan.transaksi.create') }}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-gray-100 hover:text-green-700 transition shadow-sm flex items-center">
+            <i class="fas fa-money-check-alt mr-2 text-gray-400"></i> Catat Transaksi Kas
+        </a>
+        @endif
 
-    {{-- Kolom Aktivitas & Grafik (placeholder) --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Aktivitas Terbaru</h3>
-            {{-- TODO: Tampilkan log aktivitas sistem jika ada --}}
-            <p class="text-gray-600 text-sm">Belum ada aktivitas terbaru untuk ditampilkan.</p>
+        @if(Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3', 'Admin Klasis']))
+        <a href="{{ route('admin.kepegawaian.pegawai.create') }}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-gray-100 hover:text-blue-800 transition shadow-sm flex items-center">
+            <i class="fas fa-id-badge mr-2 text-gray-400"></i> Registrasi Personel
+        </a>
+        @endif
+
+        @if(Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 4']))
+        <a href="{{ route('admin.e-office.surat-masuk.create') }}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-gray-100 hover:text-orange-700 transition shadow-sm flex items-center">
+            <i class="fas fa-envelope-open-text mr-2 text-gray-400"></i> Agenda Surat Masuk
+        </a>
+        @endif
+    </div>
+</div>
+
+{{-- 4. AREA PANEL UTAMA (PETA & PERINGATAN) --}}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    {{-- Panel Peta Sebaran (Ditampilkan jika berwenang) --}}
+    @if(Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Klasis', 'Admin Bidang 3', 'Admin Bidang 4']))
+    <div class="lg:col-span-2 bg-white rounded border border-gray-300 shadow-sm overflow-hidden flex flex-col">
+        <div class="px-5 py-3 border-b border-gray-200 bg-gray-100 flex justify-between items-center">
+            <h3 class="text-xs font-black text-gray-800 uppercase tracking-widest"><i class="fas fa-globe-asia mr-2 text-gray-500"></i> Peta Demografi & Sebaran Pelayanan</h3>
+            <a href="{{ route('admin.dashboard.peta_widget') }}" target="_blank" class="text-[9px] font-bold text-gray-600 hover:text-blue-800 bg-white border border-gray-300 px-2 py-1 rounded transition uppercase">Mode Penuh <i class="fas fa-external-link-alt ml-1"></i></a>
         </div>
-         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Grafik Pertumbuhan</h3>
-            {{-- TODO: Tambahkan chart/grafik jika diperlukan --}}
-            <p class="text-gray-600 text-sm">Fitur grafik akan segera hadir.</p>
+        <div class="h-80 w-full relative bg-gray-50 flex-grow">
+            <iframe src="{{ route('admin.dashboard.peta_widget') }}" class="w-full h-full border-0 absolute inset-0"></iframe>
         </div>
     </div>
+    @else
+    {{-- Jika bukan role di atas, tampilkan banner sambutan penuh --}}
+    <div class="lg:col-span-2 bg-blue-800 rounded border border-blue-900 shadow-sm overflow-hidden flex flex-col justify-center p-8 text-white">
+        <i class="fas fa-church text-6xl mb-4 text-blue-400"></i>
+        <h3 class="text-xl font-black uppercase tracking-widest mb-2">Sistem Informasi Manajemen Terpadu</h3>
+        <p class="text-sm font-medium leading-relaxed opacity-90">Selamat bertugas di pangkalan data terpusat Sinode Gereja Protestan Indonesia di Papua. Silakan gunakan menu navigasi di samping untuk mengelola administrasi sesuai dengan kewenangan pelayanan Anda.</p>
+    </div>
+    @endif
 
-@endsection {{-- Akhir bagian konten --}}
+    {{-- Panel Peringatan Pensiun (Ditampilkan untuk Bidang SDM & Pimpinan) --}}
+    @if(Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3', 'Admin Klasis']))
+    <div class="bg-white rounded border border-gray-300 shadow-sm overflow-hidden flex flex-col">
+        <div class="px-5 py-3 border-b border-gray-200 bg-gray-100">
+            <h3 class="text-xs font-black text-gray-800 uppercase tracking-widest"><i class="fas fa-user-clock mr-2 text-red-700"></i> Peringatan Batas Pensiun (1 Thn)</h3>
+        </div>
+        <div class="p-0 overflow-y-auto flex-grow max-h-80">
+            @if(isset($pensiunAkanDatang) && $pensiunAkanDatang->count() > 0)
+                <ul class="divide-y divide-gray-100">
+                    @foreach($pensiunAkanDatang as $p)
+                    <li class="px-5 py-4 hover:bg-gray-50 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold text-gray-900 uppercase">{{ $p->nama_lengkap ?? $p->nama }}</p>
+                                <p class="text-[10px] text-gray-500 font-mono mt-0.5">{{ $p->jabatan ?? 'Pegawai Organik' }}</p>
+                            </div>
+                            <span class="text-[9px] font-bold text-red-800 bg-red-50 px-2 py-1 rounded border border-red-200 uppercase tracking-widest">
+                                B.A.T: {{ \Carbon\Carbon::parse($p->tanggal_pensiun)->format('M Y') }}
+                            </span>
+                        </div>
+                    </li>
+                    @endforeach
+                </ul>
+            @else
+                <div class="text-center py-12 text-gray-500 text-sm">
+                    <i class="fas fa-check-square mb-3 text-gray-300 text-3xl block"></i>
+                    <p class="text-xs font-bold uppercase tracking-widest">Aman Terkendali</p>
+                    <p class="text-[10px] mt-1">Tidak ada personel yang memasuki masa pensiun.</p>
+                </div>
+            @endif
+        </div>
+    </div>
+    @endif
+</div>
 
-@push('scripts')
-{{-- Tambahkan script khusus dashboard jika perlu, misal untuk Chart.js --}}
-{{-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> --}}
-{{-- <script> /* Logika Chart */ </script> --}}
-@endpush
+{{-- MODAL POPUP (INFORMASI PUBLIK / IKLAN) --}}
+@if(isset($activePopup) && $activePopup)
+<div id="info-popup" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-gray-900/80 backdrop-blur-sm transition-opacity duration-300 p-4">
+    <div class="relative w-full max-w-4xl transform overflow-hidden rounded bg-transparent shadow-2xl transition-all scale-95 opacity-0" id="popup-content">
+        
+        <button onclick="closePopup()" class="absolute top-2 right-2 z-50 flex h-8 w-8 items-center justify-center rounded border border-white text-white hover:bg-white hover:text-black transition">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="flex justify-center bg-transparent">
+             <img src="{{ asset('storage/' . $activePopup->gambar_path) }}" alt="Info Popup" class="max-w-full max-h-[85vh] object-contain rounded border border-gray-600 shadow-xl">
+        </div>
+        
+        <div class="bg-gray-900 border border-gray-700 p-2 absolute bottom-4 left-1/2 transform -translate-x-1/2 rounded px-6 shadow-lg">
+            <p class="text-[10px] font-bold text-white uppercase tracking-widest"><i class="fas fa-info-circle mr-2 text-blue-400"></i> {{ $activePopup->judul }}</p>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const popupId = "{{ $activePopup->id }}";
+        const hasSeen = sessionStorage.getItem("seen_popup_" + popupId);
+        
+        if (!hasSeen) {
+            const popup = document.getElementById('info-popup');
+            const content = document.getElementById('popup-content');
+            
+            popup.classList.remove('hidden');
+            popup.classList.add('flex');
+            
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 100);
+
+            sessionStorage.setItem("seen_popup_" + popupId, "true");
+        }
+    });
+
+    function closePopup() {
+        const popup = document.getElementById('info-popup');
+        const content = document.getElementById('popup-content');
+
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+
+        setTimeout(() => {
+            popup.classList.add('hidden');
+            popup.classList.remove('flex');
+        }, 300);
+    }
+
+    document.getElementById('info-popup').addEventListener('click', function(e) {
+        if (e.target === this) { closePopup(); }
+    });
+</script>
+@endif
+
+@endsection

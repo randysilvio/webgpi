@@ -1,122 +1,122 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Manajemen User')
-@section('header-title', 'Daftar Pengguna Sistem')
+@section('title', 'Pangkalan Data Pengguna')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h2 class="text-xl font-semibold text-gray-800">Data User</h2>
-        {{-- Tombol Tambah (Hanya Super Admin) --}}
-        {{-- @hasrole('Super Admin') --}}
-        <a href="{{ route('admin.users.create') }}" class="bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow transition duration-150 ease-in-out whitespace-nowrap inline-flex items-center">
-            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Tambah User Baru
-        </a>
-        {{-- @endhasrole --}}
+<div class="space-y-6">
+    {{-- Header & Pencarian --}}
+    <div class="bg-white rounded border border-gray-300 p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-l-4 border-l-gray-800">
+        <div>
+            <h2 class="text-lg font-black text-gray-900 uppercase tracking-widest">Otorisasi & Pengguna Sistem</h2>
+            <p class="text-xs text-gray-600 mt-1">Sistem kontrol pangkalan data hak akses administrator dan pelayan.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <form action="{{ route('admin.users.index') }}" method="GET" class="relative w-full sm:w-64">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Pencarian Nama / Email..." 
+                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-gray-50">
+                <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+            </form>
+            <a href="{{ route('admin.users.create') }}" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-wide shadow-sm transition flex items-center justify-center">
+                <i class="fas fa-user-plus mr-2"></i> Registrasi Baru
+            </a>
+        </div>
     </div>
 
-    {{-- Form Pencarian --}}
-    <form method="GET" action="{{ route('admin.users.index') }}" class="mb-4">
-       <div class="flex items-center">
-           <input type="text" name="search" placeholder="Cari Nama/Email User..." value="{{ request('search') }}"
-                  class="flex-grow px-4 py-2 border border-gray-300 rounded-l-md focus:ring-primary focus:border-primary text-sm shadow-sm">
-           <button type="submit" class="bg-primary text-white px-4 py-2 rounded-r-md hover:bg-blue-700 transition duration-150 ease-in-out shadow-sm">
-               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-           </button>
-            @if(request('search'))
-           <a href="{{ route('admin.users.index') }}" class="ml-2 text-sm text-gray-600 hover:text-primary underline">Reset</a>
-           @endif
-       </div>
-   </form>
+    {{-- Tabel Arsip --}}
+    <div class="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 border-b-2 border-gray-800 text-[10px] text-gray-700 uppercase tracking-wider font-bold">
+                        <th class="px-6 py-3">Identitas Pengguna</th>
+                        <th class="px-6 py-3">Hak Otoritas (Role)</th>
+                        <th class="px-6 py-3">Wilayah Kerja / Tautan</th>
+                        <th class="px-6 py-3 text-center">Tindakan</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm divide-y divide-gray-200">
+                    @forelse($users as $user)
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="h-10 w-10 rounded bg-gray-200 border border-gray-300 flex items-center justify-center font-bold text-gray-500 uppercase">
+                                    {{ substr($user->name, 0, 1) }}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-gray-900">{{ $user->name }}</div>
+                                    <div class="text-[10px] text-gray-500 font-medium">{{ $user->email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                @forelse($user->roles as $role)
+                                    <span class="px-2 py-1 bg-gray-800 text-white text-[9px] font-bold uppercase tracking-wider rounded">{{ $role->name }}</span>
+                                @empty
+                                    <span class="text-[9px] text-gray-400 italic uppercase">Tanpa Otoritas</span>
+                                @endforelse
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-[10px] space-y-1">
+                                @if($user->pegawai)
+                                    <div class="text-blue-800 font-bold uppercase"><i class="fas fa-id-badge w-4 text-center mr-1"></i> Pegawai: {{ $user->pegawai->nipg }}</div>
+                                @endif
+                                @if($user->klasis_id)
+                                    <div class="text-gray-700"><i class="fas fa-map-marker-alt w-4 text-center mr-1 text-gray-400"></i> Klasis {{ $user->klasisTugas->nama_klasis ?? '-' }}</div>
+                                @endif
+                                @if($user->jemaat_id)
+                                    <div class="text-gray-700"><i class="fas fa-church w-4 text-center mr-1 text-gray-400"></i> Jemaat {{ $user->jemaatTugas->nama_jemaat ?? '-' }}</div>
+                                @endif
+                                @if(!$user->pegawai && !$user->klasis_id && !$user->jemaat_id)
+                                    <span class="text-gray-400 italic">Pusat Sinode / Tidak Spesifik</span>
+                                @endif
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex justify-center gap-3">
+                                <a href="{{ route('admin.users.show', $user->id) }}" class="text-gray-400 hover:text-blue-800 transition" title="Tinjau Detail">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </a>
 
-    <div class="overflow-x-auto relative shadow-md sm:rounded-lg border border-gray-200">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                <tr>
-                    <th scope="col" class="px-6 py-3">Nama</th>
-                    <th scope="col" class="px-6 py-3">Email</th>
-                    <th scope="col" class="px-6 py-3">Role</th>
-                    <th scope="col" class="px-6 py-3">Terhubung ke</th>
-                    <th scope="col" class="px-6 py-3 text-center">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($users as $user)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                            <a href="{{ route('admin.users.show', $user->id) }}" class="text-primary hover:underline" title="Lihat Detail">
-                                {{ $user->name }}
-                            </a>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">{{ $user->email }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-xs">
-                            {{-- Tampilkan roles --}}
-                            @if($user->roles->isNotEmpty())
-                                @foreach($user->roles as $role)
-                                    <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                        {{ $role->name == 'Super Admin' ? 'bg-red-100 text-red-800' : 
-                                           ($role->name == 'Admin Bidang 3' ? 'bg-purple-100 text-purple-800' : 
-                                           ($role->name == 'Admin Klasis' ? 'bg-yellow-100 text-yellow-800' : 
-                                           ($role->name == 'Admin Jemaat' ? 'bg-blue-100 text-blue-800' : 
-                                           ($role->name == 'Pendeta' ? 'bg-gray-200 text-gray-700' : 'bg-green-100 text-green-800')))) }}">
-                                        {{ $role->name }}
-                                    </span>
-                                @endforeach
-                            @else
-                                <span class="text-gray-400 italic">Tanpa Role</span>
-                            @endif
-                        </td>
-                         <td class="px-6 py-4 whitespace-nowrap text-xs">
-                            {{-- Tampilkan relasi --}}
-                            @if($user->pendeta)
-                                <span class="font-medium text-gray-700">Pendeta: {{ $user->pendeta->nama_lengkap }}</span>
-                            @elseif($user->klasisTugas)
-                                <span class="font-medium text-yellow-700">Klasis: {{ $user->klasisTugas->nama_klasis }}</span>
-                            @elseif($user->jemaatTugas)
-                                 <span class="font-medium text-blue-700">Jemaat: {{ $user->jemaatTugas->nama_jemaat }}</span>
-                            @else
-                                -
-                            @endif
-                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
-                            {{-- @hasrole('Super Admin') --}}
-                            <a href="{{ route('admin.users.edit', $user->id) }}" class="text-indigo-600 hover:text-indigo-900 mr-3 font-medium" title="Edit">Edit</a>
-                            
-                            {{-- Jangan hapus user ID 1 --}}
-                            @if($user->id != 1) 
-                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus user {{ $user->name }}?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-900 font-medium" title="Hapus">Hapus</button>
-                                </form>
-                            @else
-                                <span class="text-gray-400 cursor-not-allowed" title="Super Admin Utama tidak dapat dihapus">Hapus</span>
-                            @endif
-                            {{-- @endhasrole --}}
+                                @if(Auth::user()->hasRole('Super Admin') && $user->id !== Auth::id() && !$user->hasRole('Super Admin'))
+                                    <a href="{{ route('admin.users.impersonate', $user->id) }}" class="text-gray-400 hover:text-green-700 transition" title="Login Sebagai Pengguna Ini" onclick="return confirm('Anda akan dialihkan dan bertindak sebagai {{ $user->name }}. Lanjutkan?');">
+                                        <i class="fas fa-user-secret text-sm"></i>
+                                    </a>
+                                @endif
+
+                                <a href="{{ route('admin.users.edit', $user->id) }}" class="text-gray-400 hover:text-yellow-600 transition" title="Modifikasi">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </a>
+                                
+                                @if($user->id !== 1 && $user->id !== Auth::id())
+                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Peringatan: Pencabutan akses ini bersifat permanen. Lanjutkan?');">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-gray-400 hover:text-red-700 transition" title="Cabut Akses">
+                                            <i class="fas fa-trash-alt text-sm"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                         </td>
                     </tr>
-                @empty
-                    <tr class="bg-white border-b">
-                        <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">
-                            Tidak ada data user yang ditemukan
-                            @if(request('search'))
-                                untuk pencarian "{{ request('search') }}"
-                            @endif
-                            .
-                            {{-- @hasrole('Super Admin') --}}
-                            <a href="{{ route('admin.users.create') }}" class="text-primary hover:underline ml-2">Tambah Baru?</a>
-                            {{-- @endhasrole --}}
+                    @empty
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center text-gray-500 text-sm">
+                            <i class="fas fa-users-slash text-3xl mb-3 block text-gray-300"></i>
+                            Pangkalan data pengguna tidak ditemukan.
                         </td>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    {{-- Pagination Links --}}
-    <div class="mt-6">
-        {{ $users->appends(request()->query())->links('vendor.pagination.tailwind') }}
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        
+        @if($users->hasPages())
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                {{ $users->links() }}
+            </div>
+        @endif
     </div>
 </div>
 @endsection

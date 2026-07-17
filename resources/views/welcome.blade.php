@@ -25,28 +25,89 @@
         .prose h1 { @apply text-3xl font-bold mb-4 text-gray-900; } .prose h2 { @apply text-2xl font-semibold mt-6 mb-3 text-gray-800; } .prose h3 { @apply text-xl font-semibold mt-5 mb-2 text-gray-800; } .prose p { @apply mb-4 leading-relaxed text-gray-700; } .prose ul { @apply list-disc list-inside mb-4 pl-4 text-gray-700; } .prose ol { @apply list-decimal list-inside mb-4 pl-4 text-gray-700; } .prose a { @apply text-primary hover:underline; } .prose blockquote { @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 my-6; } .prose img { @apply rounded-lg shadow-md my-6 max-w-full h-auto; }
         .flash-message-public { animation: fadeOutPublic 5s forwards; }
         @keyframes fadeOutPublic { 0% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; display: none; } }
+        
+        /* CLASS TAMBAHAN UNTUK SLIDESHOW */
+        .slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1s ease-in-out; z-index: 0; }
+        .slide.active { opacity: 1; z-index: 10; }
     </style>
 </head>
 <body class="h-full bg-white font-sans antialiased">
 
+    {{-- INDIKATOR MODE LURING (OFFLINE) --}}
+    <div id="offline-indicator" class="hidden fixed top-20 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-2 rounded-full shadow-2xl z-[100] items-center animate-bounce">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a2 2 0 112.828 2.828m-2.828-2.828l2.828 2.828"></path></svg>
+        <span class="font-bold text-xs">Anda sedang Offline. Menggunakan memori perangkat.</span>
+    </div>
+
     <nav class="fixed w-full z-50 bg-white/95 backdrop-blur-sm shadow-lg">
-        {{-- ... (Kode Navigasi Lengkap seperti sebelumnya) ... --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> <div class="flex justify-between items-center py-4"> <div class="flex items-center space-x-3 cursor-pointer" onclick="window.scrollTo({ top: 0, behavior: 'smooth' });"> @if ($setting->logo_path && Storage::disk('public')->exists($setting->logo_path))<img src="{{ Storage::url($setting->logo_path) }}" alt="Logo {{ $setting->site_name ?? 'GPI Papua' }}" class="nav-logo rounded-lg shadow-md">@else<div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md"><svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7v13h18V7L12 2zm0 2.236L18.99 8H5.01L12 4.236zM5 18V9.618l7 4.118 7-4.118V18H5z"/></svg></div>@endif <div> <h1 class="text-xl font-bold text-gray-900">{{ $setting->site_name ?? 'Sinode GPI Papua' }}</h1> <p class="text-sm text-gray-600">{{ $setting->site_tagline ?? 'Gereja Protestan di Indonesia' }}</p> </div> </div> <div class="hidden md:flex items-center space-x-8"> <a href="#beranda" class="nav-item text-gray-700 font-medium">Beranda</a> <a href="#tentang" class="nav-item text-gray-700 font-medium">Tentang</a> <a href="#pelayanan" class="nav-item text-gray-700 font-medium">Pelayanan</a> <a href="#kegiatan" class="nav-item text-gray-700 font-medium">Kegiatan</a> <a href="#kontak" class="nav-item text-gray-700 font-medium">Kontak</a> <a href="{{ route('admin.dashboard') }}" class="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow hover:shadow-md"> Login Admin </a> </div> <button class="md:hidden p-2 text-gray-600 hover:text-primary" id="mobile-menu-btn" aria-label="Toggle Menu"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button> </div> </div> <div class="md:hidden hidden bg-white border-t" id="mobile-menu"> <div class="px-4 py-2 space-y-2"> <a href="#beranda" class="block py-2 text-gray-700 hover:text-primary font-medium">Beranda</a> <a href="#tentang" class="block py-2 text-gray-700 hover:text-primary font-medium">Tentang</a> <a href="#pelayanan" class="block py-2 text-gray-700 hover:text-primary font-medium">Pelayanan</a> <a href="#kegiatan" class="block py-2 text-gray-700 hover:text-primary font-medium">Kegiatan</a> <a href="#kontak" class="block py-2 text-gray-700 hover:text-primary font-medium">Kontak</a> <a href="{{ route('admin.dashboard') }}" class="block w-full text-center bg-primary text-white py-2 rounded-lg mt-2 font-medium hover:bg-blue-700">Login Admin</a> </div> </div>
     </nav>
 
     <section id="beranda" class="hero-gradient min-h-screen flex items-center justify-center text-white relative overflow-hidden pt-20">
-        {{-- ... (Kode Hero Section Lengkap seperti sebelumnya) ... --}}
-        <div class="absolute inset-0 bg-black/30"></div> <div class="relative z-10 text-center px-4 max-w-4xl mx-auto animate-fade-in"> <div class="floating mb-8"> @if ($setting->logo_path && Storage::disk('public')->exists($setting->logo_path)) <img src="{{ Storage::url($setting->logo_path) }}" alt="Logo {{ $setting->site_name ?? 'GPI Papua' }}" class="hero-logo mx-auto opacity-90 shadow-lg rounded-full border-4 border-white/50"> @else <div class="w-24 h-24 mx-auto opacity-90 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg border-4 border-white/50"><svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7v13h18V7L12 2zm0 2.236L18.99 8H5.01L12 4.236zM5 18V9.618l7 4.118 7-4.118V18H5z"/></svg></div> @endif </div> <h1 class="text-5xl md:text-7xl font-bold mb-6 text-shadow"> {{ $setting->site_name ?? 'Sinode GPI Papua' }} </h1> <p class="text-xl md:text-2xl mb-8 text-white/90 max-w-2xl mx-auto"> {{ $setting->hero_text ?? 'Melayani dengan kasih, membangun iman, dan mempersatukan umat Kristiani di tanah Papua.' }} </p> <div class="flex flex-col sm:flex-row gap-4 justify-center"> <a href="#tentang" class="bg-white text-primary px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-md hover:shadow-lg"> Pelajari Lebih Lanjut </a> <a href="#kontak" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors shadow-md hover:shadow-lg"> Hubungi Kami </a> </div> </div> <div class="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full floating opacity-50"></div> <div class="absolute bottom-20 right-10 w-16 h-16 bg-white/10 rounded-full floating opacity-50" style="animation-delay: 1s;"></div> <div class="absolute top-1/2 left-20 w-12 h-12 bg-white/10 rounded-full floating opacity-50" style="animation-delay: 2s;"></div>
+        @if(isset($slideshows) && $slideshows->count() > 0)
+            {{-- MODE SLIDESHOW AKTIF (Jika ada data popup terjadwal yang masih berlaku) --}}
+            <div id="slider-container" class="absolute inset-0 w-full h-full z-0">
+                @foreach($slideshows as $index => $slide)
+                    <div class="slide w-full h-full {{ $index === 0 ? 'active' : '' }}">
+                        <img src="{{ Storage::url($slide->gambar_path) }}" alt="{{ $slide->judul }}" class="absolute inset-0 w-full h-full object-cover">
+                        {{-- Overlay Gelap agar teks terbaca --}}
+                        <div class="absolute inset-0 bg-black/50"></div>
+                        
+                        <div class="absolute inset-0 flex items-center justify-center text-center px-4 z-20">
+                            <div class="max-w-4xl mx-auto mt-10 md:mt-0 animate-fade-in">
+                                <h1 class="text-4xl md:text-6xl font-bold mb-6 text-white text-shadow">{{ $slide->judul }}</h1>
+                                
+                                @if(isset($slide->link_url) && $slide->link_url)
+                                    <a href="{{ $slide->link_url }}" target="_blank" class="bg-primary text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"> Pelajari Lebih Lanjut </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Navigasi Manual Slider (Kiri/Kanan & Titik) --}}
+            @if($slideshows->count() > 1)
+                <button id="prevSlide" class="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white p-3 rounded-full z-30 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                <button id="nextSlide" class="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white p-3 rounded-full z-30 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                
+                <div class="absolute bottom-10 left-0 right-0 flex justify-center gap-2 z-30">
+                    @foreach($slideshows as $index => $slide)
+                        <button class="slide-dot w-3 h-3 rounded-full bg-white/40 hover:bg-white transition {{ $index === 0 ? 'bg-white' : '' }}" onclick="goToSlide({{ $index }})"></button>
+                    @endforeach
+                </div>
+            @endif
+        @else
+            {{-- MODE DESAIN ASLI (Jika kosong atau kedaluwarsa) --}}
+            <div class="absolute inset-0 bg-black/30 z-0"></div> 
+            <div class="relative z-10 text-center px-4 max-w-4xl mx-auto animate-fade-in"> 
+                <div class="floating mb-8"> 
+                    @if ($setting->logo_path && Storage::disk('public')->exists($setting->logo_path)) 
+                        <img src="{{ Storage::url($setting->logo_path) }}" alt="Logo {{ $setting->site_name ?? 'GPI Papua' }}" class="hero-logo mx-auto opacity-90 shadow-lg rounded-full border-4 border-white/50"> 
+                    @else 
+                        <div class="w-24 h-24 mx-auto opacity-90 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg border-4 border-white/50"><svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7v13h18V7L12 2zm0 2.236L18.99 8H5.01L12 4.236zM5 18V9.618l7 4.118 7-4.118V18H5z"/></svg></div> 
+                    @endif 
+                </div> 
+                <h1 class="text-5xl md:text-7xl font-bold mb-6 text-shadow"> {{ $setting->site_name ?? 'Sinode GPI Papua' }} </h1> 
+                <p class="text-xl md:text-2xl mb-8 text-white/90 max-w-2xl mx-auto"> {{ $setting->hero_text ?? 'Melayani dengan kasih, membangun iman, dan mempersatukan umat Kristiani di tanah Papua.' }} </p> 
+                <div class="flex flex-col sm:flex-row gap-4 justify-center"> 
+                    <a href="#tentang" class="bg-white text-primary px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-md hover:shadow-lg"> Pelajari Lebih Lanjut </a> 
+                    <a href="#kontak" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors shadow-md hover:shadow-lg"> Hubungi Kami </a> 
+                </div> 
+            </div> 
+            <div class="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full floating opacity-50 z-0"></div> 
+            <div class="absolute bottom-20 right-10 w-16 h-16 bg-white/10 rounded-full floating opacity-50 z-0" style="animation-delay: 1s;"></div> 
+            <div class="absolute top-1/2 left-20 w-12 h-12 bg-white/10 rounded-full floating opacity-50 z-0" style="animation-delay: 2s;"></div>
+        @endif
     </section>
 
     <section id="tentang" class="py-20 bg-gray-50">
-        {{-- ... (Kode About Section Lengkap seperti sebelumnya) ... --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> <div class="text-center mb-16 animate-slide-up"> <span class="text-primary font-semibold uppercase tracking-wider text-sm">Tentang Kami</span> <h2 class="text-4xl font-bold text-gray-900 mt-2 mb-4">Mengenal {{ $setting->site_name ?? 'Sinode GPI Papua' }}</h2> <p class="text-xl text-gray-600 max-w-3xl mx-auto"> Sinode Gereja Protestan Indonesia (GPI) di Papua adalah wadah persatuan dan pelayanan gereja-gereja Protestan di Tanah Papua, berkomitmen pada pertumbuhan iman dan kesejahteraan umat. </p> </div> <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"> <div class="animate-slide-up"> <h3 class="text-2xl font-bold text-gray-900 mb-6">Sejarah Singkat & Visi</h3> <p class="text-gray-600 mb-6 leading-relaxed"> {{ $setting->about_us ?? 'GPI di Papua secara resmi melembaga pada **25 Mei 1985**, lahir dari hasil penginjilan dan pelayanan berbagai badan zending serta Gereja Protestan Maluku (GPM). Sebagai perwujudan gereja Kristus yang Esa, Kudus, Am, dan Rasuli, kami terpanggil untuk menjadi berkat di tengah masyarakat, bangsa, dan negara Indonesia yang berazaskan Pancasila.' }} </p> <p class="text-gray-600 mb-6 leading-relaxed"> {{ $setting->vision ?? 'Visi kami adalah membangun jemaat yang berakar kuat dalam iman kepada Yesus Kristus, mampu bersaksi, melayani, dan membawa dampak positif bagi sesama serta lingkungan hidup, khususnya di Tanah Papua.' }} </p> <div class="flex items-center space-x-4 p-4 bg-blue-50 border-l-4 border-primary rounded"> <svg class="w-6 h-6 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg> <span class="text-gray-700 font-medium">Melayani dengan integritas dan kasih Kristus.</span> </div> </div> <div class="animate-slide-up flex justify-center items-center"> @if ($setting->about_image_path && Storage::disk('public')->exists($setting->about_image_path)) <img src="{{ Storage::url($setting->about_image_path) }}" alt="Ilustrasi {{ $setting->site_name ?? 'GPI Papua' }}" class="rounded-lg shadow-lg max-h-80 w-auto"> @else <img src="https://via.placeholder.com/500x350/EBF4FF/1E40AF?text=Ilustrasi+GPI+Papua" alt="Ilustrasi GPI Papua Placeholder" class="rounded-lg shadow-lg"> @endif </div> </div> </div>
     </section>
 
     <section id="pelayanan" class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16 animate-slide-up"> <span class="text-primary font-semibold uppercase tracking-wider text-sm">Amanat Pelayanan</span> <h2 class="text-4xl font-bold text-gray-900 mt-2 mb-4">Pelayanan Holistik Kami</h2> <p class="text-xl text-gray-600 max-w-3xl mx-auto"> Meneladani pola pelayanan Yesus Kristus, kami hadir sebagai hamba, imam, nabi, dan gembala bagi umat dan masyarakat. </p> </div>
+            <div class="text-center mb-16 animate-slide-up"> <span class="text-primary font-semibold uppercase tracking-wider text-sm">Amanat Pelayanan</span> <h2 class="text-4xl font-bold text-gray-900 mt-2 mb-4">Pelayanan Holistik Kami</h2> <p class="text-xl text-gray-600 max-w-3xl mx-auto"> Meneladani pola pelayanan Yesus Kristus, kami hadir sebagai gembala bagi umat dan masyarakat. </p> </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 @forelse ($services as $service)
                     @php
@@ -173,7 +234,7 @@
 
     <footer class="bg-gray-900 text-gray-400 py-12">
         {{-- ... (Kode Footer Lengkap seperti sebelumnya) ... --}}
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8"> <div class="space-y-4"> <div class="flex items-center space-x-3"> @if ($setting->logo_path && Storage::disk('public')->exists($setting->logo_path))<img src="{{ Storage::url($setting->logo_path) }}" alt="Logo {{ $setting->site_name ?? 'GPI Papua' }}" class="h-10 w-10 object-contain rounded-lg shadow-md bg-white p-1">@else<div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md"><svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7v13h18V7L12 2zm0 2.236L18.99 8H5.01L12 4.236zM5 18V9.618l7 4.118 7-4.118V18H5z"/></svg></div>@endif <div> <h3 class="text-lg font-bold text-white">{{ $setting->site_name ?? 'Sinode GPI Papua' }}</h3> <p class="text-sm">Melayani dengan Kasih</p> </div> </div> <p class="text-sm leading-relaxed"> {{ $setting->footer_description ?? 'Wadah persekutuan dan pelayanan Gereja Protestan Indonesia di Tanah Papua, membawa terang Injil dan membangun komunitas iman yang kuat.' }} </p> <div class="flex space-x-4"> @if($setting->social_facebook)<a href="{{ $setting->social_facebook }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="Facebook"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg></a>@endif @if($setting->social_youtube)<a href="{{ $setting->social_youtube }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="YouTube"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg></a>@endif @if($setting->social_instagram)<a href="{{ $setting->social_instagram }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="Instagram"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.069-4.85.069-3.205 0-3.584-.012-4.849-.069-3.225-.148-4.771-1.664-4.919-4.919-.058-1.265-.069-1.644-.069-4.849 0-3.204.012-3.583.069-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>@endif @if($setting->social_twitter)<a href="{{ $setting->social_twitter }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="Twitter/X"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>@endif </div> </div> <div> <h4 class="text-lg font-semibold text-white mb-4">Navigasi Cepat</h4> <ul class="space-y-2 text-sm"> <li><a href="{{ route('home') }}#beranda" class="hover:text-white transition-colors">Beranda</a></li> <li><a href="{{ route('home') }}#tentang" class="hover:text-white transition-colors">Tentang Kami</a></li> <li><a href="{{ route('home') }}#pelayanan" class="hover:text-white transition-colors">Pelayanan</a></li> <li><a href="{{ route('posts.public.index') }}" class="hover:text-white transition-colors">Kegiatan & Berita</a></li> <li><a href="{{ route('home') }}#kontak" class="hover:text-white transition-colors">Kontak</a></li> <li><a href="#" class="hover:text-white transition-colors">Peta Situs</a></li> </ul> </div> <div> <h4 class="text-lg font-semibold text-white mb-4">Tautan Terkait</h4> <ul class="space-y-2 text-sm"> <li><a href="https://pgi.or.id/" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">PGI</a></li> <li><a href="#" class="hover:text-white transition-colors">GPI</a></li> <li><a href="#" class="hover:text-white transition-colors">Sekolah Teologi</a></li> <li><a href="#" class="hover:text-white transition-colors">Dokumen</a></li> </ul> </div> <div> <h4 class="text-lg font-semibold text-white mb-4">Sekretariat</h4> <div class="space-y-2 text-sm"> <p>{{ Str::limit($setting->contact_address ?? '[Alamat belum diatur]', 50, '') }}</p> <p>Telp: {{ explode(',', $setting->contact_phone ?? '')[0] ?? '[Telepon belum diatur]' }}</p> <p>Email: {{ explode(',', $setting->contact_email ?? '')[0] ?? '[Email belum diatur]' }}</p> </div> </div> </div> <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm"> <p> &copy; {{ date('Y') }} {{ $setting->site_name ?? 'Sinode GPI Papua' }}. Semua hak dilindungi undang-undang. </p> <p class="mt-1">Dibuat dengan ❤️ untuk melayani umat.</p> </div> </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8"> <div class="space-y-4"> <div class="flex items-center space-x-3"> @if ($setting->logo_path && Storage::disk('public')->exists($setting->logo_path))<img src="{{ Storage::url($setting->logo_path) }}" alt="Logo {{ $setting->site_name ?? 'GPI Papua' }}" class="h-10 w-10 object-contain rounded-lg shadow-md bg-white p-1">@else<div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md"><svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7v13h18V7L12 2zm0 2.236L18.99 8H5.01L12 4.236zM5 18V9.618l7 4.118 7-4.118V18H5z"/></svg></div>@endif <div> <h3 class="text-lg font-bold text-white">{{ $setting->site_name ?? 'Sinode GPI Papua' }}</h3> <p class="text-sm">Melayani dengan Kasih</p> </div> </div> <p class="text-sm leading-relaxed"> {{ $setting->footer_description ?? 'Wadah persekutuan dan pelayanan Gereja Protestan Indonesia di Tanah Papua, membawa terang Injil dan membangun komunitas iman yang kuat.' }} </p> <div class="flex space-x-4"> @if($setting->social_facebook)<a href="{{ $setting->social_facebook }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="Facebook"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg></a>@endif @if($setting->social_youtube)<a href="{{ $setting->social_youtube }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="YouTube"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg></a>@endif @if($setting->social_instagram)<a href="{{ $setting->social_instagram }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="Instagram"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.069-4.85.069-3.205 0-3.584-.012-4.849-.069-3.225-.148-4.771-1.664-4.919-4.919-.058-1.265-.069-1.644-.069-4.849 0-3.204.012-3.583.069-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>@endif @if($setting->social_twitter)<a href="{{ $setting->social_twitter }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="Twitter/X"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>@endif </div> </div> <div> <h4 class="text-lg font-semibold text-white mb-4">Navigasi Cepat</h4> <ul class="space-y-2 text-sm"> <li><a href="{{ route('home') }}#beranda" class="hover:text-white transition-colors">Beranda</a></li> <li><a href="{{ route('home') }}#tentang" class="hover:text-white transition-colors">Tentang Kami</a></li> <li><a href="{{ route('home') }}#pelayanan" class="hover:text-white transition-colors">Pelayanan</a></li> <li><a href="{{ route('posts.public.index') }}" class="hover:text-white transition-colors">Kegiatan & Berita</a></li> <li><a href="{{ route('home') }}#kontak" class="hover:text-white transition-colors">Kontak</a></li> <li><a href="#" class="hover:text-white transition-colors">Peta Situs</a></li> </ul> </div> <div> <h4 class="text-lg font-semibold text-white mb-4">Tautan Terkait</h4> <ul class="space-y-2 text-sm"> <li><a href="https://pgi.or.id/" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">PGI</a></li> <li><a href="#" class="hover:text-white transition-colors">GPI</a></li> <li><a href="#" class="hover:text-white transition-colors">Sekolah Teologi</a></li> <li><a href="#" class="hover:text-white transition-colors">Dokumen</a></li> </ul> </div> <div> <h4 class="text-lg font-semibold text-white mb-4">Sekretariat</h4> <div class="space-y-2 text-sm"> <p>{{ Str::limit($setting->contact_address ?? '[Alamat belum diatur]', 50, '') }}</p> <p>Telp: {{ explode(',', $setting->contact_phone ?? '')[0] ?? '[Telepon belum diatur]' }}</p> <p>Email: {{ explode(',', $setting->contact_email ?? '')[0] ?? '[Email belum diatur]' }}</p> </div> </div> </div> <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm"> <p> &copy; {{ date('Y') }} {{ $setting->site_name ?? 'Sinode GPI Papua' }}. Semua hak dilindungi undang-undang. </p> <p class="mt-1">KOMINFO GPI PAPUA.</p> </div> </div>
     </footer>
 
     {{-- Script JavaScript (Sama seperti sebelumnya) --}}
@@ -182,17 +243,6 @@
         const mobileMenuBtn = document.getElementById('mobile-menu-btn'); const mobileMenu = document.getElementById('mobile-menu'); const navLinks = mobileMenu.querySelectorAll('a');
         mobileMenuBtn.addEventListener('click', () => { const isHidden = mobileMenu.classList.toggle('hidden'); mobileMenuBtn.innerHTML = isHidden ? `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>` : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`; });
         navLinks.forEach(link => { link.addEventListener('click', () => { mobileMenu.classList.add('hidden'); mobileMenuBtn.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>`; }); });
-
-        // --- Contact form submission (Contoh, belum fungsional) ---
-        // Kita biarkan form submit secara normal ke backend sekarang
-        /*
-        document.getElementById('contact-form')?.addEventListener('submit', function(e) {
-             // Hapus preventDefault agar form bisa dikirim ke backend
-             // e.preventDefault(); 
-             // showNotification('Pesan berhasil dikirim! Kami akan segera menghubungi Anda.', 'success');
-             // this.reset(); 
-        });
-        */
 
         // --- Event/Post links ---
          document.querySelectorAll('#kegiatan a[href="#"]').forEach(element => {
@@ -223,6 +273,80 @@
                 showNotification("{{ $errorMessage }}", 'error');
             @endif
         });
+
+        // ==========================================
+        // SCRIPT REGISTRASI SERVICE WORKER & OFFLINE
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+        function updateOnlineStatus() {
+            const indicator = document.getElementById('offline-indicator');
+            if (navigator.onLine) {
+                indicator.classList.add('hidden');
+                indicator.classList.remove('flex');
+            } else {
+                indicator.classList.remove('hidden');
+                indicator.classList.add('flex');
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+
+        // ==========================================
+        // SCRIPT CAROUSEL / SLIDESHOW
+        // ==========================================
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.slide-dot');
+        let currentSlide = 0;
+        let slideInterval;
+
+        function showSlide(index) {
+            if(slides.length === 0) return;
+            
+            // Sembunyikan semua
+            slides.forEach(s => s.classList.remove('active'));
+            dots.forEach(d => d.classList.replace('bg-white', 'bg-white/40'));
+            
+            // Pastikan index valid
+            if (index >= slides.length) currentSlide = 0;
+            else if (index < 0) currentSlide = slides.length - 1;
+            else currentSlide = index;
+
+            // Tampilkan yang aktif
+            slides[currentSlide].classList.add('active');
+            if(dots.length > 0) dots[currentSlide].classList.replace('bg-white/40', 'bg-white');
+        }
+
+        function nextSlide() { showSlide(currentSlide + 1); }
+        function prevSlide() { showSlide(currentSlide - 1); }
+        function goToSlide(index) { 
+            showSlide(index);
+            resetInterval();
+        }
+
+        function startInterval() {
+            if(slides.length > 1) {
+                slideInterval = setInterval(nextSlide, 5000); // Ganti tiap 5 detik
+            }
+        }
+
+        function resetInterval() {
+            clearInterval(slideInterval);
+            startInterval();
+        }
+
+        // Listener Tombol
+        const btnNext = document.getElementById('nextSlide');
+        const btnPrev = document.getElementById('prevSlide');
+        if(btnNext) btnNext.addEventListener('click', () => { nextSlide(); resetInterval(); });
+        if(btnPrev) btnPrev.addEventListener('click', () => { prevSlide(); resetInterval(); });
+
+        // Mulai Slideshow saat pertama load
+        startInterval();
     </script>
 </body>
 </html>

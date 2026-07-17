@@ -1,57 +1,64 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Import Data Jemaat')
-@section('header-title', 'Import Data Jemaat')
+@section('title', 'Migrasi Pangkalan Data Jemaat')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6 md:p-8 max-w-2xl mx-auto">
-    <h2 class="text-xl font-semibold text-gray-800 mb-6 border-b pb-3">Import Jemaat dari Excel/CSV</h2>
+<div class="max-w-2xl mx-auto mt-8">
+    <div class="bg-white rounded border border-gray-300 shadow-sm overflow-hidden">
+        
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center border-l-4 border-l-green-700">
+            <div>
+                <h2 class="font-black text-gray-900 uppercase text-sm tracking-widest">Import Basis Data Jemaat</h2>
+                <p class="text-[10px] font-bold text-gray-500 mt-1">Sistem migrasi massal menggunakan format Excel / CSV.</p>
+            </div>
+            <a href="{{ route('admin.jemaat.index') }}" class="text-gray-400 hover:text-red-700 transition" title="Batal & Tutup"><i class="fas fa-times text-lg"></i></a>
+        </div>
 
-    {{-- Tampilkan Pesan Error/Warning --}}
-    @if (session('error') && is_string(session('error')) && str_contains(session('error'), 'kesalahan validasi'))
-        <div class="flash-message mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm" role="alert"> <p class="font-bold">Gagal Import:</p> <pre class="mt-2 text-xs whitespace-pre-wrap font-mono">{{ session('error') }}</pre> </div>
-    @elseif (session('error'))
-        <div class="flash-message mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm" role="alert"> <p class="font-bold">Gagal Import:</p> <p class="mt-1 text-sm">{{ session('error') }}</p> </div>
-    @endif
-     @if (session('warning'))
-        <div class="flash-message mb-6 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow-sm" role="alert"> <p class="font-bold">Peringatan Import:</p> <pre class="mt-2 text-xs whitespace-pre-wrap font-mono">{{ session('warning') }}</pre> </div>
-    @endif
+        <div class="p-6 md:p-8">
+            {{-- Alert Kegagalan --}}
+            @if(session('error'))
+                <div class="mb-6 bg-red-50 border-l-4 border-red-700 p-4 text-xs text-red-800 rounded shadow-sm flex items-start">
+                    <i class="fas fa-exclamation-triangle mt-0.5 mr-3 text-red-600"></i>
+                    <div>
+                        <p class="font-black uppercase tracking-wider mb-1">Gagal Memproses Dokumen</p>
+                        <p>{{ session('error') }}</p>
+                    </div>
+                </div>
+            @endif
 
-    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
-        <h4 class="font-semibold mb-2">Petunjuk Import Data Jemaat:</h4>
-        <ol class="list-decimal list-inside space-y-1">
-            <li>Unduh template file di bawah ini.</li>
-            <li>Isi data jemaat sesuai kolom. Kolom **Nama Jemaat**, **ID Klasis**, **Status Jemaat**, **Jenis Jemaat** wajib diisi.</li>
-            <li>Pastikan **ID Klasis** yang dimasukkan valid (ada di sistem).</li>
-            <li>Jika **Kode Jemaat** atau **Email Jemaat** diisi, pastikan nilainya unik.</li>
-            <li>Simpan file dalam format **.xlsx** (disarankan) atau .csv.</li>
-            <li>Pilih file dan klik "Import Data".</li>
-        </ol>
-        <p class="mt-3">
-            <a href="{{ route('admin.jemaat.export', ['template' => 'yes']) }}"
-               class="inline-block bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow text-xs transition duration-150 ease-in-out">
-                Unduh Template Import Jemaat (.xlsx)
-            </a>
-        </p>
+            {{-- Instruksi Operasional --}}
+            <div class="mb-8 p-5 bg-blue-50 border border-blue-200 rounded shadow-sm text-blue-900">
+                <h4 class="font-black mb-3 text-[10px] uppercase tracking-widest border-b border-blue-200 pb-2"><i class="fas fa-info-circle mr-2"></i> Petunjuk Standardisasi Data:</h4>
+                <ol class="list-decimal list-inside space-y-2 text-xs font-medium">
+                    <li>Unduh <strong>Template Excel Rasmi</strong> dari tombol di bawah.</li>
+                    <li>Jangan mengubah format baris pertama (Header Kolom).</li>
+                    <li>Kolom <strong class="text-red-700">Nama Jemaat</strong> dan <strong class="text-red-700">ID Klasis</strong> bersifat mandat/wajib diisi.</li>
+                    <li>Pastikan <strong>Kode Jemaat</strong> unik (tidak menduplikasi data yang telah ada di server).</li>
+                </ol>
+                <div class="mt-4 pt-4 border-t border-blue-200 flex justify-end">
+                    <a href="{{ route('admin.jemaat.export', ['template' => 'yes']) }}" class="text-[10px] font-black text-green-800 bg-green-100 border border-green-300 hover:bg-green-200 px-4 py-2 rounded uppercase tracking-widest transition flex items-center shadow-sm">
+                        <i class="fas fa-download mr-2"></i> Unduh File Template (.xlsx)
+                    </a>
+                </div>
+            </div>
+
+            {{-- Form Upload Eksekusi --}}
+            <form action="{{ route('admin.jemaat.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="mb-8 p-6 border-2 border-dashed border-gray-300 rounded bg-gray-50 text-center hover:bg-gray-100 transition">
+                    <i class="fas fa-file-excel text-4xl text-green-600 mb-3 block"></i>
+                    <label class="block text-[11px] font-black uppercase text-gray-700 mb-3 tracking-widest cursor-pointer">Pilih Atau Seret Dokumen Excel Ke Sini</label>
+                    <input type="file" name="import_file" required accept=".xlsx, .xls, .csv" 
+                        class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-gray-800 file:text-white hover:file:bg-gray-900 cursor-pointer mx-auto max-w-sm">
+                </div>
+
+                <div class="flex justify-end pt-4 border-t border-gray-200">
+                    <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded text-xs uppercase tracking-widest transition shadow-md flex items-center">
+                        <i class="fas fa-cogs mr-2"></i> Eksekusi Migrasi Data
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-
-    <form action="{{ route('admin.jemaat.import') }}" method="POST" enctype="multipart/form-data">
-        @csrf
-        <div class="mb-4">
-            <label for="import_file" class="block text-sm font-medium text-gray-700 mb-1">Pilih File (Excel/CSV) <span class="text-red-600">*</span></label>
-            <input type="file" id="import_file" name="import_file" required accept=".xlsx, .xls, .csv"
-                   class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-gray-300 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 @error('import_file') border-red-500 @enderror">
-            @error('import_file') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-        </div>
-
-        <div class="mt-8 flex justify-end space-x-3 border-t pt-6">
-            <a href="{{ route('admin.jemaat.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md shadow transition duration-150 ease-in-out">
-                Batal
-            </a>
-            <button type="submit" class="bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md shadow hover:shadow-md transition duration-150 ease-in-out">
-                Import Data Jemaat
-            </button>
-        </div>
-    </form>
 </div>
 @endsection

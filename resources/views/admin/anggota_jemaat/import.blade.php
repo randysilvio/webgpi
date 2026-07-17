@@ -1,76 +1,112 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
-@section('title', 'Import Anggota Jemaat')
-@section('header-title', 'Import Data Anggota Jemaat')
+@section('title', 'Migrasi Pangkalan Data Anggota Jemaat')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6 md:p-8 max-w-2xl mx-auto">
-    <h2 class="text-xl font-semibold text-gray-800 mb-6 border-b pb-3">Import dari Excel/CSV</h2>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-    {{-- Tampilkan Pesan Error Validasi Keseluruhan dari Controller --}}
-    @if (session('error') && is_string(session('error')) && str_contains(session('error'), 'kesalahan validasi'))
-        <div class="flash-message mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm" role="alert">
-           <p class="font-bold">Gagal Import:</p>
-           <pre class="mt-2 text-xs whitespace-pre-wrap">{{ session('error') }}</pre>
+<div class="max-w-2xl mx-auto mt-8">
+    <div class="bg-white rounded border border-gray-300 shadow-sm overflow-hidden">
+        
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center border-l-4 border-l-gray-800">
+            <div>
+                <h2 class="font-black text-gray-900 uppercase text-sm tracking-widest">Import Buku Induk Anggota</h2>
+                <p class="text-[10px] font-bold text-gray-500 mt-1">Sistem migrasi massal menggunakan format Excel / CSV.</p>
+            </div>
+            <a href="{{ route('admin.anggota-jemaat.index') }}" class="text-gray-400 hover:text-red-700 transition" title="Batal & Tutup"><i class="fas fa-times text-lg"></i></a>
         </div>
-    @endif
-     {{-- Tampilkan Pesan Warning Validasi per Baris dari Controller --}}
-     @if (session('warning'))
-        <div class="flash-message mb-6 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow-sm" role="alert">
-           <p class="font-bold">Peringatan Import:</p>
-           <pre class="mt-2 text-xs whitespace-pre-wrap">{{ session('warning') }}</pre>
+
+        <div class="p-6 md:p-8">
+            {{-- Alert Kegagalan --}}
+            @if(session('error'))
+                <div class="mb-6 bg-red-50 border-l-4 border-red-700 p-4 text-xs text-red-800 rounded shadow-sm flex items-start">
+                    <i class="fas fa-exclamation-triangle mt-0.5 mr-3 text-red-600"></i>
+                    <div>
+                        <p class="font-black uppercase tracking-wider mb-1">Gagal Memproses Dokumen</p>
+                        <p>{{ session('error') }}</p>
+                    </div>
+                </div>
+            @endif
+
+            <form action="{{ route('admin.anggota-jemaat.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="space-y-6">
+                    
+                    {{-- Dropdown Jemaat Select2 --}}
+                    <div class="bg-gray-50 p-5 rounded border border-gray-300 shadow-sm">
+                        <label class="block text-[10px] font-bold uppercase text-gray-600 mb-2 tracking-widest">Tentukan Target Jemaat Induk <span class="text-red-600">*</span></label>
+                        <select name="jemaat_id" id="select-jemaat" class="w-full border-gray-300 rounded text-sm" required>
+                            <option value="">-- Ketik untuk Mencari Institusi Jemaat --</option>
+                            @foreach($jemaatOptions as $id => $nama)
+                                <option value="{{ $id }}">{{ $nama }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-[9px] text-gray-500 mt-2 font-bold uppercase tracking-widest">
+                            <i class="fas fa-info-circle mr-1 text-blue-800"></i> 
+                            Semua baris data dari file Excel akan didaftarkan ke dalam jemaat ini.
+                        </p>
+                    </div>
+
+                    {{-- Form Upload --}}
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-600 mb-2 tracking-widest">Dokumen Migrasi (.XLSX / .CSV)</label>
+                        <div class="p-6 border-2 border-dashed border-gray-300 rounded bg-white text-center hover:bg-gray-50 transition cursor-pointer relative">
+                            <i class="fas fa-file-excel text-4xl text-green-700 mb-3 block pointer-events-none"></i>
+                            <input type="file" name="import_file" required accept=".xlsx, .xls, .csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <div class="text-[11px] font-black uppercase text-gray-700 tracking-widest pointer-events-none">Pilih Atau Seret Dokumen Kesini</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-between items-center pt-6 border-t border-gray-200 mt-8 gap-4">
+                    <a href="{{ route('admin.anggota-jemaat.export', ['template' => 'yes']) }}" class="text-[10px] font-black text-blue-800 hover:text-blue-600 uppercase tracking-widest transition flex items-center bg-blue-50 px-4 py-2 rounded border border-blue-200">
+                        <i class="fas fa-download mr-2"></i> Unduh Format Template (Wajib)
+                    </a>
+                    <button type="submit" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded text-xs uppercase tracking-widest transition shadow-md flex items-center justify-center">
+                        <i class="fas fa-cogs mr-2"></i> Eksekusi Migrasi Data
+                    </button>
+                </div>
+            </form>
         </div>
-    @endif
-
-
-    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
-        <h4 class="font-semibold mb-2">Petunjuk Import:</h4>
-        <ol class="list-decimal list-inside space-y-1">
-            <li>Unduh template file di bawah ini.</li>
-            <li>Isi data anggota jemaat sesuai dengan kolom pada template. **Perhatikan format tanggal (YYYY-MM-DD)** dan **ID Jemaat** (lihat di Manajemen Jemaat jika perlu).</li>
-            <li>Kolom **NIK** akan digunakan untuk mengecek data duplikat. Jika NIK sama ditemukan dan data di file import lebih lengkap, data lama akan ditimpa. Jika data lama lebih lengkap atau sama, baris di file import akan dilewati.</li>
-            <li>Simpan file dalam format **.xlsx** (disarankan) atau .csv.</li>
-            <li>Pilih file yang sudah diisi dan klik tombol "Import Data".</li>
-            <li>Proses import mungkin memerlukan beberapa waktu tergantung jumlah data. Hasil atau error akan ditampilkan setelah selesai.</li>
-        </ol>
-        <p class="mt-3">
-            {{-- Link untuk mengunduh template via export controller --}}
-            <a href="{{ route('admin.anggota-jemaat.export', ['template' => 'yes']) }}"
-               class="inline-block bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow text-xs transition duration-150 ease-in-out">
-                Unduh Template Import (.xlsx)
-            </a>
-            <span class="text-xs text-gray-500 italic ml-2">(Template ini berisi header kolom yang benar)</span>
-        </p>
     </div>
-
-    <form action="{{ route('admin.anggota-jemaat.import') }}" method="POST" enctype="multipart/form-data">
-        @csrf
-        <div class="mb-4">
-            <label for="import_file" class="block text-sm font-medium text-gray-700 mb-1">Pilih File (Excel/CSV) <span class="text-red-600">*</span></label>
-            <input type="file" id="import_file" name="import_file" required accept=".xlsx, .xls, .csv"
-                   class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-gray-300 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 @error('import_file') border-red-500 @enderror">
-            @error('import_file') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-        </div>
-
-        {{-- Tombol Aksi --}}
-        <div class="mt-8 flex justify-end space-x-3 border-t pt-6">
-            <a href="{{ route('admin.anggota-jemaat.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md shadow transition duration-150 ease-in-out">
-                Batal
-            </a>
-            <button type="submit" class="bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md shadow hover:shadow-md transition duration-150 ease-in-out">
-                Import Data
-            </button>
-        </div>
-    </form>
 </div>
-@endsection
 
-{{-- Helper CSS untuk form (optional jika sudah ada di layout global atau create/edit) --}}
+{{-- Script Select2 --}}
+@push('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#select-jemaat').select2({
+            placeholder: "-- KETIK NAMA JEMAAT --",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+</script>
+@endpush
+
+{{-- Custom CSS untuk menyelaraskan Select2 dengan gaya Tailwind yang tajam --}}
 @push('styles')
 <style>
-    /* Styling error message dari validasi import jika perlu */
-    pre {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    .select2-container .select2-selection--single {
+        height: 42px !important;
+        border-color: #d1d5db !important;
+        border-radius: 0.25rem !important; /* Rounded biasa (bukan full/lg) */
+        display: flex !important;
+        align-items: center !important;
+        background-color: #ffffff;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__placeholder {
+        font-size: 10px;
+        text-transform: uppercase;
+        font-weight: bold;
+        letter-spacing: 0.05em;
+        color: #9ca3af;
     }
 </style>
 @endpush
+@endsection
