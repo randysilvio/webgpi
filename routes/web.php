@@ -131,7 +131,6 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('/popup-ads', [PopupAdController::class, 'store'])->name('popup.store');
         Route::delete('/popup-ads/{popup}', [PopupAdController::class, 'destroy'])->name('popup.destroy');
         Route::patch('/popup-ads/{popup}/toggle', [PopupAdController::class, 'toggle'])->name('popup.toggle');
-        Route::get('jemaat/{jemaat}/cetak', [JemaatController::class, 'cetakPdf'])->name('jemaat.cetak');
     });
 
     // 2.B. Portal Berita/Publikasi (Akses untuk Klasis & Jemaat dibuka)
@@ -191,6 +190,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('jemaat-export', [JemaatController::class, 'export'])->name('jemaat.export');
     Route::get('jemaat-import', [JemaatController::class, 'showImportForm'])->name('jemaat.import-form');
     Route::post('jemaat-import', [JemaatController::class, 'import'])->name('jemaat.import');
+    Route::get('jemaat/{jemaat}/cetak', [JemaatController::class, 'cetakPdf'])->name('jemaat.cetak');
 
     // --- ANGGOTA JEMAAT ---
     Route::get('/anggota-jemaat/search', [AnggotaJemaatController::class, 'search'])->name('anggota-jemaat.search');
