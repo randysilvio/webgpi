@@ -187,39 +187,43 @@
                 @endif
 
                 {{-- BIDANG 4: KOMINFO --}}
-                @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_popup') || $appSetting->hasModuleAccess('bidang4_berita') || $appSetting->hasModuleAccess('bidang4_eoffice'))
                 <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Bidang 4: KOMINFO</div>
                 
-                    @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_popup') || $appSetting->hasModuleAccess('bidang4_berita'))
-                    <div class="menu-group">
-                        <button onclick="toggleMenu('web')" id="btn-web" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                            <div class="flex items-center"><i class="fas fa-globe w-5 text-center mr-3"></i><span class="truncate">Multi Media</span></div>
-                            <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
-                        </button>
-                        <div class="submenu pl-10 space-y-1 mt-1" id="submenu-web">
-                            @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_popup'))
+                <div class="menu-group">
+                    <button onclick="toggleMenu('web')" id="btn-web" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
+                        <div class="flex items-center"><i class="fas fa-globe w-5 text-center mr-3"></i><span class="truncate">Portal Publikasi</span></div>
+                        <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
+                    </button>
+                    <div class="submenu pl-10 space-y-1 mt-1" id="submenu-web">
+                        
+                        {{-- PENGAMANAN: Pengumuman hanya untuk Super Admin & Bidang 4 --}}
+                        @hasanyrole('Super Admin|Admin Bidang 4')
                             <a href="{{ route('admin.popup.index') }}" class="sub-link block py-1.5 text-yellow-500 font-medium truncate @if(Request::routeIs('admin.popup.*')) active-page @endif">Pengumuman (Banner)</a>
-                            @endif
-                            @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_berita'))
-                            <a href="{{ route('admin.posts.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.posts.*')) active-page @endif">Dokumen Publikasi</a>
+                        @endhasanyrole
+                        
+                        {{-- BERITA: TERBUKA TANPA SYARAT UNTUK SEMUA ROLE --}}
+                        <a href="{{ route('admin.posts.index') }}" class="sub-link block py-1.5 text-blue-400 font-bold truncate @if(Request::routeIs('admin.posts.*')) active-page @endif">Dokumen Publikasi</a>
+                        
+                        {{-- PENGAMANAN: Pesan Masuk hanya untuk Super Admin & Bidang 4 --}}
+                        @hasanyrole('Super Admin|Admin Bidang 4')
                             <a href="{{ route('admin.messages') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.messages*')) active-page @endif">Pesan Masuk</a>
-                            @endif
-                        </div>
-                    </div>
-                    @endif
+                        @endhasanyrole
 
-                    @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_eoffice'))
-                    <div class="menu-group">
-                        <button onclick="toggleMenu('eoffice')" id="btn-eoffice" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
-                            <div class="flex items-center"><i class="fas fa-envelope-open-text w-5 text-center mr-3"></i><span class="truncate">Tata Persuratan</span></div>
-                            <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
-                        </button>
-                        <div class="submenu pl-10 space-y-1 mt-1" id="submenu-eoffice">
-                            <a href="{{ route('admin.e-office.surat-masuk.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.e-office.surat-masuk.*')) active-page @endif">Agenda Surat Masuk</a>
-                            <a href="{{ route('admin.e-office.surat-keluar.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.e-office.surat-keluar.*')) active-page @endif">Agenda Surat Keluar</a>
-                        </div>
                     </div>
-                    @endif
+                </div>
+
+                {{-- E-OFFICE --}}
+                @if(!$appSetting || $appSetting->hasModuleAccess('bidang4_eoffice'))
+                <div class="menu-group">
+                    <button onclick="toggleMenu('eoffice')" id="btn-eoffice" class="menu-btn w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800 hover:text-white transition-colors">
+                        <div class="flex items-center"><i class="fas fa-envelope-open-text w-5 text-center mr-3"></i><span class="truncate">Tata Persuratan</span></div>
+                        <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
+                    </button>
+                    <div class="submenu pl-10 space-y-1 mt-1" id="submenu-eoffice">
+                        <a href="{{ route('admin.e-office.surat-masuk.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.e-office.surat-masuk.*')) active-page @endif">Agenda Surat Masuk</a>
+                        <a href="{{ route('admin.e-office.surat-keluar.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.e-office.surat-keluar.*')) active-page @endif">Agenda Surat Keluar</a>
+                    </div>
+                </div>
                 @endif
 
                 {{-- STRUKTUR WILAYAH --}}

@@ -116,7 +116,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/peta-widget', [DashboardController::class, 'petaWidget'])->name('dashboard.peta_widget');
 
-    // 2. Pengaturan, Konten Website & POPUP ADS
+    // 2. Pengaturan, Konten Website & POPUP ADS (Hanya Akses Pusat/Bidang 4)
     Route::middleware('role:Super Admin|Admin Bidang 4')->group(function () {
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
@@ -125,7 +125,6 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
         Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('messages.destroy');
         
-        Route::resource('posts', AdminPostController::class);
         Route::resource('services', ServiceController::class);
 
         Route::get('/popup-ads', [PopupAdController::class, 'index'])->name('popup.index');
@@ -134,6 +133,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::patch('/popup-ads/{popup}/toggle', [PopupAdController::class, 'toggle'])->name('popup.toggle');
         Route::get('jemaat/{jemaat}/cetak', [JemaatController::class, 'cetakPdf'])->name('jemaat.cetak');
     });
+
+    // 2.B. Portal Berita/Publikasi (Akses untuk Klasis & Jemaat dibuka)
+    // PostController secara internal sudah mengatur RBAC (Approval Draf vs Publish)
+    Route::resource('posts', AdminPostController::class);
 
     // 3. E-Office / Persuratan Digital
     Route::prefix('e-office')->name('e-office.')->group(function () {
