@@ -98,6 +98,14 @@
 <div class="bg-gray-50 border border-gray-200 p-4 rounded mb-8 shadow-sm">
     <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-3"><i class="fas fa-bolt mr-1"></i> Panel Aksi Cepat Administratif</p>
     <div class="flex flex-wrap gap-2">
+        
+        {{-- FIX: Hanya Klasis & Pusat yang bisa daftarkan institusi Jemaat --}}
+        @if(Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3', 'Admin Klasis']))
+        <a href="{{ route('admin.jemaat.create') }}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-gray-100 hover:text-blue-800 transition shadow-sm flex items-center">
+            <i class="fas fa-church mr-2 text-gray-400"></i> Registrasi Jemaat Baru
+        </a>
+        @endif
+
         @if(Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Klasis', 'Admin Jemaat']))
         <a href="{{ route('admin.anggota-jemaat.create') }}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-gray-100 hover:text-blue-800 transition shadow-sm flex items-center">
             <i class="fas fa-user-plus mr-2 text-gray-400"></i> Register Umat Baru

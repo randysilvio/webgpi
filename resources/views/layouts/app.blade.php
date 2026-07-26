@@ -153,7 +153,7 @@
                 @endif
 
                 {{-- BIDANG 2: KEUANGAN & PEMBANGUNAN --}}
-                @if(!$appSetting || $appSetting->hasModuleAccess('bidang2_keuangan'))
+                @if(!$appSetting || $appSetting->hasModuleAccess('bidang2_keuangan') || Auth::user()->hasRole('Admin Jemaat'))
                 <div class="px-3 mb-2 mt-4 text-[10px] font-bold uppercase text-slate-600 tracking-wider truncate">Bidang 2: Keuangan & Pembangunan</div>
                 
                 <div class="menu-group">
@@ -162,10 +162,24 @@
                         <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
                     </button>
                     <div class="submenu pl-10 space-y-1 mt-1" id="submenu-keuangan">
-                        <a href="{{ route('admin.perbendaharaan.transaksi.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.transaksi.*')) active-page @endif">Buku Kas Umum (BKU)</a>
+                        @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 2|Admin Klasis')
+                        <a href="{{ route('admin.perbendaharaan.transaksi.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.transaksi.*')) active-page @endif">Buku Kas Sinode/Klasis</a>
+                        @endhasanyrole
+
+                        {{-- BUKU KAS JEMAAT --}}
+                        @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 2|Admin Klasis|Admin Jemaat')
+                        <a href="{{ route('admin.keuangan-jemaat.index') }}" class="sub-link block py-1.5 text-green-400 font-bold truncate @if(Request::routeIs('admin.keuangan-jemaat.*')) active-page @endif">Buku Kas Jemaat</a>
+                        @endhasanyrole
+
+                        @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 2|Admin Klasis')
                         <a href="{{ route('admin.perbendaharaan.anggaran.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.anggaran.*')) active-page @endif">Rencana APB</a>
-                        <a href="{{ route('admin.perbendaharaan.aset.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.aset.*')) active-page @endif">Harta Milik Gereja</a>
+                        @endhasanyrole
+                        
+                        <a href="{{ route('admin.perbendaharaan.aset.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.aset.*')) active-page @endif">Inventaris & Aset</a>
+                        
+                        @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 2')
                         <a href="{{ route('admin.perbendaharaan.mata-anggaran.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.mata-anggaran.*')) active-page @endif">Kode Akun (COA)</a>
+                        @endhasanyrole
                     </div>
                 </div>
                 @endif
@@ -274,12 +288,11 @@
                         <a href="{{ route('admin.laporan.renstra.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.laporan.renstra.*')) active-page @endif">Laporan Renstra</a>
                         <a href="{{ route('admin.wadah.statistik.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.wadah.statistik.*')) active-page @endif">Statistik Kategorial</a>
 
-                        @if(!$appSetting || $appSetting->hasModuleAccess('bidang2_keuangan'))
+                        @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 2|Admin Klasis')
                         <div class="py-1 text-[9px] text-slate-500 uppercase mt-3 font-bold tracking-wider border-b border-slate-700 pb-1 w-5/6">Daya & Dana</div>
                         <a href="{{ route('admin.perbendaharaan.laporan.gabungan') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.laporan.gabungan')) active-page @endif">Laporan Perbendaharaan</a>
                         <a href="{{ route('admin.perbendaharaan.laporan.realisasi') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.laporan.realisasi')) active-page @endif">Realisasi APB</a>
-                        <a href="{{ route('admin.perbendaharaan.laporan.aset') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.perbendaharaan.laporan.aset')) active-page @endif">Laporan Harta Milik</a>
-                        @endif
+                        @endhasanyrole
                     </div>
                 </div>
                 @endif

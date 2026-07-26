@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AsetGereja;
 use App\Models\Klasis;
 use App\Models\Jemaat;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +14,11 @@ use Illuminate\Support\Str;
 
 class AsetController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     /**
      * Menampilkan daftar inventaris aset dengan filter dan statistik.
      */
@@ -20,7 +26,7 @@ class AsetController extends Controller
     {
         $user = Auth::user();
         
-        // 1. Query Dasar (TANPA latest() di sini agar aman untuk statistik)
+        // 1. Query Dasar
         $query = AsetGereja::with(['klasis', 'jemaat']);
 
         // 2. Scoping Data Wilayah (RBAC)
@@ -30,15 +36,13 @@ class AsetController extends Controller
             $query->where('jemaat_id', $user->jemaat_id);
         }
 
-        // 3. Filter (Search, Kategori, Kondisi)
+        // 3. Filter (Kategori, Kondisi, Pencarian)
         if ($request->filled('kategori')) {
             $query->where('kategori', $request->kategori);
         }
-
         if ($request->filled('kondisi')) {
             $query->where('kondisi', $request->kondisi);
         }
-
         if ($request->filled('search')) {
             $query->where(function($q) use ($request) {
                 $q->where('nama_aset', 'like', '%' . $request->search . '%')
@@ -46,9 +50,7 @@ class AsetController extends Controller
             });
         }
 
-        // --- 4. HITUNG STATISTIK (SAFE MODE) ---
-        // Clone query yang sudah terfilter, lalu hapus sorting dengan reorder()
-        // Ini mencegah error "Mixing of GROUP columns"
+        // --- 4. HITUNG STATISTIK (SINKRON DENGAN BLADE INDEX BARU) ---
         $statsQuery = clone $query;
         $stats = $statsQuery->reorder()->selectRaw('
             count(*) as total_item,
@@ -57,10 +59,66 @@ class AsetController extends Controller
             sum(case when kondisi != "Baik" then 1 else 0 end) as total_rusak
         ')->first();
 
-        // 5. Ambil Data Tabel (Baru kita terapkan sorting latest() di sini)
+        // Mapping variabel statistik ke UI Blade
+        $totalAset = $stats->total_item ?? 0;
+        $totalNilaiAset = $stats->total_nilai ?? 0;
+        $asetBaik = $stats->total_baik ?? 0;
+        $asetRusak = $stats->total_rusak ?? 0;
+
+        // 5. Ambil Data Tabel (Sorting diterapkan di sini)
         $asets = $query->latest('tanggal_perolehan')->paginate(15)->withQueryString();
 
-        return view('admin.aset.index', compact('asets', 'stats'));
+        // Sesuaikan path view dengan struktur folder Anda (admin.aset.index atau admin.perbendaharaan.aset.index)
+        return view('admin.aset.index', compact('asets', 'totalAset', 'totalNilaiAset', 'asetBaik', 'asetRusak'));
+    }
+
+    /**
+     * FITUR BARU: Cetak Laporan Seluruh Aset (Sesuai Filter)
+     */
+    public function cetakSemua(Request $request)
+    {
+        $user = Auth::user();
+        $query = AsetGereja::with(['klasis', 'jemaat']);
+
+        // Keamanan Wilayah
+        if ($user->hasRole('Admin Klasis')) {
+            $query->where('klasis_id', $user->klasis_id);
+        } elseif ($user->hasRole('Admin Jemaat')) {
+            $query->where('jemaat_id', $user->jemaat_id);
+        }
+
+        // Terapkan Filter yang sama seperti Index
+        if ($request->filled('kategori')) $query->where('kategori', $request->kategori);
+        if ($request->filled('kondisi')) $query->where('kondisi', $request->kondisi);
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('nama_aset', 'like', '%' . $request->search . '%')
+                  ->orWhere('kode_aset', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $asets = $query->orderBy('kategori')->latest('tanggal_perolehan')->get();
+        $setting = Setting::firstOrCreate(['id' => 1]);
+
+        // Gunakan view cetak yang Anda lampirkan (aset.blade.php)
+        // Jika nama filenya "cetak_semua.blade.php", ubah parameter di bawah
+        return view('admin.aset.cetak_semua', compact('asets', 'setting')); 
+    }
+
+    /**
+     * FITUR BARU: Cetak Label / Bukti Aset Spesifik
+     */
+    public function cetakLabel(AsetGereja $aset)
+    {
+        $user = Auth::user();
+        
+        // Keamanan: Tolak jika mencoba cetak aset wilayah lain
+        if ($user->hasRole('Admin Klasis') && $aset->klasis_id != $user->klasis_id) abort(403);
+        if ($user->hasRole('Admin Jemaat') && $aset->jemaat_id != $user->jemaat_id) abort(403);
+
+        $setting = Setting::firstOrCreate(['id' => 1]);
+        
+        return view('admin.aset.cetak_label', compact('aset', 'setting'));
     }
 
     /**
@@ -68,7 +126,13 @@ class AsetController extends Controller
      */
     public function create()
     {
+        $user = Auth::user();
         $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
+        
+        if ($user->hasRole('Admin Klasis')) {
+            $klasisOptions = Klasis::where('id', $user->klasis_id)->pluck('nama_klasis', 'id');
+        }
+
         return view('admin.aset.create', compact('klasisOptions'));
     }
 
@@ -77,6 +141,18 @@ class AsetController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+
+        // Otorisasi Otomatis agar Jemaat/Klasis tidak memanipulasi wilayah
+        if ($user->hasRole('Admin Jemaat')) {
+            $request->merge([
+                'jemaat_id' => $user->jemaat_id,
+                'klasis_id' => Jemaat::find($user->jemaat_id)->klasis_id ?? null,
+            ]);
+        } elseif ($user->hasRole('Admin Klasis')) {
+            $request->merge(['klasis_id' => $user->klasis_id]);
+        }
+
         $request->validate([
             'nama_aset' => 'required|string|max:255',
             'kategori' => 'required',
@@ -103,7 +179,7 @@ class AsetController extends Controller
 
         AsetGereja::create($data);
 
-        return redirect()->route('admin.perbendaharaan.aset.index')->with('success', 'Aset berhasil dicatat.');
+        return redirect()->route('admin.perbendaharaan.aset.index')->with('success', 'Buku Aset berhasil dicatat.');
     }
 
     /**
@@ -111,6 +187,10 @@ class AsetController extends Controller
      */
     public function show(AsetGereja $aset)
     {
+        $user = Auth::user();
+        if ($user->hasRole('Admin Klasis') && $aset->klasis_id != $user->klasis_id) abort(403);
+        if ($user->hasRole('Admin Jemaat') && $aset->jemaat_id != $user->jemaat_id) abort(403);
+
         return view('admin.aset.show', compact('aset'));
     }
 
@@ -119,9 +199,19 @@ class AsetController extends Controller
      */
     public function edit(AsetGereja $aset)
     {
+        $user = Auth::user();
+        
+        // Pengecekan Hak Akses
+        if ($user->hasRole('Admin Klasis') && $aset->klasis_id != $user->klasis_id) abort(403);
+        if ($user->hasRole('Admin Jemaat') && $aset->jemaat_id != $user->jemaat_id) abort(403);
+
         $klasisOptions = Klasis::orderBy('nama_klasis')->pluck('nama_klasis', 'id');
         $jemaatOptions = Jemaat::where('klasis_id', $aset->klasis_id)->orderBy('nama_jemaat')->pluck('nama_jemaat', 'id');
         
+        if ($user->hasRole('Admin Klasis')) {
+            $klasisOptions = Klasis::where('id', $user->klasis_id)->pluck('nama_klasis', 'id');
+        }
+
         return view('admin.aset.edit', compact('aset', 'klasisOptions', 'jemaatOptions'));
     }
 
@@ -130,6 +220,18 @@ class AsetController extends Controller
      */
     public function update(Request $request, AsetGereja $aset)
     {
+        $user = Auth::user();
+
+        // Otorisasi Paksa (Mencegah injeksi manipulasi form via inspect element)
+        if ($user->hasRole('Admin Jemaat')) {
+            $request->merge([
+                'jemaat_id' => $user->jemaat_id,
+                'klasis_id' => Jemaat::find($user->jemaat_id)->klasis_id ?? null,
+            ]);
+        } elseif ($user->hasRole('Admin Klasis')) {
+            $request->merge(['klasis_id' => $user->klasis_id]);
+        }
+
         $request->validate([
             'nama_aset' => 'required|string|max:255',
             'kategori' => 'required',
@@ -163,10 +265,15 @@ class AsetController extends Controller
      */
     public function destroy(AsetGereja $aset)
     {
-        // Hapus file fisik jika diperlukan (opsional, tergantung kebijakan soft delete)
+        $user = Auth::user();
+        if ($user->hasRole('Admin Klasis') && $aset->klasis_id != $user->klasis_id) abort(403);
+        if ($user->hasRole('Admin Jemaat') && $aset->jemaat_id != $user->jemaat_id) abort(403);
+
+        // Opsi: Jika ingin langsung menghapus file dari storage (Hard Delete)
         // if ($aset->foto_aset_path) Storage::disk('public')->delete($aset->foto_aset_path);
+        // if ($aset->file_dokumen_path) Storage::disk('public')->delete($aset->file_dokumen_path);
         
         $aset->delete();
-        return redirect()->route('admin.perbendaharaan.aset.index')->with('success', 'Aset berhasil dihapus.');
+        return redirect()->route('admin.perbendaharaan.aset.index')->with('success', 'Arsip Aset berhasil dimusnahkan.');
     }
 }

@@ -13,7 +13,7 @@
     </a>
 </div>
 
-<form action="{{ route('admin.jemaat.update', $jemaat->id) }}" method="POST" enctype="multipart/form-data">
+<form action="{{ route('admin.jemaat.update', $jemaat->id) }}" method="POST" enctype="multipart/form-data" class="offline-ready">
     @csrf
     @method('PUT')
     <div class="space-y-6 max-w-5xl mx-auto">
@@ -40,15 +40,16 @@
 
                     <div>
                         <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Otoritas Wilayah Klasis <span class="text-red-600">*</span></label>
-                        <select name="klasis_id" class="w-full border border-gray-300 rounded text-sm shadow-sm font-bold bg-gray-100 text-gray-600 pointer-events-none" 
-                            {{ !Auth::user()->hasRole(['Super Admin', 'Admin Bidang 3']) ? 'readonly' : '' }}>
+                        {{-- FIX: Sinode bisa mengganti dropdown ini, Klasis terkunci --}}
+                        <select name="klasis_id" class="w-full border border-gray-300 rounded text-sm shadow-sm font-bold {{ Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3']) ? 'bg-white text-gray-900 focus:ring-blue-800 focus:border-blue-800' : 'bg-gray-100 text-gray-600 pointer-events-none' }}" 
+                            {{ !Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3']) ? 'readonly tabindex="-1"' : '' }}>
                             @foreach($klasisOptions as $id => $nama)
                                 <option value="{{ $id }}" {{ $jemaat->klasis_id == $id ? 'selected' : '' }}>{{ $nama }}</option>
                             @endforeach
                         </select>
-                        @if(!Auth::user()->hasRole(['Super Admin', 'Admin Bidang 3']))
+                        @if(!Auth::user()->hasAnyRole(['Super Admin', 'Admin Sinode', 'Admin Bidang 3']))
                             <input type="hidden" name="klasis_id" value="{{ $jemaat->klasis_id }}">
-                            <p class="text-[9px] text-red-600 italic mt-1 font-bold">Pemindahan Klasis hanya dapat dilakukan oleh Admin Sinode.</p>
+                            <p class="text-[9px] text-red-600 italic mt-1 font-bold">Pemindahan Jemaat ke Klasis lain hanya dapat dilakukan oleh Admin Sinode.</p>
                         @endif
                     </div>
 

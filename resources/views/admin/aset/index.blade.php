@@ -11,7 +11,12 @@
             <h2 class="text-lg font-black text-gray-900 uppercase tracking-widest">Register Inventaris & Aset</h2>
             <p class="text-xs text-gray-600 mt-1">Pangkalan data pencatatan, pemeliharaan, dan valuasi kekayaan organisasi.</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
+            {{-- TOMBOL CETAK KESELURUHAN LAPORAN --}}
+            <a href="{{ route('admin.perbendaharaan.aset.cetak-semua', request()->query()) }}" target="_blank" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition flex items-center justify-center shadow-sm">
+                <i class="fas fa-print mr-2 text-green-700"></i> Cetak Laporan
+            </a>
+            
             <a href="{{ route('admin.perbendaharaan.aset.create') }}" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest shadow-sm transition flex items-center justify-center">
                 <i class="fas fa-plus-circle mr-2"></i> Catat Inventaris Baru
             </a>
@@ -87,7 +92,7 @@
                         <th class="px-6 py-3">Otoritas Kepemilikan & Kategori</th>
                         <th class="px-6 py-3 text-center w-32">Kondisi Fisik</th>
                         <th class="px-6 py-3 text-right w-40">Nilai Historis (Rp)</th>
-                        <th class="px-6 py-3 text-center w-28">Tindakan</th>
+                        <th class="px-6 py-3 text-center w-36">Tindakan</th>
                     </tr>
                 </thead>
                 <tbody class="text-sm divide-y divide-gray-200">
@@ -124,12 +129,22 @@
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <div class="flex justify-center gap-3">
+                                    {{-- LIHAT DETAIL --}}
                                     <a href="{{ route('admin.perbendaharaan.aset.show', $aset->id) }}" class="text-gray-400 hover:text-blue-800 transition" title="Tinjau Detail Buku Aset">
                                         <i class="fas fa-folder-open"></i>
                                     </a>
+
+                                    {{-- CETAK SATUAN / BUKTI ASET TERSEBUT --}}
+                                    <a href="{{ route('admin.perbendaharaan.aset.cetak', $aset->id) }}" target="_blank" class="text-gray-400 hover:text-green-700 transition" title="Cetak Kartu / Bukti Aset Ini">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+
+                                    {{-- MODIFIKASI DATA --}}
                                     <a href="{{ route('admin.perbendaharaan.aset.edit', $aset->id) }}" class="text-gray-400 hover:text-yellow-600 transition" title="Modifikasi Arsip">
                                         <i class="fas fa-edit"></i>
                                     </a>
+
+                                    {{-- HAPUS DATA --}}
                                     <form action="{{ route('admin.perbendaharaan.aset.destroy', $aset->id) }}" method="POST" onsubmit="return confirm('Peringatan: Pemusnahan data aset ini bersifat permanen dari buku besar. Lanjutkan?')" class="inline">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-gray-400 hover:text-red-700 transition" title="Hapus Aset">

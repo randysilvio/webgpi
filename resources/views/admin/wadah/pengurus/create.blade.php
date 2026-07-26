@@ -13,7 +13,7 @@
     </a>
 </div>
 
-<form action="{{ route('admin.wadah.pengurus.store') }}" method="POST">
+<form action="{{ route('admin.wadah.pengurus.store') }}" method="POST" class="offline-ready">
     @csrf
     <div class="space-y-6 max-w-5xl mx-auto">
         
@@ -39,9 +39,13 @@
                     <label for="tingkat" class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Hierarki Kepengurusan <span class="text-red-600">*</span></label>
                     <select id="tingkat" name="tingkat" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white" required onchange="handleTingkatChange()">
                         <option value="">-- Tetapkan Hierarki --</option>
-                        <option value="sinode" {{ old('tingkat') == 'sinode' ? 'selected' : '' }}>TINGKAT PUSAT SINODE</option>
-                        <option value="klasis" {{ old('tingkat') == 'klasis' ? 'selected' : '' }}>TINGKAT KLASIS</option>
-                        <option value="jemaat" {{ old('tingkat') == 'jemaat' ? 'selected' : '' }}>TINGKAT JEMAAT</option>
+                        @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 3')
+                            <option value="sinode" {{ old('tingkat') == 'sinode' ? 'selected' : '' }}>TINGKAT PUSAT SINODE</option>
+                        @endhasanyrole
+                        @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 3|Admin Klasis')
+                            <option value="klasis" {{ old('tingkat') == 'klasis' ? 'selected' : '' }}>TINGKAT KLASIS</option>
+                        @endhasanyrole
+                        <option value="jemaat" {{ old('tingkat', (Auth::user()->hasRole('Admin Jemaat') ? 'jemaat' : '')) == 'jemaat' ? 'selected' : '' }}>TINGKAT JEMAAT</option>
                     </select>
                     @error('tingkat') <p class="text-red-600 text-[10px] mt-1">{{ $message }}</p> @enderror
                 </div>
@@ -50,10 +54,10 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <div id="div_klasis" class="hidden">
                     <label for="klasis_id" class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Teritorial Klasis <span class="text-red-600">*</span></label>
-                    <select id="klasis_id" name="klasis_id" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white" onchange="loadJemaat(this.value)">
+                    <select id="klasis_id" name="klasis_id" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white {{ Auth::user()->hasAnyRole(['Admin Klasis', 'Admin Jemaat']) ? 'pointer-events-none bg-gray-100 text-gray-600' : '' }}" onchange="loadJemaat(this.value)">
                         <option value="">-- Pilihan Klasis --</option>
                         @foreach($klasisList as $klasis)
-                            <option value="{{ $klasis->id }}" {{ old('klasis_id') == $klasis->id ? 'selected' : '' }}>
+                            <option value="{{ $klasis->id }}" {{ (old('klasis_id') == $klasis->id || $klasisList->count() == 1) ? 'selected' : '' }}>
                                 {{ strtoupper($klasis->nama_klasis) }}
                             </option>
                         @endforeach
@@ -63,10 +67,10 @@
 
                 <div id="div_jemaat" class="hidden">
                     <label for="jemaat_id" class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Lokal Jemaat <span class="text-red-600">*</span></label>
-                    <select id="jemaat_id" name="jemaat_id" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                    <select id="jemaat_id" name="jemaat_id" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white {{ Auth::user()->hasRole('Admin Jemaat') ? 'pointer-events-none bg-gray-100 text-gray-600' : '' }}">
                         <option value="">-- Menunggu Pilihan Klasis --</option>
                         @foreach($jemaatList as $jemaat)
-                            <option value="{{ $jemaat->id }}" {{ old('jemaat_id') == $jemaat->id ? 'selected' : '' }}>
+                            <option value="{{ $jemaat->id }}" {{ (old('jemaat_id') == $jemaat->id || $jemaatList->count() == 1) ? 'selected' : '' }}>
                                 {{ strtoupper($jemaat->nama_jemaat) }}
                             </option>
                         @endforeach
@@ -158,6 +162,11 @@
             divJemaat.classList.remove('hidden');
             inputKlasis.setAttribute('required', 'required');
             inputJemaat.setAttribute('required', 'required');
+            
+            // Auto-trigger fetch jika Klasis sudah otomatis terisi
+            if(inputKlasis.value && inputJemaat.options.length <= 2) {
+                loadJemaat(inputKlasis.value);
+            }
         }
     }
 
@@ -165,7 +174,14 @@
         const tingkat = document.getElementById('tingkat').value;
         if (tingkat !== 'jemaat') return; 
 
+        // Bypass API call if User is Admin Jemaat (it's already loaded serverside)
+        @hasrole('Admin Jemaat')
+            return;
+        @endhasrole
+
         const jemaatSelect = document.getElementById('jemaat_id');
+        const currentSelected = jemaatSelect.value;
+        
         jemaatSelect.innerHTML = '<option value="">Memuat Pangkalan Data...</option>';
 
         if (klasisId) {
@@ -174,7 +190,8 @@
                 .then(data => {
                     jemaatSelect.innerHTML = '<option value="">-- Pilihan Jemaat --</option>';
                     data.forEach(jemaat => {
-                        jemaatSelect.innerHTML += `<option value="${jemaat.id}">${jemaat.nama_jemaat}</option>`;
+                        const isSelected = (currentSelected == jemaat.id) ? 'selected' : '';
+                        jemaatSelect.innerHTML += `<option value="${jemaat.id}" ${isSelected}>${jemaat.nama_jemaat}</option>`;
                     });
                 })
                 .catch(error => {

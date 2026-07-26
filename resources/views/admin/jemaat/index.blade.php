@@ -22,9 +22,13 @@
                 <i class="fas fa-download mr-2 text-blue-800"></i> Export Data
             </a>
             @endcan
+            
+            {{-- PENGAMANAN: Tombol Tambah Institusi Jemaat disembunyikan dari Admin Jemaat --}}
+            @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 3|Admin Klasis')
             <a href="{{ route('admin.jemaat.create') }}" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-[10px] font-bold uppercase shadow-sm transition flex items-center">
                 <i class="fas fa-plus mr-2"></i> Pendaftaran Baru
             </a>
+            @endhasanyrole
         </div>
     </div>
 
@@ -137,22 +141,27 @@
                             </td>
                             <td class="px-5 py-4 text-center">
                                 <div class="flex justify-center gap-3">
-                                    <a href="{{ route('admin.jemaat.show', $jemaat->id) }}" class="text-gray-400 hover:text-blue-800 transition" title="Buka Detail">
+                                    {{-- Semua orang bisa lihat profil (Read-Only) --}}
+                                    <a href="{{ route('admin.jemaat.show', $jemaat->id) }}" class="text-gray-400 hover:text-blue-800 transition" title="Buka Detail Profil">
                                         <i class="fas fa-folder-open text-xs"></i>
                                     </a>
-                                    @can('edit jemaat')
-                                    <a href="{{ route('admin.jemaat.edit', $jemaat->id) }}" class="text-gray-400 hover:text-yellow-600 transition" title="Modifikasi Data">
+
+                                    {{-- Modifikasi HANYA untuk Klasis dan Sinode --}}
+                                    @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 3|Admin Klasis')
+                                    <a href="{{ route('admin.jemaat.edit', $jemaat->id) }}" class="text-gray-400 hover:text-yellow-600 transition" title="Modifikasi Data Institusi">
                                         <i class="fas fa-edit text-xs"></i>
                                     </a>
-                                    @endcan
-                                    @can('delete jemaat')
+                                    @endhasanyrole
+
+                                    {{-- Hapus HANYA untuk Sinode --}}
+                                    @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 3')
                                     <form action="{{ route('admin.jemaat.destroy', $jemaat->id) }}" method="POST" onsubmit="return confirm('PERINGATAN: Memusnahkan Data Jemaat?\n\nSemua populasi anggota di dalam jemaat ini akan ikut terhapus. Lanjutkan?');" class="inline">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-gray-400 hover:text-red-700 transition" title="Musnahkan Arsip">
                                             <i class="fas fa-trash-alt text-xs"></i>
                                         </button>
                                     </form>
-                                    @endcan
+                                    @endhasanyrole
                                 </div>
                             </td>
                         </tr>
