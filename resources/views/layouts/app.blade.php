@@ -168,7 +168,7 @@
 
                         {{-- BUKU KAS JEMAAT --}}
                         @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 2|Admin Klasis|Admin Jemaat')
-                        <a href="{{ route('admin.keuangan-jemaat.index') }}" class="sub-link block py-1.5 text-green-400 font-bold truncate @if(Request::routeIs('admin.keuangan-jemaat.*')) active-page @endif">Buku Kas Jemaat</a>
+                        <a href="{{ route('admin.keuangan-jemaat.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.keuangan-jemaat.*')) active-page @endif">Buku Kas Jemaat</a>
                         @endhasanyrole
 
                         @hasanyrole('Super Admin|Admin Sinode|Admin Bidang 2|Admin Klasis')
@@ -212,11 +212,11 @@
                         
                         {{-- PENGAMANAN: Pengumuman hanya untuk Super Admin & Bidang 4 --}}
                         @hasanyrole('Super Admin|Admin Bidang 4')
-                            <a href="{{ route('admin.popup.index') }}" class="sub-link block py-1.5 text-yellow-500 font-medium truncate @if(Request::routeIs('admin.popup.*')) active-page @endif">Pengumuman (Banner)</a>
+                            <a href="{{ route('admin.popup.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.popup.*')) active-page @endif">Pengumuman (Banner)</a>
                         @endhasanyrole
                         
                         {{-- BERITA: TERBUKA TANPA SYARAT UNTUK SEMUA ROLE --}}
-                        <a href="{{ route('admin.posts.index') }}" class="sub-link block py-1.5 text-blue-400 font-bold truncate @if(Request::routeIs('admin.posts.*')) active-page @endif">Dokumen Publikasi</a>
+                        <a href="{{ route('admin.posts.index') }}" class="sub-link block py-1.5 truncate @if(Request::routeIs('admin.posts.*')) active-page @endif">Dokumen Publikasi</a>
                         
                         {{-- PENGAMANAN: Pesan Masuk hanya untuk Super Admin & Bidang 4 --}}
                         @hasanyrole('Super Admin|Admin Bidang 4')
