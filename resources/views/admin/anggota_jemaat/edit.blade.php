@@ -15,7 +15,18 @@
     </a>
 </div>
 
-{{-- PENAMBAHAN CLASS OFFLINE-READY --}}
+{{-- Helper PHP untuk memastikan format tanggal selalu Y-m-d untuk input HTML --}}
+@php
+    function formatTanggalInput($tanggal) {
+        if (!$tanggal || $tanggal == '0000-00-00') return '';
+        try {
+            return \Carbon\Carbon::parse($tanggal)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return '';
+        }
+    }
+@endphp
+
 <form action="{{ route('admin.anggota-jemaat.update', $anggotaJemaat->id) }}" method="POST" enctype="multipart/form-data" class="offline-ready">
     @csrf
     @method('PUT')
@@ -42,9 +53,11 @@
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tempat Kelahiran</label>
                     <input type="text" name="tempat_lahir" value="{{ old('tempat_lahir', $anggotaJemaat->tempat_lahir) }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
                 </div>
+                
+                {{-- FIX TANGGAL LAHIR --}}
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tanggal Kelahiran</label>
-                    <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir', optional($anggotaJemaat->tanggal_lahir)->format('Y-m-d')) }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
+                    <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir', formatTanggalInput($anggotaJemaat->tanggal_lahir)) }}" class="w-full border border-gray-300 rounded text-sm focus:ring-blue-800 focus:border-blue-800 shadow-sm bg-white">
                 </div>
                 
                 <div>
@@ -101,7 +114,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Instansi Jemaat Terdaftar <span class="text-red-600">*</span></label>
-                    <select name="jemaat_id" class="w-full border border-gray-300 rounded text-sm shadow-sm font-bold {{ !Auth::user()->hasRole('Super Admin') ? 'bg-gray-100 text-gray-500 cursor-not-allowed pointer-events-none' : 'bg-white focus:ring-blue-800 focus:border-blue-800' }}" {{ !Auth::user()->hasRole('Super Admin') ? 'readonly' : '' }}>
+                    <select name="jemaat_id" class="w-full border border-gray-300 rounded text-sm shadow-sm font-bold {{ !Auth::user()->hasRole('Super Admin') ? 'bg-gray-100 text-gray-500 cursor-not-allowed pointer-events-none' : 'bg-white focus:ring-blue-800 focus:border-blue-800' }}" {{ !Auth::user()->hasRole('Super Admin') ? 'readonly tabindex="-1"' : '' }}>
                         @foreach ($jemaatOptions as $id => $nama)
                             <option value="{{ $id }}" {{ $anggotaJemaat->jemaat_id == $id ? 'selected' : '' }}>{{ $nama }}</option>
                         @endforeach
@@ -136,9 +149,10 @@
                 <div class="lg:col-span-3 border-t border-gray-200 pt-4 mt-2">
                     <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Administrasi Sakramen Rekaman</h5>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Baptis Air</label><input type="date" name="tanggal_baptis" value="{{ old('tanggal_baptis', optional($anggotaJemaat->tanggal_baptis)->format('Y-m-d')) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
+                        {{-- FIX TANGGAL BAPTIS DAN SIDI --}}
+                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Baptis Air</label><input type="date" name="tanggal_baptis" value="{{ old('tanggal_baptis', formatTanggalInput($anggotaJemaat->tanggal_baptis)) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
                         <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Lokasi Baptis</label><input type="text" name="tempat_baptis" value="{{ old('tempat_baptis', $anggotaJemaat->tempat_baptis) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
-                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Peneguhan Sidi</label><input type="date" name="tanggal_sidi" value="{{ old('tanggal_sidi', optional($anggotaJemaat->tanggal_sidi)->format('Y-m-d')) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Tgl Peneguhan Sidi</label><input type="date" name="tanggal_sidi" value="{{ old('tanggal_sidi', formatTanggalInput($anggotaJemaat->tanggal_sidi)) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
                         <div><label class="block text-[9px] font-bold text-gray-500 uppercase mb-1">Lokasi Sidi</label><input type="text" name="tempat_sidi" value="{{ old('tempat_sidi', $anggotaJemaat->tempat_sidi) }}" class="w-full border-gray-300 rounded text-xs focus:ring-blue-800 focus:border-blue-800"></div>
                     </div>
                 </div>
@@ -178,6 +192,7 @@
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Status Konstruksi Rumah</label>
                     <select name="kondisi_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
+                        <option value="">-- Pilih --</option>
                         @foreach(['Permanen','Semi-Permanen','Darurat/Kayu'] as $kr)
                             <option value="{{ $kr }}" {{ old('kondisi_rumah', $anggotaJemaat->kondisi_rumah) == $kr ? 'selected' : '' }}>{{ strtoupper($kr) }}</option>
                         @endforeach
@@ -186,6 +201,7 @@
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Legalitas Kepemilikan Rumah</label>
                     <select name="status_kepemilikan_rumah" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
+                        <option value="">-- Pilih --</option>
                         @foreach(['Milik Sendiri','Sewa','Menumpang','Dinas'] as $sr)
                             <option value="{{ $sr }}" {{ old('status_kepemilikan_rumah', $anggotaJemaat->status_kepemilikan_rumah) == $sr ? 'selected' : '' }}>{{ strtoupper($sr) }}</option>
                         @endforeach
@@ -194,6 +210,7 @@
                 <div>
                     <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Estimasi Pengeluaran Rutin</label>
                     <select name="rentang_pengeluaran" class="w-full border border-gray-300 rounded text-sm shadow-sm bg-white focus:ring-gray-600 focus:border-gray-600">
+                        <option value="">-- Pilih --</option>
                         @foreach(['< 1jt','1jt - 3jt','> 3jt'] as $rp)
                             <option value="{{ $rp }}" {{ old('rentang_pengeluaran', $anggotaJemaat->rentang_pengeluaran) == $rp ? 'selected' : '' }}>{{ strtoupper($rp) }}</option>
                         @endforeach
